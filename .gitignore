@@ -1,0 +1,10 @@
+# Python environments
+**/env/
+**/venv/
+
+# Python distribution files
+**/dist
+
+# Pycharm
+**/.idea/
+**/__pycache__/
