@@ -20,7 +20,7 @@ class OverSamplingDataLoader(DataLoader):
         max_label_length = max([(self._dataset.y == cls).sum() for cls in labels])
         x_dict, y_dict = {}, {}
         for label in labels:
-            label_indices = self._dataset.y == label
+            label_indices = (self._dataset.y == label).min(dim=-1)
             x = self._dataset.x[label_indices]
             y = self._dataset.y[label_indices]
 
