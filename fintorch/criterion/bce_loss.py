@@ -19,7 +19,7 @@ class BCELoss(Criterion):
             loss = loss.mean()
         elif 'sum' == self.reduction:
             loss = loss.sum()
-`
+
         return loss
 
     def to_str(self, value: float) -> str:
