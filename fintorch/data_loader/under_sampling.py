@@ -13,10 +13,10 @@ class UnderSamplingDataLoader(DataLoader):
 
         # resampling part
         labels = torch.unique(self._dataset.y, dim=0)
-        min_label_length = min([(self._dataset.y == cls).sum() for cls in labels])
+        min_label_length = min([(self._dataset.y == cls).min(dim=1).values.sum() for cls in labels])
         x_dict, y_dict = {}, {}
         for label in labels:
-            label_indices = (self._dataset.y == label).min(dim=-1)
+            label_indices = (self._dataset.y == label).min(dim=1).values
             x = self._dataset.x[label_indices]
             y = self._dataset.y[label_indices]
 
