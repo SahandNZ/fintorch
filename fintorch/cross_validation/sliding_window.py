@@ -67,7 +67,7 @@ class SlidingWindowCrossValidator(CrossValidation):
             dev_set = self.dataset[train_stop_index:dev_stop_index]
             test_set = self.dataset[dev_stop_index:test_stop_index]
 
-            fold = Fold(train_set, dev_set, test_set)
+            fold = Fold(self.index, train_set, dev_set, test_set)
 
             return fold
 

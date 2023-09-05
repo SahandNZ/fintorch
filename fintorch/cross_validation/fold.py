@@ -7,7 +7,8 @@ from fintorch.metrics import Metrics
 
 
 class Fold:
-    def __init__(self, train_set: Dataset, dev_set: Dataset, test_set: Dataset):
+    def __init__(self, index: int, train_set: Dataset, dev_set: Dataset, test_set: Dataset):
+        self.__index: int = index
         self.__train_set: Dataset = train_set
         self.__dev_set: Dataset = dev_set
         self.__test_set: Dataset = test_set
@@ -21,6 +22,10 @@ class Fold:
         self.best_test_metrics: Metrics = None
 
     @property
+    def index(self) -> int:
+        return self.__index
+
+    @property
     def train_set(self) -> Dataset:
         return self.__train_set
 
@@ -32,7 +37,7 @@ class Fold:
     def test_set(self) -> Dataset:
         return self.__test_set
 
-    def show_plot(self):
+    def show_learning_curve_plot(self):
         fig = plt.figure(figsize=(10, 5))
 
         plt.plot([m.objective for m in self.train_metrics_list], 'b', label='train obejctive')
