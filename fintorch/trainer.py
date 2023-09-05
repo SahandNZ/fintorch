@@ -2,6 +2,9 @@ import copy
 from typing import Dict, List
 
 import torch
+from torch import nn
+from tqdm.auto import tqdm
+
 from fintorch.criterion.criterion import Criterion
 from fintorch.cross_validation.cross_validation import CrossValidation
 from fintorch.cross_validation.fold import Fold
@@ -9,8 +12,6 @@ from fintorch.data_loader.data_loader import DataLoader
 from fintorch.dataset.dataset import Dataset
 from fintorch.metrics import Metrics
 from fintorch.model.model import Model
-from torch import nn
-from tqdm.auto import tqdm
 
 
 class Trainer:
@@ -22,7 +23,9 @@ class Trainer:
                  optimizer: torch.optim.Optimizer,
                  scheduler: torch.optim.lr_scheduler.LRScheduler = None,
                  gradient_clipping_threshold: float = None,
-                 show_progress_bar: bool = False):
+                 print_logs: bool = False,
+                 show_progress_bar: bool = False,
+                 show_learning_curve_plot: bool = False):
 
         self.__epochs: int = epochs
         self.__cross_validation: CrossValidation = cross_validation
@@ -31,7 +34,9 @@ class Trainer:
         self.__optimizer: torch.optim.Optimizer = optimizer
         self.__scheduler: torch.optim.lr_scheduler.LRScheduler = scheduler
         self.__gradient_clipping_threshold: float = gradient_clipping_threshold
+        self.__print_logs: bool = print_logs
         self.__show_progress_bar: bool = show_progress_bar
+        self.__show_learning_curve_plot: bool = show_learning_curve_plot
 
         self.__optimizer_initial_state_dict: Dict = copy.deepcopy(self.__optimizer.state_dict())
         self.__scheduler_initial_state_dict: Dict = copy.deepcopy(self.__scheduler.state_dict())
@@ -166,9 +171,15 @@ class Trainer:
         self.reset(model)
         self.cross_validation.set_dataset(dataset)
         for fold in self.cross_validation:
+            if self.__print_logs:
+                print("#{} Fold".format(fold.index))
+
             self.train(fold=fold, model=model)
             self.validation(fold=fold, model=model)
             self.test(fold=fold, model=model)
             folds.append(fold)
+
+            if self.__show_learning_curve_plot:
+                fold.show_learning_curve_plot()
 
         return folds
