@@ -15,7 +15,7 @@ class ResNet1D(Model):
         for index in range(len(layers) - 2):
             modules.append(block(input_dim=layers[index], output_dim=layers[index + 1]))
             modules.append(nn.Dropout(dropout))
-            modules.append(nn.ReLU())
+            modules.append(nn.LeakyReLU())
 
         modules.append(block(input_dim=layers[-2], output_dim=layers[-1]))
         if activation_fn is not None:

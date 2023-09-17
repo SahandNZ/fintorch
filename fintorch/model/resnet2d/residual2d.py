@@ -7,7 +7,7 @@ class ResidualBlock2D(nn.Module):
         self.main_edge = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=kernel_size),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=kernel_size),
             nn.BatchNorm2d(out_channels)
         )

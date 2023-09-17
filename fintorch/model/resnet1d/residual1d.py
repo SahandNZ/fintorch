@@ -11,7 +11,7 @@ class ResidualBlock1D(nn.Module):
         self.main_edge = nn.Sequential(
             nn.Linear(self.input_dim, self.output_dim),
             nn.BatchNorm1d(self.output_dim),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(self.output_dim, self.output_dim),
             nn.BatchNorm1d(self.output_dim)
         )

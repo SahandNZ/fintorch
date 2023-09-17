@@ -15,7 +15,7 @@ class FeedForward(Model):
         for index in range(len(self.layers) - 2):
             modules.append(nn.Linear(layers[index], layers[index + 1]))
             modules.append(nn.BatchNorm1d(layers[index + 1]))
-            modules.append(nn.ReLU())
+            modules.append(nn.LeakyReLU())
             modules.append(nn.Dropout(dropout))
 
         modules.append(nn.Linear(layers[-2], layers[-1]))

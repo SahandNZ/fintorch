@@ -18,7 +18,7 @@ class ResNet2D(Model):
             modules.append(
                 block(in_channels=channels[index], out_channels=channels[index + 1], kernel_size=kernel_size))
             modules.append(nn.Dropout(dropout))
-            modules.append(nn.ReLU())
+            modules.append(nn.LeakyReLU())
 
         modules.append(block(in_channels=channels[-2], out_channels=channels[-1], kernel_size=kernel_size))
 
