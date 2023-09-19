@@ -56,11 +56,11 @@ class Metrics:
 
     @property
     def mse_loss(self) -> float:
-        return nn.functional.mse_loss(self.y_hat, self.y).detach().item().cpu()
+        return nn.functional.mse_loss(self.y_hat, self.y).detach().cpu().item()
 
     @property
     def mae_loss(self) -> float:
-        return nn.functional.l1_loss(self.y_hat, self.y).detach().item().cpu()
+        return nn.functional.l1_loss(self.y_hat, self.y).detach().cpu().item()
 
     @property
     def accuracy(self) -> float:
