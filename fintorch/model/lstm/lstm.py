@@ -4,7 +4,7 @@ from fintorch.model.feed_forward.feed_forward import FeedForward
 from fintorch.model.model import Model
 
 
-class GRU(Model):
+class LSTM(Model):
     def __init__(self, dim_sequence_length: int, dim_feature: int, hidden_size: int, num_layer: int, dropout: float,
                  dim_output: int,
                  activation_fn: nn.Module, auto_cuda: bool = True):
