@@ -71,18 +71,23 @@ class Metrics:
     def recall(self, label: int) -> float:
         numerator = ((label == self.actual) & (label == self.prediction)).sum().item()
         denominator = (label == self.actual).sum().item()
+        denominator = denominator if 0 < denominator else denominator + 1
         return round(numerator / denominator * 100, 2)
 
     def precision(self, label: int) -> float:
         numerator = ((label == self.actual) & (label == self.prediction)).sum().item()
         denominator = (label == self.prediction).sum().item()
+        denominator = denominator if 0 < denominator else denominator + 1
         return round(numerator / denominator * 100, 2)
 
     def f1(self, label: int) -> float:
         if self.actual is not None:
             r = self.recall(label)
             p = self.precision(label)
-            return round(2 * (r * p) / (r + p), 2) if 0 < r + p else 0
+            numerator = 2 * r * p
+            denominator = r + p
+            denominator = denominator if 0 < denominator else denominator + 1
+            return round(numerator / denominator, 2)
 
     def append(self, y: torch.Tensor, y_hat: torch.Tensor):
         y = y.detach().clone().cpu()
