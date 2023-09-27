@@ -18,6 +18,10 @@ class Model(nn.Module, ABC):
     def auto_cuda(self):
         return self.__auto_cuda
 
+    @auto_cuda.setter
+    def auto_cuda(self, value: bool):
+        self.__auto_cuda: bool = value
+
     @property
     def device(self) -> str:
         return torch.device('cuda' if self.auto_cuda and torch.cuda.is_available() else 'cpu')
