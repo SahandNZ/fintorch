@@ -145,9 +145,11 @@ class Trainer:
             bar = tqdm(bar)
             bar.set_description("Validation")
 
+        loaded_x, loaded_y = self.data_loader.load(x=fold.dev_set.x, y=fold.dev_set.y)
+
         for train_metrics in bar:
             model.load_state_dict(train_metrics.model_state_dict)
-            y, y_hat = self.common_step(x=fold.dev_set.x, y=fold.dev_set.y, model=model)
+            y, y_hat = self.common_step(x=loaded_x, y=loaded_y, model=model)
             epoch_metrics = Metrics(criterion=self.criterion, epoch=train_metrics.epoch, y=y, y_hat=y_hat)
             epoch_metrics.set_model_state_dict(train_metrics.model_state_dict)
             fold.dev_metrics_list.append(epoch_metrics)
@@ -165,9 +167,11 @@ class Trainer:
             bar = tqdm(bar)
             bar.set_description("Test")
 
+        loaded_x, loaded_y = self.data_loader.load(x=fold.test_set.x, y=fold.test_set.y)
+
         for train_metrics in bar:
             model.load_state_dict(train_metrics.model_state_dict)
-            y, y_hat = self.common_step(x=fold.test_set.x, y=fold.test_set.y, model=model)
+            y, y_hat = self.common_step(x=loaded_x, y=loaded_y, model=model)
             epoch_metrics = Metrics(criterion=self.criterion, epoch=train_metrics.epoch, y=y, y_hat=y_hat)
             epoch_metrics.set_model_state_dict(train_metrics.model_state_dict)
             fold.test_metrics_list.append(epoch_metrics)
