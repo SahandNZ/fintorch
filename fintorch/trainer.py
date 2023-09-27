@@ -41,8 +41,9 @@ class Trainer:
         self.__optimizer_initial_state_dict: Dict = copy.deepcopy(self.__optimizer.state_dict())
         self.__scheduler_initial_state_dict: Dict = copy.deepcopy(self.__scheduler.state_dict())
 
-    def set_inputs(self, inputs_dict: Dict):
-        pass
+    @property
+    def name(self) -> str:
+        return self.criterion.name + '-' + self.optimizer.__class__.__name__
 
     @property
     def epochs(self) -> int:
@@ -72,6 +73,18 @@ class Trainer:
     def gradient_clipping_threshold(self) -> float:
         return self.__gradient_clipping_threshold
 
+    @property
+    def print_logs(self) -> bool:
+        return self.__print_logs
+
+    @property
+    def show_progress_bar(self) -> bool:
+        return self.__show_progress_bar
+
+    @property
+    def show_learning_curve_plot(self) -> bool:
+        return self.__show_learning_curve_plot
+
     def reset(self, model: Model):
         model.reset()
         self.optimizer.load_state_dict(self.__optimizer_initial_state_dict)
@@ -100,7 +113,7 @@ class Trainer:
 
     def train(self, fold: Fold, model: Model):
         bar = range(self.epochs)
-        if self.__show_progress_bar:
+        if self.show_progress_bar:
             bar = tqdm(bar)
             bar.set_description("Train")
 
@@ -120,7 +133,7 @@ class Trainer:
             if fold.best_train_metrics is None or fold.best_train_metrics < epoch_metrics:
                 fold.best_train_metrics = epoch_metrics
 
-            if self.__show_progress_bar:
+            if self.show_progress_bar:
                 learning_rate = next(iter(self.optimizer.param_groups))['lr']
                 postfix = "current {} | best {} | LR: {:.6f}" \
                     .format(epoch_metrics, fold.best_train_metrics, learning_rate)
@@ -128,7 +141,7 @@ class Trainer:
 
     def validation(self, fold: Fold, model: Model):
         bar = fold.train_metrics_list
-        if self.__show_progress_bar:
+        if self.show_progress_bar:
             bar = tqdm(bar)
             bar.set_description("Validation")
 
@@ -142,13 +155,13 @@ class Trainer:
             if fold.best_dev_metrics is None or fold.best_dev_metrics < epoch_metrics:
                 fold.best_dev_metrics = epoch_metrics
 
-            if self.__show_progress_bar:
+            if self.show_progress_bar:
                 postfix = "current {} | best {}".format(epoch_metrics, fold.best_dev_metrics)
                 bar.set_postfix_str(postfix)
 
     def test(self, fold: Fold, model: Model):
         bar = fold.train_metrics_list
-        if self.__show_progress_bar:
+        if self.show_progress_bar:
             bar = tqdm(bar)
             bar.set_description("Test")
 
@@ -162,7 +175,7 @@ class Trainer:
             if fold.best_test_metrics is None or fold.best_test_metrics < epoch_metrics:
                 fold.best_test_metrics = epoch_metrics
 
-            if self.__show_progress_bar:
+            if self.show_progress_bar:
                 postfix = "current {} | best {}".format(epoch_metrics, fold.best_test_metrics)
                 bar.set_postfix_str(postfix)
 
@@ -179,7 +192,7 @@ class Trainer:
             self.test(fold=fold, model=model)
             folds.append(fold)
 
-            if self.__show_learning_curve_plot:
+            if self.show_learning_curve_plot:
                 fold.show_learning_curve_plot()
 
         return folds
