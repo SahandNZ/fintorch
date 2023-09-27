@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import torch
 
 from fintorch.data_loader.data_loader import DataLoader
@@ -50,18 +48,3 @@ class OverSamplingDataLoader(DataLoader):
             self._dataset.preset(x=x, y=y, df=None)
 
         return self
-
-    def __next__(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        self._index += 1
-
-        if self.index * self.batch_size < len(self._dataset):
-            start_index = self.index * self.batch_size
-            stop_index = start_index + self.batch_size
-
-            batch_x = self._dataset.x[start_index: stop_index]
-            batch_y = self._dataset.y[start_index: stop_index]
-
-            return batch_x, batch_y
-
-        else:
-            raise StopIteration

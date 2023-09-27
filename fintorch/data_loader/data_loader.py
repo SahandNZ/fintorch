@@ -66,7 +66,7 @@ class DataLoader:
             batch_x = self._dataset.x[start_index: stop_index]
             batch_y = self._dataset.y[start_index: stop_index]
 
-            return batch_x, batch_y
+            return self.load(batch_x, batch_y)
 
         else:
             raise StopIteration
