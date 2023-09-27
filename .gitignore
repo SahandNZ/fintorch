@@ -11,3 +11,6 @@
 # Pycharm
 **/.idea/
 **/__pycache__/
+
+# jupyter lab
+**/.ipynb_checkpoints/
