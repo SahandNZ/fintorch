@@ -1,25 +1,14 @@
 import pandas as pd
 
-from fintorch.transform.transform import Transform
+from fintorch.transform.feature.transform import FeatureTransform
 
 
-class RocFeatureTransform(Transform):
-    def __init__(self):
-        super().__init__(name='ROC')
+class RocFeatureTransform(FeatureTransform):
+    def __init__(self, sequence_length: int):
+        super().__init__(name='ROC', features=['roc'], sequence_length=sequence_length)
 
-    def fit(self, df: pd.DataFrame):
-        pass
-
-    def transform(self, df: pd.DataFrame):
+    def fit(self, df: pd.DataFrame) -> pd.DataFrame:
         df['roc'] = df.close / df.open - 1
-
-        return df.roc
-
-    def inverse_transform(self, df: pd.DataFrame):
-        pass
-
-    def save(self, path: str):
-        pass
-
-    def load(self, path: str):
-        pass
+        df = df.dropna()
+        
+        return df

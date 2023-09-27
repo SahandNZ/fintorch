@@ -1,12 +1,11 @@
-import numpy as np
 import pandas as pd
 
 from fintorch.transform.label.transform import LabelTransform
 
 
-class NpmmLabelTransform(LabelTransform):
+class PivotLabelTransform(LabelTransform):
     def __init__(self, length: int = 20):
-        super().__init__(name='NPMM', num_classes=3)
+        super().__init__(name='Pivot', num_classes=2)
         self.__length: int = length
 
     @property
@@ -21,7 +20,12 @@ class NpmmLabelTransform(LabelTransform):
 
         df['ispl'] = (df.close == df.fmin) & (df.close == df.bmin)
         df['isph'] = (df.close == df.fmax) & (df.close == df.bmax)
-        df['label'] = np.where(df.ispl, 1, np.where(df.isph, -1, 1))
+        df['isp'] = df.ispl | df.isph
+
+        df['pivot'] = df.close[df.isp]
+        df['next-pivot'] = df.pivot.shift(-1).bfill()
+        df['label'] = df.close < df['forward-pivot']
+        df['label'] = df.label.astype(int)
         df = df.dropna()
 
         return df

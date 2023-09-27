@@ -1,34 +1,23 @@
 from abc import abstractmethod
 
+import numpy as np
 import pandas as pd
 
 
 class Transform:
     def __init__(self, name: str):
-        self.name: str = name
+        self.__name: str = name
+
+    @property
+    def name(self) -> str:
+        return self.__name
 
     @abstractmethod
-    def fit(self, df: pd.DataFrame):
+    def fit(self, df: pd.DataFrame) -> pd.DataFrame:
         NotImplemented()
 
     @abstractmethod
-    def transform(self, df: pd.DataFrame):
-        NotImplemented()
-
-    def fit_transform(self, dataframe: pd.DataFrame):
-        self.fit(dataframe)
-        return self.transform(dataframe)
-
-    @abstractmethod
-    def inverse_transform(self, df: pd.DataFrame):
-        NotImplemented()
-
-    @abstractmethod
-    def save(self, path: str):
-        NotImplemented()
-
-    @abstractmethod
-    def load(self, path: str):
+    def transform(self, *args) -> np.array:
         NotImplemented()
 
     def __str__(self):
