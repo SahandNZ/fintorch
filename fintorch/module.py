@@ -1,9 +1,11 @@
 import os
 import pickle
+from typing import List
 
 import pandas as pd
 import torch
 
+from fintorch.cross_validation.fold import Fold
 from fintorch.dataset.dataset import Dataset
 from fintorch.model.model import Model
 from fintorch.trainer import Trainer
@@ -14,6 +16,8 @@ class Module:
         self.__dataset: Dataset = dataset
         self.__trainer: Trainer = trainer
         self.__model: Model = model
+
+        self.__folds: List[Fold] = None
 
     @property
     def name(self) -> str:
@@ -31,13 +35,17 @@ class Module:
     def model(self) -> Model:
         return self.__model
 
+    @property
+    def folds(self) -> List[Fold]:
+        return self.__folds
+
     def optimize(self, df: pd.DataFrame):
         self.dataset.prepare(df)
-        last_fold = self.trainer.optimize(dataset=self.dataset, model=self.model)[-1]
-        self.model.load_state_dict(last_fold.best_test_metrics.model_state_dict)
+        self.__folds = self.trainer.optimize(dataset=self.dataset, model=self.model)[-1]
+        self.model.load_state_dict(self.folds[-1].best_test_metrics.model_state_dict)
+        self.model.eval()
 
     def predict(self, df: pd.DataFrame, timestamp: int) -> torch.Tensor:
-        self.model.eval()
         x = self.dataset.preprocess(df=df, timestamp=timestamp)
         y_hat = self.model(x).cpu()
 
