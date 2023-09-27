@@ -4,13 +4,11 @@ from fintorch.cross_validation.fold import Fold
 
 class SlidingWindowCrossValidator(CrossValidation):
     def __init__(self, window_size: int, train_percentage: float, dev_percentage: float):
-        super().__init__()
+        super().__init__(train_percentage, dev_percentage)
         self.__window_size: int = window_size
-        self.__train_percentage: float = train_percentage
-        self.__dev_percentage: float = dev_percentage
 
-        self.__train_length: int = int(self.__window_size * self.__train_percentage)
-        self.__dev_length: int = int(self.__window_size * self.__dev_percentage)
+        self.__train_length: int = int(self.__window_size * self.train_percentage)
+        self.__dev_length: int = int(self.__window_size * self.dev_percentage)
         self.__test_length: int = int(self.__window_size - self.__train_length - self.__dev_length)
 
         self._index: int = None
@@ -19,14 +17,6 @@ class SlidingWindowCrossValidator(CrossValidation):
     @property
     def window_size(self) -> int:
         return self.__window_size
-
-    @property
-    def train_percentage(self) -> float:
-        return self.__train_percentage
-
-    @property
-    def dev_percentage(self) -> float:
-        return self.__dev_percentage
 
     @property
     def train_length(self) -> int:
