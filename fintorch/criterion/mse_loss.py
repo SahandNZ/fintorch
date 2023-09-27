@@ -5,7 +5,7 @@ from fintorch.criterion.criterion import Criterion
 
 class MSELoss(Criterion):
     def __init__(self):
-        super().__init__(reduction='mean')
+        super().__init__(name="MSE", reduction='mean')
 
     def forward(self, inputs: torch.Tensor, targets: torch.Tensor):
         return torch.nn.functional.mse_loss(inputs, targets)

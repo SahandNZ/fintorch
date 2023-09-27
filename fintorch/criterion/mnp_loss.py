@@ -5,7 +5,7 @@ from fintorch.criterion.criterion import Criterion
 
 class MNPLoss(Criterion):
     def __init__(self, fee_rate: float = 2e-4):
-        super().__init__(reduction='mean')
+        super().__init__(name="MNP", reduction='mean')
         self.__fee_rate: float = fee_rate
 
     @property

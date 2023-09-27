@@ -6,7 +6,7 @@ from fintorch.criterion.criterion import Criterion
 
 class BCELoss(Criterion):
     def __init__(self, alpha: float = 0.5, reduction: str = 'mean'):
-        super().__init__(reduction)
+        super().__init__(name="BCE", reduction=reduction)
         self.alpha: float = alpha
 
     def forward(self, inputs: torch.Tensor, targets: torch.Tensor):

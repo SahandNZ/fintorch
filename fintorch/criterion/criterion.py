@@ -5,9 +5,14 @@ from torch import nn
 
 
 class Criterion(nn.Module, ABC):
-    def __init__(self, reduction: str):
+    def __init__(self, name: str, reduction: str):
         super().__init__()
+        self.__name: str = name
         self.__reduction: str = reduction
+
+    @property
+    def name(self) -> str:
+        return self.__name
 
     @property
     def reduction(self) -> str:

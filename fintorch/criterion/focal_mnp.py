@@ -5,7 +5,7 @@ from fintorch.criterion.criterion import Criterion
 
 class FocalMNPLoss(Criterion):
     def __init__(self, gamma: float = 0, fee_rate: float = 2e-4):
-        super().__init__(reduction='mean')
+        super().__init__(name="Focal MNP", reduction='mean')
         self.__gamma: float = gamma
         self.__fee_rate: float = fee_rate
 
