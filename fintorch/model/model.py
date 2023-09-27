@@ -42,5 +42,4 @@ class Model(nn.Module, ABC):
 
     def __call__(self, *args):
         self.to(self.device)
-        print(self.device)
-        self.forward(*args)
+        return self.forward(*args)
