@@ -12,8 +12,8 @@ class Metrics:
         self.__model_state_dict: Dict = None
         self.__criterion: Criterion = criterion
 
-        self.__y: torch.Tensor = y if y is not None else torch.tensor([])
-        self.__y_hat: torch.Tensor = y_hat if y_hat is not None else torch.tensor([])
+        self.__y: torch.Tensor = y.detach().clone().cpu() if y is not None else torch.tensor([])
+        self.__y_hat: torch.Tensor = y_hat.detach().clone().cpu() if y_hat is not None else torch.tensor([])
 
     @property
     def epoch(self) -> int:
@@ -38,6 +38,7 @@ class Metrics:
     @property
     def objective(self):
         with torch.no_grad():
+
             return self.__criterion(self.y_hat, self.y) if 0 < len(self.y) and 0 < len(self.y_hat) else None
 
     @property
