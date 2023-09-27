@@ -4,52 +4,42 @@ import torch
 from tqdm.auto import tqdm
 
 from fintorch.dataset.dataset import Dataset
-from fintorch.transform.label.label_transform import LabelTransform
-from fintorch.transform.transform import Transform
+from fintorch.transform.feature.transform import FeatureTransform
+from fintorch.transform.label.transform import LabelTransform
 
 
 class BsfDataset(Dataset):
-    def __init__(self, sequence_length: int, feature_transform: Transform, label_transform: LabelTransform):
-        super().__init__(feature_transform, label_transform)
-        self.__sequence_length: int = sequence_length
-
-    @property
-    def sequence_length(self) -> int:
-        return self.__sequence_length
+    def __init__(self, feature_transform: FeatureTransform, label_transform: LabelTransform):
+        super().__init__(feature_transform=feature_transform, label_transform=label_transform)
 
     def prepare(self, df: pd.DataFrame):
         # create dataframes
-        fdf = self.feature_transform.transform(df)
-        ldf = self.label_transform.transform(df)
-
-        # align dataframes
-        start_timestamp = max([df.index.to_series().min() for df in [fdf, ldf]])
-        fdf = fdf[start_timestamp <= fdf.index]
-        ldf = ldf[start_timestamp <= ldf.index]
+        df = df.copy()
+        df = self.feature_transform.fit(df)
+        df = self.label_transform.fit(df)
 
         # create samples
         x, y = [], []
-        for index in tqdm(list(range(self.sequence_length, len(ldf)))):
-            label = ldf.label.iloc[index]
-            wdf = fdf.iloc[index - self.sequence_length: index]
-            wdf = (wdf - wdf.mean()) / wdf.std()
-            feature = wdf.to_numpy()
+        for index in tqdm(list(range(self.feature_transform.sequence_length, len(df)))):
+            timestamp = df.index.to_series().iloc[index]
+            label = self.label_transform.transform(df=df, timestamp=timestamp)
+            feature = self.feature_transform.transform(df=df, timestamp=timestamp)
 
             y.append(label)
             x.append(feature)
 
         # slice dataframe and convert x and y to tensor
-        self.df = ldf[self.sequence_length:]
-        self.x = torch.from_numpy(np.array(x)).float()
-        if 1 == self.label_transform.num_classes:
-            self.y = torch.from_numpy(np.array(y)).float().unsqueeze(-1)
-        else:
-            self.y = torch.nn.functional.one_hot(torch.from_numpy(np.array(y)).long(), num_classes=-1).float()
+        df = df[self.feature_transform.sequence_length:]
+        x = torch.from_numpy(np.array(x)).float()
+        y = torch.from_numpy(np.array(y)).float()
 
-    def preprocess(self, df: pd.DataFrame):
-        fdf = self.feature_transform.transform(df)
-        wdf = fdf.iloc[-self.sequence_length:]
-        wdf = (wdf - wdf.mean()) / wdf.std()
-        x = torch.from_numpy(np.array(wdf.to_numpy())).float().unsqueeze(0)
+        # set x, y, and df properties
+        self.preset(x=x, y=y, df=df)
+
+    def preprocess(self, df: pd.DataFrame, timestamp: int) -> torch.Tensor:
+        df = df.copy()
+        df = self.feature_transform.fit(df=df)
+        feature = self.feature_transform.transform(df=df, timestamp=timestamp)
+        x = torch.from_numpy(feature).unsqueeze(0).float()
 
         return x
