@@ -38,21 +38,23 @@ class OverSamplingDataLoader(DataLoader):
             x_dict[label] = x[select_indices]
             y_dict[label] = y[select_indices]
 
-        self._dataset.x = torch.concat(tuple(x_dict.values()), dim=0)
-        self._dataset.y = torch.concat(tuple(y_dict.values()), dim=0)
+        x = torch.concat(tuple(x_dict.values()), dim=0)
+        y = torch.concat(tuple(y_dict.values()), dim=0)
+        self._dataset.preset(x=x, y=y, df=None)
 
         # shuffle part
         if self.shuffle:
             random_index = torch.randperm(len(self._dataset))
-            self._dataset.x = self._dataset.x[random_index]
-            self._dataset.y = self._dataset.y[random_index]
+            x = self._dataset.x[random_index]
+            y = self._dataset.y[random_index]
+            self._dataset.preset(x=x, y=y, df=None)
 
         return self
 
     def __next__(self) -> Tuple[torch.Tensor, torch.Tensor]:
         self._index += 1
 
-        if self.index * self.batch_size < len(self._dataset.x):
+        if self.index * self.batch_size < len(self._dataset):
             start_index = self.index * self.batch_size
             stop_index = start_index + self.batch_size
 
