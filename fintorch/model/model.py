@@ -39,3 +39,8 @@ class Model(nn.Module, ABC):
 
     def save(self, path: str):
         torch.save(self.state_dict(), path)
+
+    def __call__(self, *args):
+        self.to(self.device)
+        print(self.device)
+        self.forward(args)
