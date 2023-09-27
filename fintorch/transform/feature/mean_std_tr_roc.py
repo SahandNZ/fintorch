@@ -5,7 +5,7 @@ from fintorch.transform.feature.transform import FeatureTransform
 
 class MeanStdTrRocFeatureTransform(FeatureTransform):
     def __init__(self, look_back: int, sequence_length: int):
-        super().__init__(name="MEAN-STD TR-ROC", features=['tr', 'roc', 'mean-tr', 'mean-roc', 'std-tr', 'std-roc'],
+        super().__init__(name="MEAN-STD TR-ROC", features=['mean-tr', 'mean-roc', 'std-tr', 'std-roc'],
                          sequence_length=sequence_length)
         self.__look_back: int = look_back
 
