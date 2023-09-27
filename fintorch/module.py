@@ -9,6 +9,7 @@ from fintorch.cross_validation.fold import Fold
 from fintorch.dataset.dataset import Dataset
 from fintorch.model.model import Model
 from fintorch.trainer import Trainer
+from fintorch.utils import create_directory
 
 
 class Module:
@@ -60,6 +61,8 @@ class Module:
         self.dataset.reset()
 
         # save module
+        if not os.path.exists(root):
+            create_directory(root)
         path = os.path.join(root, f'{self.name}.pkl')
         with open(path, 'wb+') as file:
             pickle.dump(self, file)
