@@ -19,7 +19,7 @@ class BfmmLabelTransform(LabelTransform):
         return self.__look_ahead
 
     def fit(self, df: pd.DataFrame):
-        df['bmin'] = df.clsoe.rolling(self.look_back).min()
+        df['bmin'] = df.close.rolling(self.look_back).min()
         df['bmax'] = df.close.rolling(self.look_back).max()
         df['fmin'] = df.close.rolling(self.look_ahead).min().shift(-self.look_ahead + 1)
         df['fmax'] = df.close.rolling(self.look_ahead).max().shift(-self.look_ahead + 1)
