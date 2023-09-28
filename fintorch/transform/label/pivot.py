@@ -4,8 +4,8 @@ from fintorch.transform.label.transform import LabelTransform
 
 
 class PivotLabelTransform(LabelTransform):
-    def __init__(self, length: int = 20):
-        super().__init__(name='Pivot', num_classes=2)
+    def __init__(self, length: int = 10):
+        super().__init__(name='Forward pivot', num_classes=2)
         self.__length: int = length
 
     @property
@@ -23,8 +23,8 @@ class PivotLabelTransform(LabelTransform):
         df['isp'] = df.ispl | df.isph
 
         df['pivot'] = df.close[df.isp]
-        df['next-pivot'] = df.pivot.shift(-1).bfill()
-        df['label'] = df.close < df['forward-pivot']
+        df['f-pivot'] = df.pivot.shift(-1).bfill()
+        df['label'] = df.close < df['f-pivot']
         df['label'] = df.label.astype(int)
         df = df.dropna()
 

@@ -5,7 +5,7 @@ from fintorch.transform.label.transform import LabelTransform
 
 
 class NpmmLabelTransform(LabelTransform):
-    def __init__(self, length: int = 20):
+    def __init__(self, length: int = 10):
         super().__init__(name='NPMM', num_classes=3)
         self.__length: int = length
 
