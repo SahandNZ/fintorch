@@ -20,7 +20,7 @@ class Dataset:
 
     @property
     def name(self) -> str:
-        return self.feature_transform.name + ' - ' + self.label_transform.name
+        return self.feature_transform.name + ' | ' + self.label_transform.name
 
     @property
     def feature_transform(self) -> FeatureTransform:

@@ -22,7 +22,7 @@ class Module:
 
     @property
     def name(self) -> str:
-        return self.trainer.name + ' - ' + self.dataset.name + ' - ' + self.model.name
+        return self.trainer.name + ' | ' + self.dataset.name + ' | ' + self.model.name
 
     @property
     def trainer(self) -> Trainer:
