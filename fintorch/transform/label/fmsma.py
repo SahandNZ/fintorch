@@ -5,7 +5,7 @@ from fintorch.transform.label.transform import LabelTransform
 
 class FMsmaLabelTransform(LabelTransform):
     def __init__(self, length: int = 51, look_ahead: int = 12):
-        super().__init__(name="Forward MSMA", num_classes=2)
+        super().__init__(name="F-MSMA", num_classes=2)
         self.__length: int = length
         self.__look_ahead: int = look_ahead
 

@@ -5,7 +5,7 @@ from fintorch.transform.label.transform import LabelTransform
 
 class FrocLabelTransform(LabelTransform):
     def __init__(self, look_ahead: int = 12):
-        super().__init__(name='Forward ROC', num_classes=2)
+        super().__init__(name='F-ROC', num_classes=2)
         self.__look_ahead: int = look_ahead
 
     @property

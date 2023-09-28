@@ -5,7 +5,7 @@ from fintorch.transform.label.transform import LabelTransform
 
 class PivotLabelTransform(LabelTransform):
     def __init__(self, length: int = 10):
-        super().__init__(name='Forward pivot', num_classes=2)
+        super().__init__(name='F-Pivot', num_classes=2)
         self.__length: int = length
 
     @property
