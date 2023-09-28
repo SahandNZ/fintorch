@@ -9,8 +9,10 @@ from fintorch.transform.label.transform import LabelTransform
 
 
 class BsfDataset(Dataset):
-    def __init__(self, feature_transform: FeatureTransform, label_transform: LabelTransform):
-        super().__init__(feature_transform=feature_transform, label_transform=label_transform)
+    def __init__(self, feature_transform: FeatureTransform, label_transform: LabelTransform,
+                 show_progress_bar: bool = False):
+        super().__init__(feature_transform=feature_transform, label_transform=label_transform,
+                         show_progress_bar=show_progress_bar)
 
     def prepare(self, df: pd.DataFrame):
         # create dataframes
@@ -18,9 +20,13 @@ class BsfDataset(Dataset):
         df = self.feature_transform.fit(df)
         df = self.label_transform.fit(df)
 
+        bar = range(self.feature_transform.sequence_length, len(df))
+        if self.show_progress_bar:
+            bar = tqdm(list(bar))
+
         # create samples
         x, y = [], []
-        for index in tqdm(list(range(self.feature_transform.sequence_length, len(df)))):
+        for index in bar:
             timestamp = df.index.to_series().iloc[index]
             label = self.label_transform.transform(df=df, timestamp=timestamp)
             feature = self.feature_transform.transform(df=df, timestamp=timestamp)

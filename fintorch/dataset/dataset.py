@@ -8,9 +8,11 @@ from fintorch.transform.label.transform import LabelTransform
 
 
 class Dataset:
-    def __init__(self, feature_transform: FeatureTransform = None, label_transform: LabelTransform = None):
+    def __init__(self, feature_transform: FeatureTransform = None, label_transform: LabelTransform = None,
+                 show_progress_bar: bool = False):
         self.__feature_transform: FeatureTransform = feature_transform
         self.__label_transform: LabelTransform = label_transform
+        self.__show_progress_bar: bool = show_progress_bar
 
         self.__x: torch.Tensor = None
         self.__y: torch.Tensor = None
@@ -27,6 +29,10 @@ class Dataset:
     @property
     def label_transform(self) -> LabelTransform:
         return self.__label_transform
+
+    @property
+    def show_progress_bar(self) -> bool:
+        return self.__show_progress_bar
 
     @property
     def x(self) -> torch.Tensor:
@@ -72,7 +78,8 @@ class Dataset:
             x = self.x[item]
             y = self.y[item]
             df = self.df[item] if self.df is not None else None
-            dataset = Dataset(feature_transform=self.feature_transform, label_transform=self.label_transform)
+            dataset = Dataset(feature_transform=self.feature_transform, label_transform=self.label_transform,
+                              show_progress_bar=self.show_progress_bar)
             dataset.preset(x, y, df)
 
             return dataset
