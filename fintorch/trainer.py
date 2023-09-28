@@ -85,13 +85,9 @@ class Trainer:
     def show_learning_curve_plot(self) -> bool:
         return self.__show_learning_curve_plot
 
-    def __reset_optimizer(self, model: Model):
-        self.optimizer.load_state_dict(self.__optimizer_initial_state_dict)
-        self.optimizer.param_groups[0]['params'] = list(model.parameters())
-
     def reset(self, model: Model):
         model.reset()
-        self.__reset_optimizer(model)
+        self.optimizer.load_state_dict(self.__optimizer_initial_state_dict)
         if self.scheduler is not None:
             self.scheduler.load_state_dict(self.__optimizer_initial_state_dict)
 
