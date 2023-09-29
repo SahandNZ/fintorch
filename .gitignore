@@ -1,6 +1,6 @@
 # project
 *.pkl
-**/data/candle
+**/data
 
 # Python environments
 **/env/
