@@ -19,7 +19,7 @@ def main():
     exchange = Exchange(exchange='binance')
     local_data = LocalData(exchange=exchange)
     candles = local_data.get_candles(symbol=args.symbol, time_frame=args.time_frame)
-    df = Candle.to_data_frame(candles)[-1000:]
+    df = Candle.to_data_frame(candles)[-10000:]
 
     feature_transform = MeanStdTrRocFeatureTransform(look_back=4, sequence_length=32)
     label_transform = FMsmaLabelTransform()
