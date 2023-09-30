@@ -37,7 +37,6 @@ def main():
 
     # prepare model
     model = FeedForward(layers=[128, 2], dropout=0.5, activation_fn=nn.Softmax())
-    tmp_model = FeedForward(layers=[128, 2], dropout=0.5, activation_fn=nn.Softmax())
 
     # prepare trainer
     cross_validation = CrossValidation(train_percentage=0.8, dev_percentage=0.1)
@@ -59,7 +58,7 @@ def main():
         show_learning_curve_plot=True
     )
 
-    folds = trainer.optimize(dataset=dataset, model=tmp_model)
+    folds = trainer.optimize(dataset=dataset, model=model)
 
 
 if __name__ == '__main__':
