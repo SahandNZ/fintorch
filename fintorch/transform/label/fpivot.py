@@ -23,8 +23,8 @@ class PivotLabelTransform(LabelTransform):
         df['isph'] = (df.close == df.fmax) & (df.close == df.bmax)
         df['isp'] = df.ispl | df.isph
 
-        df['pivot'] = df.close[df.isp]
-        df['f-pivot'] = df.pivot.shift(-1).bfill()
+        df['p'] = df.close[df.isp]
+        df['f-pivot'] = df.p.shift(-1).bfill()
         df['up'] = df.close < df['f-pivot']
         df['label'] = np.where(df.up, 1, -1)
         df = df.dropna()

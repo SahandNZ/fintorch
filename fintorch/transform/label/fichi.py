@@ -4,11 +4,12 @@ import pandas as pd
 from fintorch.transform.label.transform import LabelTransform
 
 
-class IchimokuLabelTransform(LabelTransform):
-    def __init__(self, base_length: int = 5, conversion_length: int = 20):
-        super().__init__(name="Ichimoku", num_classes=3, min_class=-1)
+class FIchiLabelTransform(LabelTransform):
+    def __init__(self, base_length: int = 5, conversion_length: int = 20, look_ahead: int = 12):
+        super().__init__(name="F-Ichi", num_classes=3, min_class=-1)
         self.__base_length: int = base_length
         self.__conversion_length: int = conversion_length
+        self.__look_ahead: int = look_ahead
 
     @property
     def base_length(self) -> int:
@@ -17,6 +18,10 @@ class IchimokuLabelTransform(LabelTransform):
     @property
     def conversion_length(self) -> int:
         return self.__conversion_length
+
+    @property
+    def look_ahead(self) -> int:
+        return self.__look_ahead
 
     @staticmethod
     def donchian(df: pd.DataFrame, length: int) -> pd.Series:
@@ -27,8 +32,8 @@ class IchimokuLabelTransform(LabelTransform):
         df['conversion'] = self.donchian(df, length=self.conversion_length)
 
         df['up'] = df.conversion < df.base
-        df['down'] = df.base < df.conversion
-        df['label'] = np.where(df.up, 1, np.where(df.down, -1, 0))
+        df['f-up'] = df.up.shift(-self.look_ahead)
+        df['label'] = np.where(df['f-up'], 1, -1)
         df = df.dropna()
 
         return df
