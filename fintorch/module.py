@@ -2,6 +2,7 @@ import os
 import pickle
 from typing import List
 
+import numpy as np
 import pandas as pd
 import torch
 
@@ -22,7 +23,7 @@ class Module:
 
     @property
     def name(self) -> str:
-        return self.trainer.name + ' | ' + self.dataset.name + ' | ' + self.model.name
+        return self.dataset.name + ' | ' + self.model.name
 
     @property
     def trainer(self) -> Trainer:
@@ -45,11 +46,12 @@ class Module:
             self.dataset.prepare(df)
         self.__folds = self.trainer.optimize(dataset=self.dataset, model=self.model)
         self.model.load_state_dict(self.folds[-1].best_test_metrics.model_state_dict)
-        self.model.eval()
 
-    def predict(self, df: pd.DataFrame, timestamp: int) -> torch.Tensor:
+    def predict(self, df: pd.DataFrame, timestamp: int) -> np.array:
         x = self.dataset.preprocess(df=df, timestamp=timestamp)
-        y_hat = self.model(x).cpu()
+        with torch.no_grad():
+            self.model.eval()
+            y_hat = self.model(x).squeeze(0).cpu().numpy()
 
         return y_hat
 
