@@ -58,7 +58,7 @@ def main():
         show_learning_curve_plot=True
     )
 
-    folds = trainer.optimize(dataset=dataset, model=model)
+    trainer.optimize(dataset=dataset, model=model)
 
 
 if __name__ == '__main__':
