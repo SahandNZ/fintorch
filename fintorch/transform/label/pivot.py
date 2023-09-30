@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from fintorch.transform.label.transform import LabelTransform
@@ -5,7 +6,7 @@ from fintorch.transform.label.transform import LabelTransform
 
 class PivotLabelTransform(LabelTransform):
     def __init__(self, length: int = 10):
-        super().__init__(name='F-Pivot', num_classes=2)
+        super().__init__(name='F-Pivot', num_classes=3, min_class=-1)
         self.__length: int = length
 
     @property
@@ -24,8 +25,8 @@ class PivotLabelTransform(LabelTransform):
 
         df['pivot'] = df.close[df.isp]
         df['f-pivot'] = df.pivot.shift(-1).bfill()
-        df['label'] = df.close < df['f-pivot']
-        df['label'] = df.label.astype(int)
+        df['up'] = df.close < df['f-pivot']
+        df['label'] = np.where(df.up, 1, -1)
         df = df.dropna()
 
         return df

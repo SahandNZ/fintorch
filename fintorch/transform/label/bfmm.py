@@ -6,7 +6,7 @@ from fintorch.transform.label.transform import LabelTransform
 
 class BfmmLabelTransform(LabelTransform):
     def __init__(self, look_back: int = 10, look_ahead: int = 10):
-        super().__init__(name='BFMM', num_classes=3)
+        super().__init__(name='BFMM', num_classes=3, min_class=-1)
         self.__look_back: int = look_back
         self.__look_ahead: int = look_ahead
 

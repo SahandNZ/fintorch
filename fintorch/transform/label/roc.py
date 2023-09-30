@@ -5,7 +5,7 @@ from fintorch.transform.label.transform import LabelTransform
 
 class RocLabelTransform(LabelTransform):
     def __init__(self):
-        super().__init__(name='ROC', num_classes=1)
+        super().__init__(name='ROC', num_classes=None, min_class=None)
 
     def fit(self, df: pd.DataFrame):
         df['roc'] = df.close / df.open - 1
