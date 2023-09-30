@@ -6,7 +6,7 @@ from fintorch.transform.label.transform import LabelTransform
 
 class IchiLabelTransform(LabelTransform):
     def __init__(self, base_length: int = 5, conversion_length: int = 20):
-        super().__init__(name="F-Ichi", num_classes=3, min_class=-1)
+        super().__init__(name="Ichi", num_classes=3, min_class=-1)
         self.__base_length: int = base_length
         self.__conversion_length: int = conversion_length
 
