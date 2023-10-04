@@ -13,7 +13,7 @@ from fintorch.data_loader.data_loader import DataLoader
 from fintorch.dataset.bsf_dataset import BsfDataset
 from fintorch.model.feed_forward.feed_forward import FeedForward
 from fintorch.trainer import Trainer
-from fintorch.transform.feature.mean_std_tr_roc import MeanStdTrRocFeatureTransform
+from fintorch.transform.feature.rms_tr_roc import RollingMeanStdTrRocFeatureTransform
 from fintorch.transform.label.fmsma import FMsmaLabelTransform
 
 
@@ -30,7 +30,7 @@ def main():
     df = Candle.to_data_frame(candles)[-1000:]
 
     # prepare dataset
-    feature_transform = MeanStdTrRocFeatureTransform(look_back=4, sequence_length=32)
+    feature_transform = RollingMeanStdTrRocFeatureTransform(look_back=4, sequence_length=32)
     label_transform = FMsmaLabelTransform()
     dataset = BsfDataset(feature_transform=feature_transform, label_transform=label_transform)
     dataset.prepare(df=df)

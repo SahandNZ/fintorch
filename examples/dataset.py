@@ -6,7 +6,7 @@ from pyccx.interface.exchange import Exchange
 from pyccx.model.candle import Candle
 
 from fintorch.dataset.bsf_dataset import BsfDataset
-from fintorch.transform.feature.mean_std_tr_roc import MeanStdTrRocFeatureTransform
+from fintorch.transform.feature.rms_tr_roc import RollingMeanStdTrRocFeatureTransform
 from fintorch.transform.label.fmsma import FMsmaLabelTransform
 
 
@@ -18,10 +18,10 @@ def main():
 
     exchange = Exchange(exchange='binance')
     local_data = LocalData(exchange=exchange)
-    candles = local_data.get_candles(symbol=args.symbol, time_frame=args.time_frame)
+    candles = local_data.download_candles(symbol=args.symbol, time_frame=args.time_frame)
     df = Candle.to_data_frame(candles)[-10000:]
 
-    feature_transform = MeanStdTrRocFeatureTransform(look_back=4, sequence_length=32)
+    feature_transform = RollingMeanStdTrRocFeatureTransform(look_back=4, sequence_length=32)
     label_transform = FMsmaLabelTransform()
     dataset = BsfDataset(feature_transform=feature_transform, label_transform=label_transform)
     dataset.prepare(df=df)
