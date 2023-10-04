@@ -24,3 +24,6 @@ dependencies = [
     "pandas_ta==0.3.14b",
     "matplotlib==3.8.0"
 ]
+
+[tool.black]
+line-length = 119
