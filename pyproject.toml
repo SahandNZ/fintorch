@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fintorch"
-version = "0.1.7"
+version = "0.1.8"
 authors = [
   { name="Sahand Nazarzadeh", email="sahand.nazarzadeh@gmail.com" },
 ]
 description = "Finbright deep learning package"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -24,6 +24,3 @@ dependencies = [
     "pandas_ta==0.3.14b",
     "matplotlib==3.8.0"
 ]
-
-[tool.black]
-line-length = 119
