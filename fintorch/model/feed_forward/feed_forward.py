@@ -8,7 +8,7 @@ from fintorch.model.model import Model
 
 class FeedForward(Model):
     def __init__(self, layers: List[int], dropout: float, activation_fn: nn.Module = None, auto_cuda: bool = True):
-        super().__init__(auto_cuda)
+        super().__init__(name="Feed Froward", short_name="FF", auto_cuda=auto_cuda)
         self.layers: List[int] = layers
 
         modules = [nn.Flatten()]

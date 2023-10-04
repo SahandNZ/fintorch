@@ -8,7 +8,7 @@ from fintorch.model.model import Model
 class Hybrid(Model):
     def __init__(self, dim_sequence: int, dim_feature: int, dropout: float, dim_output: int,
                  activation_fn: nn.Module = None, auto_cuda: bool = True):
-        super().__init__(auto_cuda)
+        super().__init__(name="Hybrid", short_name="HYB", auto_cuda=auto_cuda)
         self.q_linear = nn.Linear(dim_feature, dim_feature)
         self.k_linear = nn.Linear(dim_feature, dim_feature)
         self.v_linear = nn.Linear(dim_feature, dim_feature)

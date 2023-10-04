@@ -26,6 +26,10 @@ class Module:
         return self.dataset.name + ' | ' + self.model.name
 
     @property
+    def short_name(self) -> str:
+        return self.dataset.short_name + ' | ' + self.model.short_name
+
+    @property
     def trainer(self) -> Trainer:
         return self.__trainer
 

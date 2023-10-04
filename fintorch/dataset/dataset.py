@@ -20,6 +20,10 @@ class Dataset:
 
     @property
     def name(self) -> str:
+        return self.feature_transform.name + ' | ' + self.label_transform.name
+
+    @property
+    def short_name(self) -> str:
         return self.feature_transform.short_name + ' | ' + self.label_transform.short_name
 
     @property

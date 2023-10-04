@@ -9,7 +9,7 @@ from fintorch.model.model import Model
 class ResNet1D(Model):
     def __init__(self, block: nn.Module, layers: List[int], dropout: float, activation_fn: nn.Module = None,
                  auto_cuda: bool = True):
-        super().__init__(auto_cuda)
+        super().__init__(name="Residual Network 1D", short_name="RN1D", auto_cuda=auto_cuda)
 
         modules = [nn.Flatten()]
         for index in range(len(layers) - 2):

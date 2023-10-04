@@ -6,13 +6,19 @@ from torch import nn
 
 
 class Model(nn.Module, ABC):
-    def __init__(self, auto_cuda: bool):
+    def __init__(self, name: str, short_name: str, auto_cuda: bool):
         super().__init__()
+        self.__name: str = name
+        self.__short_name: str = short_name
         self.__auto_cuda: bool = auto_cuda
 
     @property
     def name(self) -> str:
-        return self.__class__.__name__
+        return self.__name
+
+    @property
+    def short_name(self) -> str:
+        return self.__short_name
 
     @property
     def auto_cuda(self):
