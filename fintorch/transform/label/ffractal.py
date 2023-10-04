@@ -4,12 +4,12 @@ import pandas as pd
 from fintorch.transform.label.transform import LabelTransform
 
 
-class NpmmLabelTransform(LabelTransform):
+class FFractalLabelTransform(LabelTransform):
     def __init__(self, length: int = 10):
         super().__init__(
-            name="N Period Min Max",
-            short_name="NPMM",
-            description="This labeling method works by calculating the N-Period Min-Max indicator "
+            name="Forward Fractal",
+            short_name="F-Fractal",
+            description="This labeling method works by comparing the next fractal with the current close price "
                         "to assign trend labels to the data.",
             num_classes=3,
             min_class=-1,
@@ -28,7 +28,12 @@ class NpmmLabelTransform(LabelTransform):
 
         df["ispl"] = (df.close == df.fmin) & (df.close == df.bmin)
         df["isph"] = (df.close == df.fmax) & (df.close == df.bmax)
-        df["label"] = np.where(df.ispl, 1, np.where(df.isph, -1, 1))
+        df["isp"] = df.ispl | df.isph
+
+        df["p"] = df.close[df.isp]
+        df["f-pivot"] = df.p.shift(-1).bfill()
+        df["up"] = df.close < df["f-pivot"]
+        df["label"] = np.where(df.up, 1, -1)
         df = df.dropna()
 
         return df

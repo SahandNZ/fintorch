@@ -6,7 +6,7 @@ from fintorch.transform.transform import Transform
 
 class DfftTransform(Transform):
     def __init__(self, muting_percentage: int):
-        super().__init__(name="DFFT")
+        super().__init__(name="Discrete Fast Fourier Transform", short_name="DFFT", description="")
         self.__muting_percentage: str = muting_percentage
 
     @property

@@ -6,7 +6,15 @@ from fintorch.transform.label.transform import LabelTransform
 
 class BfmmLabelTransform(LabelTransform):
     def __init__(self, look_back: int = 10, look_ahead: int = 10):
-        super().__init__(name='BFMM', num_classes=3, min_class=-1)
+        super().__init__(
+            name="Backward Forward Min Max",
+            short_name="BFMM",
+            description="This labeling method works by comparing the Backward Min-Max series with "
+                        "the Forward Min-Max series to assign trend labels to the data.Additionally, "
+                        "this method can detect sideways markets and assign a label value of 0 to them.",
+            num_classes=3,
+            min_class=-1,
+        )
         self.__look_back: int = look_back
         self.__look_ahead: int = look_ahead
 
@@ -19,12 +27,12 @@ class BfmmLabelTransform(LabelTransform):
         return self.__look_ahead
 
     def fit(self, df: pd.DataFrame):
-        df['bmin'] = df.close.rolling(self.look_back).min()
-        df['bmax'] = df.close.rolling(self.look_back).max()
-        df['fmin'] = df.close.rolling(self.look_ahead).min().shift(-self.look_ahead + 1)
-        df['fmax'] = df.close.rolling(self.look_ahead).max().shift(-self.look_ahead + 1)
+        df["bmin"] = df.close.rolling(self.look_back).min()
+        df["bmax"] = df.close.rolling(self.look_back).max()
+        df["fmin"] = df.close.rolling(self.look_ahead).min().shift(-self.look_ahead + 1)
+        df["fmax"] = df.close.rolling(self.look_ahead).max().shift(-self.look_ahead + 1)
 
-        df['label'] = np.where(df.bmin <= df.fmin, 1, np.where(df.fmax <= df.bmax, -1, 0))
+        df["label"] = np.where(df.bmin <= df.fmin, 1, np.where(df.fmax <= df.bmax, -1, 0))
         df = df.dropna()
 
         return df

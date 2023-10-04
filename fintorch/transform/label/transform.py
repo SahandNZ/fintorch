@@ -2,12 +2,13 @@ from abc import ABC
 
 import numpy as np
 import pandas as pd
+
 from fintorch.transform.transform import Transform
 
 
 class LabelTransform(Transform, ABC):
-    def __init__(self, name: str, num_classes: int, min_class: int):
-        super().__init__(name)
+    def __init__(self, name: str, short_name: str, description: str, num_classes: int, min_class: int):
+        super().__init__(name, short_name, description)
         self.__num_classes: int = num_classes
         self.__min_class: int = min_class
 

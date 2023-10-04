@@ -8,8 +8,8 @@ from fintorch.transform.transform import Transform
 
 
 class FeatureTransform(Transform, ABC):
-    def __init__(self, name: str, features: List[str], sequence_length: int):
-        super().__init__(name)
+    def __init__(self, name: str, short_name: str, description: str, features: List[str], sequence_length: int):
+        super().__init__(name, short_name, description)
         self.__features: List[str] = features
         self.__sequence_length: int = sequence_length
 
@@ -30,5 +30,3 @@ class FeatureTransform(Transform, ABC):
         feature = df.to_numpy()
 
         return feature
-
-
