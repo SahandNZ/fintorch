@@ -23,7 +23,7 @@ class BsfDataset(Dataset):
         bar = range(self.feature_transform.sequence_length, len(df))
         if self.show_progress_bar:
             bar = tqdm(list(bar))
-            bar.set_description_str(f"Creating ({self.name}) BSF dataset")
+            bar.set_description_str(f"Creating ({self.short_name}) BSF dataset")
 
         # create samples
         x, y = [], []
