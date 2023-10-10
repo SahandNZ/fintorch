@@ -8,7 +8,7 @@ from fintorch.transform.feature.transform import FeatureTransform
 from fintorch.transform.label.transform import LabelTransform
 
 
-class BsatfDataset(Dataset):
+class BatsfDataset(Dataset):
     def __init__(self, samples_count: int, feature_transform: FeatureTransform, label_transform: LabelTransform,
                  show_progress_bar: bool = False):
         super().__init__(samples_count=samples_count, feature_transform=feature_transform,
