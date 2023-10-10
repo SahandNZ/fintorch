@@ -15,17 +15,20 @@ from fintorch.model.model import Model
 
 
 class Trainer:
-    def __init__(self,
-                 epochs: int,
-                 cross_validation: CrossValidation,
-                 data_loader: DataLoader,
-                 criterion: Criterion,
-                 optimizer: torch.optim.Optimizer,
-                 scheduler: torch.optim.lr_scheduler.LRScheduler = None,
-                 gradient_clipping_threshold: float = None,
-                 print_logs: bool = False,
-                 show_progress_bar: bool = False,
-                 show_learning_curve_plot: bool = False):
+    def __init__(
+            self,
+            epochs: int,
+            cross_validation: CrossValidation,
+            data_loader: DataLoader,
+            criterion: Criterion,
+            optimizer: torch.optim.Optimizer,
+            scheduler: torch.optim.lr_scheduler.LRScheduler = None,
+            gradient_clipping_threshold: float = None,
+            print_logs: bool = False,
+            show_progress_bar: bool = False,
+            show_learning_curve_plot: bool = False,
+            print_classification_logs: bool = False,
+    ):
 
         self.__epochs: int = epochs
         self.__cross_validation: CrossValidation = cross_validation
@@ -37,6 +40,7 @@ class Trainer:
         self.__print_logs: bool = print_logs
         self.__show_progress_bar: bool = show_progress_bar
         self.__show_learning_curve_plot: bool = show_learning_curve_plot
+        self.__print_classification_logs: bool = print_classification_logs
 
         self.__optimizer_initial_state_dict: Dict = copy.deepcopy(self.__optimizer.state_dict())
         self.__scheduler_initial_state_dict: Dict = copy.deepcopy(self.__scheduler.state_dict())
@@ -84,6 +88,10 @@ class Trainer:
     @property
     def show_learning_curve_plot(self) -> bool:
         return self.__show_learning_curve_plot
+
+    @property
+    def print_classification_logs(self) -> bool:
+        return self.__print_classification_logs
 
     def reset(self, model: Model):
         model.reset()
@@ -198,5 +206,8 @@ class Trainer:
 
             if self.show_learning_curve_plot:
                 fold.show_learning_curve_plot()
+
+            if self.print_classification_logs:
+                fold.print_classification_logs()
 
         return folds

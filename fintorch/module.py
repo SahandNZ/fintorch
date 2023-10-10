@@ -3,10 +3,10 @@ import pickle
 from typing import List
 
 import numpy as np
-import pandas as pd
 import torch
 
 from fintorch.cross_validation.fold import Fold
+from fintorch.dataset.data import Data
 from fintorch.dataset.dataset import Dataset
 from fintorch.model.model import Model
 from fintorch.trainer import Trainer
@@ -45,14 +45,14 @@ class Module:
     def folds(self) -> List[Fold]:
         return self.__folds
 
-    def optimize(self, df: pd.DataFrame):
+    def optimize(self, data: Data):
         if self.dataset.x is None:
-            self.dataset.prepare(df)
+            self.dataset.prepare(data=data)
         self.__folds = self.trainer.optimize(dataset=self.dataset, model=self.model)
         self.model.load_state_dict(self.folds[-1].best_test_metrics.model_state_dict)
 
-    def predict(self, df: pd.DataFrame, timestamp: int) -> np.array:
-        x = self.dataset.preprocess(df=df, timestamp=timestamp)
+    def predict(self, data: Data, timestamp: int) -> np.array:
+        x = self.dataset.preprocess(data=data, timestamp=timestamp)
         with torch.no_grad():
             self.model.eval()
             y_hat = self.model(x).squeeze(0).cpu().numpy()

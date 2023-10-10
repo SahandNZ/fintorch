@@ -3,6 +3,7 @@ from abc import abstractmethod
 import pandas as pd
 import torch
 
+from fintorch.dataset.data import Data
 from fintorch.transform.feature.transform import FeatureTransform
 from fintorch.transform.label.transform import LabelTransform
 
@@ -66,11 +67,11 @@ class Dataset:
         self.__df: pd.DataFrame = df
 
     @abstractmethod
-    def prepare(self, df: pd.DataFrame):
+    def prepare(self, data: Data):
         raise NotImplemented()
 
     @abstractmethod
-    def preprocess(self, df: pd.DataFrame, timestamp: int):
+    def preprocess(self, data: Data, timestamp: int):
         raise NotImplemented()
 
     def __len__(self):

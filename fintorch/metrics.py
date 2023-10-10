@@ -38,7 +38,6 @@ class Metrics:
     @property
     def objective(self):
         with torch.no_grad():
-
             return self.__criterion(self.y_hat, self.y) if 0 < len(self.y) and 0 < len(self.y_hat) else None
 
     @property
