@@ -1,23 +1,23 @@
-import numpy as np
 import pandas as pd
 
 from fintorch.transform.label.transform import LabelTransform
 
 
 class UpDownLabelTransform(LabelTransform):
-    def __init__(self):
+    def __init__(self, symbol: str, time_frame: int):
         super().__init__(
             name="Up-Down",
             short_name="Up-Down",
             description="This labeling method compares the current close price with the current open price "
                         "to assign trend labels to the data.",
-            num_classes=3,
-            min_class=-1,
+            symbol=symbol,
+            time_frame=time_frame,
+            label2side={0: -1, 1: 1}
         )
 
-    def fit(self, df: pd.DataFrame):
+    def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         df["up"] = df.open < df.close
-        df["label"] = np.where(df.up, 1, -1)
+        df["label"] = df.up.astype(int)
         df = df.dropna()
 
         return df

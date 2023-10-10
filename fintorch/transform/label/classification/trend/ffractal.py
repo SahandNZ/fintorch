@@ -5,14 +5,15 @@ from fintorch.transform.label.transform import LabelTransform
 
 
 class FFractalLabelTransform(LabelTransform):
-    def __init__(self, length: int = 10):
+    def __init__(self, symbol: str, time_frame: int, length: int = 10):
         super().__init__(
             name="Forward Fractal",
             short_name="F-Fractal",
             description="This labeling method works by comparing the next fractal with the current close price "
                         "to assign trend labels to the data.",
-            num_classes=3,
-            min_class=-1,
+            symbol=symbol,
+            time_frame=time_frame,
+            label2side={0: -1, 1: 1}
         )
         self.__length: int = length
 
@@ -20,7 +21,7 @@ class FFractalLabelTransform(LabelTransform):
     def length(self) -> int:
         return self.__length
 
-    def fit(self, df: pd.DataFrame):
+    def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         df["bmin"] = df.close.rolling(self.length).min()
         df["bmax"] = df.close.rolling(self.length).max()
         df["fmin"] = df.close.rolling(self.length).min().shift(-self.length + 1)
@@ -33,7 +34,7 @@ class FFractalLabelTransform(LabelTransform):
         df["p"] = df.close[df.isp]
         df["f-pivot"] = df.p.shift(-1).bfill()
         df["up"] = df.close < df["f-pivot"]
-        df["label"] = np.where(df.up, 1, -1)
+        df["label"] = np.where(df.up, 1, 0)
         df = df.dropna()
 
         return df
