@@ -1,16 +1,20 @@
+from typing import List
+
 import pandas as pd
 
 from fintorch.transform.feature.transform import FeatureTransform
 
 
 class RollingMeanStdTrRocFeatureTransform(FeatureTransform):
-    def __init__(self, look_back: int, sequence_length: int):
+    def __init__(self, symbols: List[str], time_frames: List[int], look_back: int = 4, sequence_length: int = 32):
         super().__init__(
             name="Rolling Mean and Standard deviation of True Range and Rate Of Change",
             short_name="RMS TR-ROC",
             description="",
-            features=["mean-tr", "mean-roc", "std-tr", "std-roc"],
+            symbols=symbols,
+            time_frames=time_frames,
             sequence_length=sequence_length,
+            features=["mean-tr", "mean-roc", "std-tr", "std-roc"],
         )
         self.__look_back: int = look_back
 
@@ -18,7 +22,7 @@ class RollingMeanStdTrRocFeatureTransform(FeatureTransform):
     def look_back(self) -> int:
         return self.__look_back
 
-    def fit(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         df["tr"] = df.high / df.low - 1
         df["roc"] = df.close / df.open - 1
         df["mean-tr"] = df.tr.rolling(self.look_back).mean()
