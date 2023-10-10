@@ -1,42 +1,59 @@
-import argparse
+import itertools
 
+import numpy as np
 import torch
 from pyccx.constant.time_frame import TimeFrame
-from pyccx.data.local_data import LocalData
-from pyccx.interface.exchange import Exchange
-from pyccx.model.candle import Candle
+from pyccx.data.local_data import load_dataframe
 from torch import nn
 
 from fintorch.criterion.bce_loss import BCELoss
 from fintorch.cross_validation.cross_validation import CrossValidation
 from fintorch.data_loader.data_loader import DataLoader
 from fintorch.dataset.bsf_dataset import BsfDataset
+from fintorch.dataset.data import Data
 from fintorch.model.feed_forward.feed_forward import FeedForward
 from fintorch.trainer import Trainer
 from fintorch.transform.feature.rms_tr_roc import RollingMeanStdTrRocFeatureTransform
-from fintorch.transform.label.fmsma import FMsmaLabelTransform
+from fintorch.transform.label.classification.trend.fmsma import FMsmaLabelTransform
+
+
+def print_metrics_logs(fold):
+    for name, best_dataset_metrics in zip(["Dev set", "Test set"], [fold.best_dev_metrics, fold.best_test_metrics]):
+        print(name)
+        print("\t{:<20}{}".format("MAE", best_dataset_metrics.mae_loss))
+        print("\t{:<20}{}".format("MSE", best_dataset_metrics.mse_loss))
+        print("\t{:<20}{}".format("Loss", best_dataset_metrics.objective))
+        print("\t{:<20}{}\n".format("Accuracy", best_dataset_metrics.accuracy))
+        print("\t{:<20}{:<20}{:<20}{:<20}".format("Label \ Measure", "Precision", "Recall", "F1-score"))
+        for label in range(fold.dev_set.label_transform.num_classes):
+            p = best_dataset_metrics.precision(label=label)
+            r = best_dataset_metrics.recall(label=label)
+            f1 = best_dataset_metrics.f1(label=label)
+            print("\t{:<20}{:<20}{:<20}{:<20}".format(label, p, r, f1))
+        print()
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--symbol', action='store', type=str, required=False, default='BTC-USDT')
-    parser.add_argument('--time-frame', action='store', type=int, required=False, default=TimeFrame.HOUR1)
-    args = parser.parse_args()
+    symbols = ['BTC-USDT']
+    time_frames = [TimeFrame.MIN5, TimeFrame.MIN15]
 
-    # prepare dataframe
-    exchange = Exchange(exchange='binance')
-    local_data = LocalData(exchange=exchange)
-    candles = local_data.get_candles(symbol=args.symbol, time_frame=args.time_frame)
-    df = Candle.to_data_frame(candles)[-1000:]
+    # preparing data
+    data = Data()
+    for symbol, time_frame in itertools.product(symbols, time_frames):
+        df = load_dataframe(exchange='binance', symbol=symbol, time_frame=time_frame)
+        data[(symbol, time_frame)] = df
 
-    # prepare dataset
-    feature_transform = RollingMeanStdTrRocFeatureTransform(look_back=4, sequence_length=32)
-    label_transform = FMsmaLabelTransform()
-    dataset = BsfDataset(feature_transform=feature_transform, label_transform=label_transform)
-    dataset.prepare(df=df)
+    # creating dataset
+    feature_transform = RollingMeanStdTrRocFeatureTransform(symbols=symbols, time_frames=time_frames)
+    label_transform = FMsmaLabelTransform(symbol=symbols[0], time_frame=time_frames[0])
+    dataset = BsfDataset(samples_count=10000, feature_transform=feature_transform, label_transform=label_transform,
+                         show_progress_bar=True)
+    dataset.prepare(data=data)
 
     # prepare model
-    model = FeedForward(layers=[128, 2], dropout=0.5, activation_fn=nn.Softmax())
+    input_dim = np.array(list(dataset.x.shape)[1:]).prod()
+    output_dim = dataset.label_transform.num_classes
+    model = FeedForward(layers=[input_dim, output_dim], dropout=0.5, activation_fn=nn.Softmax())
 
     # prepare trainer
     cross_validation = CrossValidation(train_percentage=0.8, dev_percentage=0.1)
@@ -54,11 +71,12 @@ def main():
         optimizer=optimizer,
         scheduler=scheduler,
         print_logs=True,
-        show_progress_bar=True,
+        show_progress_bar=False,
         show_learning_curve_plot=True
     )
 
-    trainer.optimize(dataset=dataset, model=model)
+    folds = trainer.optimize(dataset=dataset, model=model)
+    print_metrics_logs(folds[-1])
 
 
 if __name__ == '__main__':

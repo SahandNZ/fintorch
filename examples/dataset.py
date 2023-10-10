@@ -1,30 +1,38 @@
-import argparse
+import itertools
 
 from pyccx.constant.time_frame import TimeFrame
-from pyccx.data.local_data import LocalData
+from pyccx.data.local_data import LocalData, load_dataframe
 from pyccx.interface.exchange import Exchange
-from pyccx.model.candle import Candle
 
 from fintorch.dataset.bsf_dataset import BsfDataset
+from fintorch.dataset.data import Data
 from fintorch.transform.feature.rms_tr_roc import RollingMeanStdTrRocFeatureTransform
 from fintorch.transform.label.fmsma import FMsmaLabelTransform
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--symbol', action='store', type=str, required=False, default='BTC-USDT')
-    parser.add_argument('--time-frame', action='store', type=int, required=False, default=TimeFrame.HOUR1)
-    args = parser.parse_args()
+    symbols = ['BTC-USDT', 'ETH-USDT']
+    time_frames = [TimeFrame.MIN5, TimeFrame.HOUR1, TimeFrame.HOUR4]
 
     exchange = Exchange(exchange='binance')
-    local_data = LocalData(exchange=exchange)
-    candles = local_data.download_candles(symbol=args.symbol, time_frame=args.time_frame)
-    df = Candle.to_data_frame(candles)[-10000:]
+    local_data = LocalData(exchange=exchange, candles_count=100000)
+    for symbol in symbols:
+        local_data.download_candles(symbol=symbol, time_frame=TimeFrame.MIN1)
 
-    feature_transform = RollingMeanStdTrRocFeatureTransform(look_back=4, sequence_length=32)
-    label_transform = FMsmaLabelTransform()
-    dataset = BsfDataset(feature_transform=feature_transform, label_transform=label_transform)
-    dataset.prepare(df=df)
+    # preparing data
+    data = Data()
+    for symbol, time_frame in itertools.product(symbols, time_frames):
+        df = load_dataframe(exchange='binance', symbol=symbol, time_frame=time_frame)
+        data[(symbol, time_frame)] = df
+
+    # creating dataset
+    feature_transform = RollingMeanStdTrRocFeatureTransform(symbols=symbols, time_frames=time_frames)
+    label_transform = FMsmaLabelTransform(symbol=symbols[0], time_frame=time_frames[1])
+    dataset = BsfDataset(samples_count=1000, feature_transform=feature_transform, label_transform=label_transform,
+                         show_progress_bar=True)
+    dataset.prepare(data=data)
+
+    a = 0
 
 
 if __name__ == '__main__':
