@@ -53,7 +53,7 @@ def main():
     # prepare model
     input_dim = np.array(list(dataset.x.shape)[1:]).prod()
     output_dim = dataset.label_transform.num_classes
-    model = FeedForward(layers=[input_dim, output_dim], dropout=0.5, activation_fn=nn.Softmax())
+    model = FeedForward(layers=[input_dim, output_dim], dropout=0.5, activation_fn=nn.Softmax(dim=-1))
 
     # prepare trainer
     cross_validation = CrossValidation(train_percentage=0.8, dev_percentage=0.1)

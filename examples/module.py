@@ -1,11 +1,9 @@
-import argparse
 import pickle
 
+import numpy as np
 import torch
+from fintorch.transform.label.fmsma import FMsmaLabelTransform
 from pyccx.constant.time_frame import TimeFrame
-from pyccx.data.local_data import LocalData
-from pyccx.interface.exchange import Exchange
-from pyccx.model.candle import Candle
 from torch import nn
 
 from fintorch.criterion.bce_loss import BCELoss
@@ -16,28 +14,29 @@ from fintorch.model.feed_forward.feed_forward import FeedForward
 from fintorch.module import Module
 from fintorch.trainer import Trainer
 from fintorch.transform.feature.rms_tr_roc import RollingMeanStdTrRocFeatureTransform
-from fintorch.transform.label.fmsma import FMsmaLabelTransform
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--symbol', action='store', type=str, required=False, default='BTC-USDT')
-    parser.add_argument('--time-frame', action='store', type=int, required=False, default=TimeFrame.HOUR1)
-    args = parser.parse_args()
+    symbols = ['BTC-USDT']
+    time_frames = [TimeFrame.MIN5, TimeFrame.MIN15]
 
-    # prepare dataframe
-    exchange = Exchange(exchange='binance')
-    local_data = LocalData(exchange=exchange)
-    candles = local_data.download_candles(symbol=args.symbol, time_frame=args.time_frame)
-    df = Candle.to_data_frame(candles)[-10000:]
+    # preparing data
+    data = Data()
+    for symbol, time_frame in itertools.product(symbols, time_frames):
+        df = load_dataframe(exchange='binance', symbol=symbol, time_frame=time_frame)
+        data[(symbol, time_frame)] = df
 
-    # prepare dataset
-    feature_transform = RollingMeanStdTrRocFeatureTransform(look_back=4, sequence_length=32)
-    label_transform = FMsmaLabelTransform()
-    dataset = BsfDataset(feature_transform=feature_transform, label_transform=label_transform, show_progress_bar=True)
+    # creating dataset
+    feature_transform = RollingMeanStdTrRocFeatureTransform(symbols=symbols, time_frames=time_frames)
+    label_transform = FMsmaLabelTransform(symbol=symbols[0], time_frame=time_frames[0])
+    dataset = BsfDataset(samples_count=10000, feature_transform=feature_transform, label_transform=label_transform,
+                         show_progress_bar=True)
+    dataset.prepare(data=data)
 
     # prepare model
-    model = FeedForward(layers=[128, 3], dropout=0.5, activation_fn=nn.Softmax(dim=1))
+    input_dim = np.array(list(dataset.x.shape)[1:]).prod()
+    output_dim = dataset.label_transform.num_classes
+    model = FeedForward(layers=[input_dim, output_dim], dropout=0.5, activation_fn=nn.Softmax(dim=-1))
 
     # prepare trainer
     cross_validation = CrossValidation(train_percentage=0.8, dev_percentage=0.1)
