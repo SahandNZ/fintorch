@@ -24,8 +24,9 @@ class FrocLabelTransform(LabelTransform):
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         df["roc"] = df.close / df.open - 1
         df["f-roc"] = df.roc.rolling(self.look_ahead).sum().shift(-self.look_ahead)
+        df = df.dropna()
+
         df["up"] = 0 < df["f-roc"]
         df["label"] = df.up.astype(int)
-        df = df.dropna()
 
         return df
