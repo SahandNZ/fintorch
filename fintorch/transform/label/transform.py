@@ -15,6 +15,7 @@ class LabelTransform(Transform, ABC):
         self.__symbol: str = symbol
         self.__time_frame: int = time_frame
         self.__label2side: Dict[int, int] = label2side
+        self.__side2label: Dict[int, int] = {v: k for k, v in label2side.items()}
 
     @property
     def symbol(self) -> str:
@@ -25,12 +26,8 @@ class LabelTransform(Transform, ABC):
         return self.__time_frame
 
     @property
-    def label2side(self) -> Dict[int, int]:
-        return self.__label2side
-
-    @property
     def num_classes(self) -> int:
-        return len(self.label2side) if self.label2side else None
+        return len(self.__label2side) if self.__label2side else None
 
     def fit(self, data: Data) -> pd.DataFrame:
         df = data[self.symbol, self.time_frame].copy()
@@ -60,4 +57,7 @@ class LabelTransform(Transform, ABC):
             return None
 
     def to_side(self, label: int):
-        return self.label2side[label]
+        return self.__label2side[label]
+
+    def to_label(self, side: int):
+        return self.__side2label[side]
