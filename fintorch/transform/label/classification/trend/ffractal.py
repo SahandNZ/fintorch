@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 from fintorch.transform.label.transform import LabelTransform
@@ -13,7 +12,7 @@ class FFractalLabelTransform(LabelTransform):
                         "to assign trend labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
-            label2side={0: -1, 1: 1}
+            num_classes=2
         )
         self.__length: int = length
 
@@ -34,7 +33,7 @@ class FFractalLabelTransform(LabelTransform):
         df["p"] = df.close[df.isp]
         df["f-pivot"] = df.p.shift(-1).bfill()
         df["up"] = df.close < df["f-pivot"]
-        df["label"] = np.where(df.up, 1, 0)
+        df["label"] = df.up.astype(int)
         df = df.dropna()
 
         return df

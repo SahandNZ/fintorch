@@ -12,7 +12,7 @@ class UpDownLabelTransform(LabelTransform):
                         "to assign trend labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
-            label2side={0: -1, 1: 1}
+            num_classes=3
         )
 
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:

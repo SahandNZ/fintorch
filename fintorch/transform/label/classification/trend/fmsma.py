@@ -13,7 +13,7 @@ class FMsmaLabelTransform(LabelTransform):
                         "with the forward values to assign trend labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
-            label2side={0: -1, 1: 1},
+            num_classes=2
         )
         self.__length: int = length
         self.__look_ahead: int = look_ahead

@@ -13,7 +13,7 @@ class NpmmLabelTransform(LabelTransform):
                         "to assign trend labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
-            label2side={0: -1, 1: 0, 2: 1}
+            num_classes=3
         )
         self.__length: int = length
 
@@ -29,7 +29,7 @@ class NpmmLabelTransform(LabelTransform):
 
         df["ispl"] = (df.close == df.fmin) & (df.close == df.bmin)
         df["isph"] = (df.close == df.fmax) & (df.close == df.bmax)
-        df["label"] = np.where(df.isph, 0, np.where(df.ispl, 2, 1))
+        df["label"] = np.where(df.isph, 0, np.where(df.ispl, 1, 2))
         df = df.dropna()
 
         return df

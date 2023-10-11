@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 from fintorch.transform.label.transform import LabelTransform
@@ -15,7 +14,7 @@ class FIchiLabelTransform(LabelTransform):
                         "labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
-            label2side={0: -1, 1: 1}
+            num_classes=2
         )
         self.__base_length: int = base_length
         self.__conversion_length: int = conversion_length
@@ -43,7 +42,7 @@ class FIchiLabelTransform(LabelTransform):
 
         df["up"] = df.conversion < df.base
         df["f-up"] = df.up.shift(-self.look_ahead)
-        df["label"] = np.where(df["f-up"], 1, 0)
+        df["label"] = df["f-up"].astype(int)
         df = df.dropna()
 
         return df

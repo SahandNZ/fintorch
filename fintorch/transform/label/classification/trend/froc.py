@@ -13,7 +13,7 @@ class FrocLabelTransform(LabelTransform):
                         'if the sum value is negative, it assigns a "down trend" label to the data.',
             symbol=symbol,
             time_frame=time_frame,
-            label2side={0: -1, 1: 1}
+            num_classes=2
         )
         self.__look_ahead: int = look_ahead
 

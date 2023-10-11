@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -10,12 +9,11 @@ from fintorch.transform.transform import Transform
 
 class LabelTransform(Transform, ABC):
     def __init__(self, name: str, short_name: str, description: str, symbol: str, time_frame: int,
-                 label2side: Dict[int, int] = None):
+                 num_classes: int = None):
         super().__init__(name, short_name, description)
         self.__symbol: str = symbol
         self.__time_frame: int = time_frame
-        self.__label2side: Dict[int, int] = label2side
-        self.__side2label: Dict[int, int] = {v: k for k, v in label2side.items()}
+        self.__num_classes: int = num_classes
 
     @property
     def symbol(self) -> str:
@@ -27,7 +25,7 @@ class LabelTransform(Transform, ABC):
 
     @property
     def num_classes(self) -> int:
-        return len(self.__label2side) if self.__label2side else None
+        return self.__num_classes
 
     def fit(self, data: Data) -> pd.DataFrame:
         df = data[self.symbol, self.time_frame].copy()
@@ -55,9 +53,3 @@ class LabelTransform(Transform, ABC):
 
         else:
             return None
-
-    def to_side(self, label: int):
-        return self.__label2side[label]
-
-    def to_label(self, side: int):
-        return self.__side2label[side]

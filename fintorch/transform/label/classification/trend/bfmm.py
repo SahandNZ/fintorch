@@ -14,7 +14,7 @@ class BfmmLabelTransform(LabelTransform):
                         "this method can detect sideways markets and assign a label value of 0 to them.",
             symbol=symbol,
             time_frame=time_frame,
-            label2side={0: -1, 1: 0, 2: 1}
+            num_classes=3
         )
         self.__look_back: int = look_back
         self.__look_ahead: int = look_ahead
@@ -35,7 +35,7 @@ class BfmmLabelTransform(LabelTransform):
 
         df["down"] = df.fmax <= df.bmax
         df["up"] = df.bmin <= df.fmin
-        df["label"] = np.where(df.down, 0, np.where(df.up, 2, 1))
+        df["label"] = np.where(df.down, 0, np.where(df.up, 1, 2))
         df = df.dropna()
 
         return df
