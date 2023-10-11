@@ -33,7 +33,7 @@ class LabelTransform(Transform, ABC):
         return len(self.label2side) if self.label2side else None
 
     def fit(self, data: Data) -> pd.DataFrame:
-        df = data[self.symbol, self.time_frame]
+        df = data[self.symbol, self.time_frame].copy()
         return self._fit(df=df)
 
     def transform(self, df: pd.DataFrame, timestamp: int) -> np.array:
