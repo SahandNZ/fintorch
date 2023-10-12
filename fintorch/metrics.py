@@ -7,13 +7,15 @@ from fintorch.criterion.criterion import Criterion
 
 
 class Metrics:
-    def __init__(self, criterion: Criterion, epoch: int = None, y: torch.Tensor = None, y_hat: torch.Tensor = None):
+    def __init__(self, criterion: Criterion, epoch: int = None, y: torch.Tensor = None, y_hat: torch.Tensor = None,
+                 probability: torch.Tensor = None):
         self.__epoch: int = epoch
         self.__model_state_dict: Dict = None
         self.__criterion: Criterion = criterion
 
         self.__y: torch.Tensor = y.detach().clone().cpu() if y is not None else torch.tensor([])
         self.__y_hat: torch.Tensor = y_hat.detach().clone().cpu() if y_hat is not None else torch.tensor([])
+        self.__probability: torch.Tensor = probability.detach().clone().cpu() if probability is not None else None
 
     @property
     def epoch(self) -> int:
@@ -34,6 +36,14 @@ class Metrics:
     @property
     def y_hat(self) -> torch.Tensor:
         return self.__y_hat
+
+    @property
+    def probability(self) -> torch.Tensor:
+        if self.__probability is not None:
+            return self.__probability
+        else:
+            probability, _ = torch.max(self.y_hat, dim=-1)
+            return probability
 
     @property
     def objective(self):
@@ -68,6 +78,13 @@ class Metrics:
             rate = round((self.actual == self.prediction).sum().item() / len(self.actual) * 100, 2)
             return rate if 0 < len(self.actual) else 0
 
+    @property
+    def probability_accuracy(self) -> float:
+        numerator = ((self.actual == self.prediction) * self.probability).sum().item()
+        denominator = self.prediction.sum().item()
+        denominator = denominator if 0 < denominator else denominator + 1
+        return round(numerator / denominator * 100, 2)
+
     def recall(self, label: int) -> float:
         numerator = ((label == self.actual) & (label == self.prediction)).sum().item()
         denominator = (label == self.actual).sum().item()
@@ -77,6 +94,12 @@ class Metrics:
     def precision(self, label: int) -> float:
         numerator = ((label == self.actual) & (label == self.prediction)).sum().item()
         denominator = (label == self.prediction).sum().item()
+        denominator = denominator if 0 < denominator else denominator + 1
+        return round(numerator / denominator * 100, 2)
+
+    def probability_precision(self, label: int) -> float:
+        numerator = (((label == self.actual) & (label == self.prediction)) * self.probability).sum().item()
+        denominator = ((label == self.prediction) * self.probability).sum().item()
         denominator = denominator if 0 < denominator else denominator + 1
         return round(numerator / denominator * 100, 2)
 
