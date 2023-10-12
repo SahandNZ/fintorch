@@ -40,14 +40,18 @@ class Fold:
     def print_classification_logs(self):
         for name, best_dataset_metrics in zip(["Dev set", "Test set"], [self.best_dev_metrics, self.best_test_metrics]):
             print(name)
-            print("\t{:<20}{}".format("Loss", best_dataset_metrics.objective))
-            print("\t{:<20}{}\n".format("Accuracy", best_dataset_metrics.accuracy))
-            print("\t{:<20}{:<20}{:<20}{:<20}".format("Label \\ Measure", "Precision", "Recall", "F1-score"))
+            print("\t{:<32}{}".format("Loss", best_dataset_metrics.objective))
+            print("\t{:<32}{}".format("Accuracy", best_dataset_metrics.accuracy))
+            print("\t{:<32}{}\n".format("Probability Accuracy", best_dataset_metrics.probability_accuracy))
+
+            print("\t{:<32}{:<16}{:<32}{:<16}{:<16}".format("Label \\ Measure", "Precision", "Probability Precision",
+                                                            "Recall", "F1-score"))
             for label in range(self.dev_set.label_transform.num_classes):
                 p = best_dataset_metrics.precision(label=label)
+                pp = best_dataset_metrics.f1(label=label)
                 r = best_dataset_metrics.recall(label=label)
                 f1 = best_dataset_metrics.f1(label=label)
-                print("\t{:<20}{:<20}{:<20}{:<20}".format(label, p, r, f1))
+                print("\t{:<32}{:<16}{:<32}{:<16}{:<16}".format(label, p, pp, r, f1))
             print()
 
     def show_learning_curve_plot(self):
