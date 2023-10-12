@@ -1,5 +1,5 @@
 from pyccx.constant.time_frame import TimeFrame
-from pyccx.data.local_data import load_dataframes_dict
+from pyccx.data.local import load_dataframes_dict
 
 from fintorch.dataset.bsf_dataset import BsfDataset
 from fintorch.dataset.data import Data

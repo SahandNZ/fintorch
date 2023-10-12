@@ -1,6 +1,6 @@
 import torch
 from pyccx.constant.time_frame import TimeFrame
-from pyccx.data.local_data import load_dataframes_dict
+from pyccx.data.local import load_dataframes_dict
 from torch import nn
 
 from fintorch.criterion.bce_loss import BCELoss

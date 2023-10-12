@@ -2,7 +2,7 @@ import pickle
 
 import torch
 from pyccx.constant.time_frame import TimeFrame
-from pyccx.data.local_data import load_dataframes_dict
+from pyccx.data.local import load_dataframes_dict
 from torch import nn
 
 from fintorch.criterion.bce_loss import BCELoss
@@ -64,7 +64,7 @@ def main():
 
     # store modules
     modules = [module]
-    with open(f'./data/pre-trained-dlm/{symbols[0]}/modules.pkl', 'wb+') as file:
+    with open(f'./data/pre-trained-dlm/data.pkl', 'wb+') as file:
         pickle.dump(modules, file)
 
 
