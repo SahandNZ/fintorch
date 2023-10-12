@@ -81,7 +81,7 @@ class Metrics:
     @property
     def probability_accuracy(self) -> float:
         numerator = ((self.actual == self.prediction) * self.probability).sum().item()
-        denominator = self.prediction.sum().item()
+        denominator = self.probability.sum().item()
         denominator = denominator if 0 < denominator else denominator + 1
         return round(numerator / denominator * 100, 2)
 
