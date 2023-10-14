@@ -9,8 +9,7 @@ class BfmmLabelTransform(LabelTransform):
             name="Backward Forward Min Max",
             short_name="BFMM",
             description="This labeling method works by comparing the Backward Min-Max series with "
-                        "the Forward Min-Max series to assign trend labels to the data.Additionally, "
-                        "this method can detect sideways markets and assign a label value of 0 to them.",
+                        "the Forward Min-Max series to assign trend labels to the data",
             symbol=symbol,
             time_frame=time_frame,
             num_classes=2
