@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 from fintorch.transform.label.transform import LabelTransform
@@ -14,7 +13,7 @@ class BfmmLabelTransform(LabelTransform):
                         "this method can detect sideways markets and assign a label value of 0 to them.",
             symbol=symbol,
             time_frame=time_frame,
-            num_classes=3
+            num_classes=2
         )
         self.__look_back: int = look_back
         self.__look_ahead: int = look_ahead
@@ -34,8 +33,7 @@ class BfmmLabelTransform(LabelTransform):
         df["fmax"] = df.close.rolling(self.look_ahead).max().shift(-self.look_ahead + 1)
         df = df.dropna()
 
-        df["down"] = df.fmax <= df.bmax
         df["up"] = df.bmin <= df.fmin
-        df["label"] = np.where(df.down, 0, np.where(df.up, 1, 2))
+        df["label"] = df.up.astype(int)
 
         return df
