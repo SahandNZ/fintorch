@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
     "numpy==1.26.0",
     "pandas==2.1.1",
-    "torch==2.0.1",
+    "torch==2.1.0",
     "pandas_ta==0.3.14b",
     "matplotlib==3.8.0"
 ]
