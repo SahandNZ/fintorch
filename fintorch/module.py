@@ -51,8 +51,8 @@ class Module:
         self.__folds = self.trainer.optimize(dataset=self.dataset, model=self.model)
         self.model.load_state_dict(self.folds[-1].best_test_metrics.model_state_dict)
 
-    def predict(self, data: Data, timestamps: int) -> Tuple[np.array, np.array]:
-        x, y = self.dataset.preprocess(data=data, timestamps=timestamps)
+    def predict(self, data: Data, timestamps: int, show_progress_bar: bool) -> Tuple[np.array, np.array]:
+        x, y = self.dataset.preprocess(data=data, timestamps=timestamps, show_progress_bar=show_progress_bar)
         with torch.no_grad():
             self.model.eval()
             y_hat = self.model(x).cpu().numpy()

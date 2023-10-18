@@ -72,8 +72,8 @@ def main():
     data = Data(df_dict)
 
     ldf = data[module.dataset.label_transform.symbol, module.dataset.label_transform.time_frame]
-    timestamps = ldf.index.to_list()[-48:]
-    y, y_hat = module.predict(data=data, timestamps=timestamps)
+    timestamps = ldf.index.to_list()[-16:]
+    y, y_hat = module.predict(data=data, timestamps=timestamps, show_progress_bar=True)
     print(y, y.shape)
     print(y_hat, y_hat.shape)
 

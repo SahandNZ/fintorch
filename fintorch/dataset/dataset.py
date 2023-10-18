@@ -72,7 +72,7 @@ class Dataset:
         raise NotImplemented()
 
     @abstractmethod
-    def preprocess(self, data: Data, timestamps: List[int]):
+    def preprocess(self, data: Data, timestamps: List[int], show_progress_bar: bool):
         raise NotImplemented()
 
     def __len__(self):

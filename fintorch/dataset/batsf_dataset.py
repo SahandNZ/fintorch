@@ -41,9 +41,11 @@ class BatsfDataset(Dataset):
         # set x, y, and df properties
         self.preset(x=x, y=y, df=df)
 
-    def preprocess(self, data: Data, timestamps: List[int]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def preprocess(self, data: Data, timestamps: List[int], show_progress_bar: bool) \
+            -> Tuple[torch.Tensor, torch.Tensor]:
         feature_data = self.feature_transform.fit(data=data)
-        features = self.feature_transform.transform(data=feature_data, timestamps=timestamps, show_progress_bar=False)
+        features = self.feature_transform.transform(data=feature_data, timestamps=timestamps,
+                                                    show_progress_bar=show_progress_bar)
 
         label_dataframe = self.label_transform.fit(data=data)
         labels = self.label_transform.transform(df=label_dataframe, timestamps=timestamps)

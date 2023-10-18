@@ -27,7 +27,7 @@ def main():
 
     # preprocess example
     timestamps = dataset.df.index.to_list()[-10:]
-    x, y = dataset.preprocess(data=data, timestamps=timestamps)
+    x, y = dataset.preprocess(data=data, timestamps=timestamps, show_progress_bar=True)
 
     print(x.shape)
     print(y.shape)
