@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fintorch"
-version = "0.1.19"
+version = "0.1.21"
 authors = [
   { name="Sahand Nazarzadeh", email="sahand.nazarzadeh@gmail.com" },
 ]
