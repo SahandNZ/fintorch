@@ -18,6 +18,6 @@ class UpDownLabelTransform(LabelTransform):
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         df["up"] = df.open < df.close
         df["label"] = df.up.astype(int)
-        df = df.dropna()
+        df.dropna(inplace=True)
 
         return df

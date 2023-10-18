@@ -30,9 +30,9 @@ class BfmmLabelTransform(LabelTransform):
         df["bmax"] = df.close.rolling(self.look_back).max()
         df["fmin"] = df.close.rolling(self.look_ahead).min().shift(-self.look_ahead + 1)
         df["fmax"] = df.close.rolling(self.look_ahead).max().shift(-self.look_ahead + 1)
+        df.dropna(inplace=True)
 
         df["up"] = df.bmin <= df.fmin
         df["label"] = df.up.astype(int)
-        df = df.dropna()
 
         return df

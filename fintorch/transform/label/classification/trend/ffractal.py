@@ -32,9 +32,9 @@ class FFractalLabelTransform(LabelTransform):
 
         df["p"] = df.close[df.isp]
         df["f-pivot"] = df.p.shift(-1).bfill()
+        df.dropna(inplace=True)
 
         df["up"] = df.close < df["f-pivot"]
         df["label"] = df.up.astype(int)
-        df = df.dropna()
 
         return df
