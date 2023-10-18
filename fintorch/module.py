@@ -1,6 +1,6 @@
 import os
 import pickle
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -51,13 +51,13 @@ class Module:
         self.__folds = self.trainer.optimize(dataset=self.dataset, model=self.model)
         self.model.load_state_dict(self.folds[-1].best_test_metrics.model_state_dict)
 
-    def predict(self, data: Data, timestamps: int) -> np.array:
+    def predict(self, data: Data, timestamps: int) -> Tuple[np.array, np.array]:
         x, y = self.dataset.preprocess(data=data, timestamps=timestamps)
         with torch.no_grad():
             self.model.eval()
             y_hat = self.model(x).cpu().numpy()
 
-        return y_hat, y
+        return y.numpy(), y_hat
 
     def save(self, root: str) -> str:
         # mute unnecessary data from dataset
