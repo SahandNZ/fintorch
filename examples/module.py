@@ -28,7 +28,7 @@ def main():
     # creating dataset
     feature_transform = RollingMeanStdTrRocFeatureTransform(symbols=symbols, time_frames=time_frames)
     label_transform = FMsmaLabelTransform(symbol=symbols[0], time_frame=time_frames[0])
-    dataset = BsfDataset(samples_count=10000, feature_transform=feature_transform, label_transform=label_transform,
+    dataset = BsfDataset(samples_count=1000, feature_transform=feature_transform, label_transform=label_transform,
                          show_progress_bar=True)
 
     # prepare model
@@ -66,6 +66,16 @@ def main():
     modules = [module]
     with open(f'./data/pre-trained-dlm/data.pkl', 'wb+') as file:
         pickle.dump(modules, file)
+
+    # make prediction
+    df_dict = load_dataframes_dict(exchange='binance', symbols=symbols, time_frames=time_frames, update=True)
+    data = Data(df_dict)
+
+    ldf = data[module.dataset.label_transform.symbol, module.dataset.label_transform.time_frame]
+    timestamps = ldf.index.to_list()[-48:]
+    y, y_hat = module.predict(data=data, timestamps=timestamps)
+    print(y, y.shape)
+    print(y_hat, y_hat.shape)
 
 
 if __name__ == '__main__':

@@ -39,10 +39,10 @@ class FIchiLabelTransform(LabelTransform):
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         df["base"] = self.donchian(df, length=self.base_length)
         df["conversion"] = self.donchian(df, length=self.conversion_length)
+
         df["up"] = df.conversion < df.base
         df["f-up"] = df.up.shift(-self.look_ahead)
-        df = df.dropna()
-
         df["label"] = df["f-up"].astype(int)
+        df = df.dropna()
 
         return df

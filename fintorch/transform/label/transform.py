@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -31,25 +32,31 @@ class LabelTransform(Transform, ABC):
         df = data[self.symbol, self.time_frame].copy()
         return self._fit(df=df)
 
-    def transform(self, df: pd.DataFrame, timestamp: int) -> np.array:
-        return self._transform(df=df, timestamp=timestamp)
+    def transform(self, df: pd.DataFrame, timestamps: List[int]) -> List[np.array]:
+        labels = []
+        for timestamp in timestamps:
+            label = self._transform(df=df, timestamp=timestamp)
+            labels.append(label)
+        return labels
 
     @abstractmethod
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError()
 
-    def _transform(self, df: pd.DataFrame, timestamp: int) -> np.array:
-        label = df[df.index.to_series() == timestamp].label
-        if 0 < len(label):
+    def _transform(self, df: pd.DataFrame, timestamp: List[int]) -> np.array:
+        if timestamp in df.index:
+            label = df.loc[timestamp].label
             # regression
             if self.num_classes is None:
-                return label
+                return label.to_numpy()
 
             # classification
             else:
                 one_hot = np.zeros(self.num_classes)
                 one_hot[label] = 1
                 return one_hot
-
         else:
-            return None
+            if self.num_classes is None:
+                return np.nan
+            else:
+                return [np.nan] * self.num_classes

@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import List
 
 import pandas as pd
 import torch
@@ -71,7 +72,7 @@ class Dataset:
         raise NotImplemented()
 
     @abstractmethod
-    def preprocess(self, data: Data, timestamp: int):
+    def preprocess(self, data: Data, timestamps: List[int]):
         raise NotImplemented()
 
     def __len__(self):

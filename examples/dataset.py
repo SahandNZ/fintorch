@@ -4,7 +4,7 @@ from pyccx.data.local import load_dataframes_dict
 from fintorch.dataset.bsf_dataset import BsfDataset
 from fintorch.dataset.data import Data
 from fintorch.transform.feature.rms_tr_roc import RollingMeanStdTrRocFeatureTransform
-from fintorch.transform.label.classification.trend.fmsma import FMsmaLabelTransform
+from fintorch.transform.label.classification.trend.bfmm import BfmmLabelTransform
 
 
 def main():
@@ -17,10 +17,20 @@ def main():
 
     # creating dataset
     feature_transform = RollingMeanStdTrRocFeatureTransform(symbols=symbols, time_frames=time_frames)
-    label_transform = FMsmaLabelTransform(symbol=symbols[0], time_frame=time_frames[1])
+    label_transform = BfmmLabelTransform(symbol=symbols[0], time_frame=time_frames[1])
     dataset = BsfDataset(samples_count=1000, feature_transform=feature_transform, label_transform=label_transform,
                          show_progress_bar=True)
     dataset.prepare(data=data)
+    print(dataset.x.shape)
+    print(dataset.x.shape)
+    print()
+
+    # preprocess example
+    timestamps = dataset.df.index.to_list()[-10:]
+    x, y = dataset.preprocess(data=data, timestamps=timestamps)
+
+    print(x.shape)
+    print(y.shape)
 
 
 if __name__ == '__main__':

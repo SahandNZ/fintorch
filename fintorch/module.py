@@ -51,13 +51,13 @@ class Module:
         self.__folds = self.trainer.optimize(dataset=self.dataset, model=self.model)
         self.model.load_state_dict(self.folds[-1].best_test_metrics.model_state_dict)
 
-    def predict(self, data: Data, timestamp: int) -> np.array:
-        x = self.dataset.preprocess(data=data, timestamp=timestamp)
+    def predict(self, data: Data, timestamps: int) -> np.array:
+        x, y = self.dataset.preprocess(data=data, timestamps=timestamps)
         with torch.no_grad():
             self.model.eval()
-            y_hat = self.model(x).squeeze(0).cpu().numpy()
+            y_hat = self.model(x).cpu().numpy()
 
-        return y_hat
+        return y_hat, y
 
     def save(self, root: str) -> str:
         # mute unnecessary data from dataset
