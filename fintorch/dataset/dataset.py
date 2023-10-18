@@ -100,3 +100,10 @@ class Dataset:
 
     def __str__(self) -> str:
         return self.name
+
+    def __getstate__(self):
+        dct = dict(self.__dict__)
+        dct['_Dataset__x'] = None
+        dct['_Dataset__y'] = None
+        dct['_Dataset__df'] = None
+        return dct
