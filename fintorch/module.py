@@ -4,7 +4,7 @@ from typing import List
 
 import numpy as np
 import torch
-from fintorch.dataset.data import Data
+from fintorch.data import Data
 
 from fintorch.cross_validation.fold import Fold
 from fintorch.dataset.dataset import Dataset

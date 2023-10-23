@@ -3,7 +3,7 @@ from typing import List
 import torch
 
 from fintorch.dataset.batsf_dataset import BatsfDataset
-from fintorch.dataset.data import Data
+from fintorch.data import Data
 from fintorch.transform.feature.transform import FeatureTransform
 from fintorch.transform.label.transform import LabelTransform
 

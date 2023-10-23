@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 import torch
 
-from fintorch.dataset.data import Data
+from fintorch.data import Data
 from fintorch.dataset.dataset import Dataset
 from fintorch.transform.feature.transform import FeatureTransform
 from fintorch.transform.label.transform import LabelTransform

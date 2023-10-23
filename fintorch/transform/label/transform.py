@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from fintorch.dataset.data import Data
+from fintorch.data import Data
 from fintorch.plot import draw_ohlcv_plot
 from fintorch.transform.transform import Transform
 

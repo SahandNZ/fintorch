@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 
-from fintorch.dataset.data import Data
+from fintorch.data import Data
 from fintorch.transform.transform import Transform
 
 
