@@ -41,9 +41,16 @@ class LabelTransform(Transform, ABC):
             labels.append(label)
         return labels
 
-    def draw_ohlcv_plot(self, data: Data, volume: bool = False) -> plt.Figure:
-        df = data[self.symbol, self.time_frame].copy()
-        ldf = self.fit(data=data)
+    def draw_ohlcv_plot(self, df: pd.DataFrame = None, data: Data = None, volume: bool = False) -> plt.Figure:
+        if df is not None:
+            df = df.copy()
+            ldf = self._fit(df=df.copy())
+        elif data is not None:
+            df = data[self.symbol, self.time_frame].copy()
+            ldf = self.fit(data=data)
+        else:
+            raise ValueError("Either df or data must be passed.")
+
         for col in ldf.columns:
             if col not in df.columns:
                 df[col] = ldf[col]
