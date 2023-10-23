@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
 import torch
@@ -41,15 +41,10 @@ class BatsfDataset(Dataset):
         # set x, y, and df properties
         self.preset(x=x, y=y, df=df)
 
-    def preprocess(self, data: Data, timestamps: List[int], show_progress_bar: bool) \
-            -> Tuple[torch.Tensor, torch.Tensor]:
+    def preprocess(self, data: Data, timestamps: List[int], show_progress_bar: bool) -> torch.Tensor:
         feature_data = self.feature_transform.fit(data=data)
         features = self.feature_transform.transform(data=feature_data, timestamps=timestamps,
                                                     show_progress_bar=show_progress_bar)
 
-        label_dataframe = self.label_transform.fit(data=data)
-        labels = self.label_transform.transform(df=label_dataframe, timestamps=timestamps)
-
         x = torch.from_numpy(np.array(features)).float()
-        y = torch.from_numpy(np.array(labels)).float()
-        return x, y
+        return x

@@ -1,12 +1,12 @@
 import os
 import pickle
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
 import torch
+from fintorch.dataset.data import Data
 
 from fintorch.cross_validation.fold import Fold
-from fintorch.dataset.data import Data
 from fintorch.dataset.dataset import Dataset
 from fintorch.model.model import Model
 from fintorch.trainer import Trainer
@@ -51,30 +51,21 @@ class Module:
         self.__folds = self.trainer.optimize(dataset=self.dataset, model=self.model)
         self.model.load_state_dict(self.folds[-1].best_test_metrics.model_state_dict)
 
-    def predict(self, data: Data, timestamps: int, show_progress_bar: bool) -> Tuple[np.array, np.array]:
-        x, y = self.dataset.preprocess(data=data, timestamps=timestamps, show_progress_bar=show_progress_bar)
+    def predict(self, data: Data, timestamps: int, show_progress_bar: bool) -> np.array:
+        x = self.dataset.preprocess(data=data, timestamps=timestamps, show_progress_bar=show_progress_bar)
         with torch.no_grad():
             self.model.eval()
             y_hat = self.model(x).cpu().numpy()
 
-        return y.numpy(), y_hat
+        return y_hat
 
     def save(self, root: str) -> str:
-        # mute unnecessary data from dataset
-        x = self.dataset.x
-        y = self.dataset.y
-        df = self.dataset.df
-        self.dataset.reset()
-
-        # save module
         if not os.path.exists(root):
             create_directory(root)
         path = os.path.join(root, f'{self.name}.pkl')
         with open(path, 'wb+') as file:
             pickle.dump(self, file)
 
-        # reset muted data to dataset
-        self.dataset.preset(x=x, y=y, df=df)
         return path
 
     @staticmethod

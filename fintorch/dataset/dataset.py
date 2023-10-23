@@ -3,8 +3,8 @@ from typing import List
 
 import pandas as pd
 import torch
-
 from fintorch.dataset.data import Data
+
 from fintorch.transform.feature.transform import FeatureTransform
 from fintorch.transform.label.transform import LabelTransform
 
@@ -72,7 +72,7 @@ class Dataset:
         raise NotImplemented()
 
     @abstractmethod
-    def preprocess(self, data: Data, timestamps: List[int], show_progress_bar: bool):
+    def preprocess(self, data: Data, timestamps: List[int], show_progress_bar: bool) -> torch.Tensor:
         raise NotImplemented()
 
     def __len__(self):

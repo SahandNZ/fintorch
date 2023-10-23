@@ -22,8 +22,8 @@ class BsfDataset(BatsfDataset):
         self.preset(x=x, y=self.y, df=self.df)
 
     def preprocess(self, data: Data, timestamps: List[int], show_progress_bar: bool) -> torch.Tensor:
-        x, y = super().preprocess(data=data, timestamps=timestamps, show_progress_bar=show_progress_bar)
+        x = super().preprocess(data=data, timestamps=timestamps, show_progress_bar=show_progress_bar)
         x = x.permute(0, 3, 1, 2, 4)
         x = torch.flatten(x, start_dim=2)
 
-        return x, y
+        return x
