@@ -1,4 +1,5 @@
 import pandas as pd
+from matplotlib import pyplot as plt
 
 from fintorch.transform.label.transform import LabelTransform
 
@@ -21,3 +22,6 @@ class UpDownLabelTransform(LabelTransform):
         df.dropna(inplace=True)
 
         return df
+
+    def _draw_lines(self, df: pd.DataFrame, ohlcv_ax: plt.Axes, volume_ax: plt.Axes) -> pd.DataFrame:
+        pass

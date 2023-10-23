@@ -1,15 +1,17 @@
 import pandas as pd
+from matplotlib import pyplot as plt
 
+from fintorch.plot import draw_trend_rectangles
 from fintorch.transform.label.transform import LabelTransform
 
 
-class BfmmLabelTransform(LabelTransform):
+class BfmLabelTransform(LabelTransform):
     def __init__(self, symbol: str, time_frame: int, look_back: int = 10, look_ahead: int = 10):
         super().__init__(
-            name="Backward Forward Min Max",
-            short_name="BFMM",
-            description="This labeling method works by comparing the Backward Min-Max series with "
-                        "the Forward Min-Max series to assign trend labels to the data",
+            name="Backward Forward Min",
+            short_name="BFM",
+            description="This labeling method works by comparing the Backward Min series with "
+                        "the Forward Min series to assign trend labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
             num_classes=2
@@ -27,12 +29,16 @@ class BfmmLabelTransform(LabelTransform):
 
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         df["bmin"] = df.close.rolling(self.look_back).min()
-        df["bmax"] = df.close.rolling(self.look_back).max()
         df["fmin"] = df.close.rolling(self.look_ahead).min().shift(-self.look_ahead + 1)
-        df["fmax"] = df.close.rolling(self.look_ahead).max().shift(-self.look_ahead + 1)
         df.dropna(inplace=True)
 
         df["up"] = df.bmin <= df.fmin
         df["label"] = df.up.astype(int)
 
         return df
+
+    def _draw_lines(self, df: pd.DataFrame, ohlcv_ax: plt.Axes, volume_ax: plt.Axes) -> pd.DataFrame:
+        ohlcv_ax.plot(df.bmin, label="Backward Min")
+        ohlcv_ax.plot(df.fmin, label="Forward Min")
+        draw_trend_rectangles(ax=ohlcv_ax, df=df)
+        ohlcv_ax.legend()

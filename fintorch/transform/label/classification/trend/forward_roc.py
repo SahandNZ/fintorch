@@ -1,9 +1,11 @@
 import pandas as pd
+from matplotlib import pyplot as plt
 
+from fintorch.plot import draw_trend_rectangles
 from fintorch.transform.label.transform import LabelTransform
 
 
-class FrocLabelTransform(LabelTransform):
+class ForwardRocLabelTransform(LabelTransform):
     def __init__(self, symbol: str, time_frame: int, look_ahead: int = 12):
         super().__init__(
             name="Forward Rate Of Change",
@@ -30,3 +32,7 @@ class FrocLabelTransform(LabelTransform):
         df["label"] = df.up.astype(int)
 
         return df
+
+    def _draw_lines(self, df: pd.DataFrame, ohlcv_ax: plt.Axes, volume_ax: plt.Axes) -> pd.DataFrame:
+        draw_trend_rectangles(ax=ohlcv_ax, df=df)
+        ohlcv_ax.legend()

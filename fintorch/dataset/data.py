@@ -17,6 +17,20 @@ class Data:
     def time_frames(self) -> List[str]:
         return list(self.__time_frames)
 
+    def crop(self, start_timestamp: int = None, stop_timestamp: int = None):
+        if start_timestamp is None and stop_timestamp is None:
+            raise ValueError("Either start_timestamp or stop_timestamp must be passed.")
+
+        data = Data()
+        for key, df in self.__dict.items():
+            if start_timestamp is not None:
+                df = df[start_timestamp <= df.index]
+            if stop_timestamp is not None:
+                df = df[df.index < stop_timestamp]
+            data[key] = df
+
+        return data
+
     def __setitem__(self, key: Tuple[str, int], value):
         self.__symbols.add(key[0])
         self.__time_frames.add(key[1])

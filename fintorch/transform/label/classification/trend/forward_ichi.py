@@ -1,9 +1,11 @@
 import pandas as pd
+from matplotlib import pyplot as plt
 
+from fintorch.plot import draw_trend_rectangles
 from fintorch.transform.label.transform import LabelTransform
 
 
-class FIchiLabelTransform(LabelTransform):
+class ForwardIchiLabelTransform(LabelTransform):
     def __init__(self, symbol: str, time_frame: int, base_length: int = 5, conversion_length: int = 20,
                  look_ahead: int = 12):
         super().__init__(
@@ -47,3 +49,9 @@ class FIchiLabelTransform(LabelTransform):
         df["label"] = df["f-up"].astype(int)
 
         return df
+
+    def _draw_lines(self, df: pd.DataFrame, ohlcv_ax: plt.Axes, volume_ax: plt.Axes) -> pd.DataFrame:
+        ohlcv_ax.plot(df.base, label="Base")
+        ohlcv_ax.plot(df.conversion, label="Conversion")
+        draw_trend_rectangles(ax=ohlcv_ax, df=df)
+        ohlcv_ax.legend()

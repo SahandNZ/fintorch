@@ -1,12 +1,14 @@
 import pandas as pd
+from matplotlib import pyplot as plt
 
+from fintorch.plot import draw_trend_rectangles
 from fintorch.transform.label.transform import LabelTransform
 
 
-class FMsmaLabelTransform(LabelTransform):
+class ForwardMsmaLabelTransform(LabelTransform):
     def __init__(self, symbol: str, time_frame: int, length: int = 51, look_ahead: int = 12):
         super().__init__(
-            name="Forwad Middle Simple Moving Average",
+            name="Forward Middle Simple Moving Average",
             short_name="F-MSMA",
             description="This labeling method works by smoothing the close price using a lookahead and "
                         "the Simple Moving Average (SMA) method. It then compares the current smoothed close price "
@@ -35,3 +37,8 @@ class FMsmaLabelTransform(LabelTransform):
         df["label"] = df.up.astype(int)
 
         return df
+
+    def _draw_lines(self, df: pd.DataFrame, ohlcv_ax: plt.Axes, volume_ax: plt.Axes) -> pd.DataFrame:
+        ohlcv_ax.plot(df.msma, label="Middle SMA")
+        draw_trend_rectangles(ax=ohlcv_ax, df=df)
+        ohlcv_ax.legend()

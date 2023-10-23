@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import List
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from fintorch.dataset.data import Data
+from fintorch.plot import draw_ohlcv_plot
 from fintorch.transform.transform import Transform
 
 
@@ -39,6 +41,19 @@ class LabelTransform(Transform, ABC):
             labels.append(label)
         return labels
 
+    def draw_ohlcv_plot(self, data: Data, volume: bool = False) -> plt.Figure:
+        df = data[self.symbol, self.time_frame].copy()
+        ldf = self.fit(data=data)
+        for col in ldf.columns:
+            if col not in df.columns:
+                df[col] = ldf[col]
+        df = df.reset_index()
+
+        fig, ohlcv_ax, volume_ax = draw_ohlcv_plot(df=df, volume=volume)
+        self._draw_lines(df=df, ohlcv_ax=ohlcv_ax, volume_ax=volume_ax)
+
+        return fig
+
     @abstractmethod
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError()
@@ -60,3 +75,7 @@ class LabelTransform(Transform, ABC):
                 return np.nan
             else:
                 return [np.nan] * self.num_classes
+
+    @abstractmethod
+    def _draw_lines(self, df: pd.DataFrame, ohlcv_ax: plt.Axes, volume_ax: plt.Axes) -> pd.DataFrame:
+        raise NotImplementedError()
