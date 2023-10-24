@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from pyccx.constant.time_frame import TimeFrame
 from pyccx.data.local import load_dataframes_dict
 
-from fintorch.dataset.data import Data
+from fintorch.data import Data
 from fintorch.transform.label.classification.trend.forward_ichi import ForwardIchiLabelTransform
 
 

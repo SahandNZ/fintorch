@@ -9,12 +9,12 @@ from fintorch.criterion.bce_loss import BCELoss
 from fintorch.cross_validation.cross_validation import CrossValidation
 from fintorch.data_loader.data_loader import DataLoader
 from fintorch.dataset.bsf_dataset import BsfDataset
-from fintorch.dataset.data import Data
+from fintorch.data import Data
 from fintorch.model.feed_forward.feed_forward import FeedForward
 from fintorch.module import Module
 from fintorch.trainer import Trainer
 from fintorch.transform.feature.rms_tr_roc import RollingMeanStdTrRocFeatureTransform
-from fintorch.transform.label.classification.trend.fmsma import FMsmaLabelTransform
+from fintorch.transform.label.classification.trend.forward_msma import ForwardMsmaLabelTransform
 
 
 def main():
@@ -27,7 +27,7 @@ def main():
 
     # creating dataset
     feature_transform = RollingMeanStdTrRocFeatureTransform(symbols=symbols, time_frames=time_frames)
-    label_transform = FMsmaLabelTransform(symbol=symbols[0], time_frame=time_frames[0])
+    label_transform = ForwardMsmaLabelTransform(symbol=symbols[0], time_frame=time_frames[0])
     dataset = BsfDataset(samples_count=1000, feature_transform=feature_transform, label_transform=label_transform,
                          show_progress_bar=True)
 
@@ -73,8 +73,7 @@ def main():
 
     ldf = data[module.dataset.label_transform.symbol, module.dataset.label_transform.time_frame]
     timestamps = ldf.index.to_list()[-16:]
-    y, y_hat = module.predict(data=data, timestamps=timestamps, show_progress_bar=True)
-    print(y, y.shape)
+    y_hat = module.predict(data=data, timestamps=timestamps, show_progress_bar=True)
     print(y_hat, y_hat.shape)
 
 
