@@ -46,7 +46,7 @@ class Module:
         return self.__folds
 
     def optimize(self, data: Data):
-        if self.dataset.x is None:
+        if self.dataset.need_preparation:
             self.dataset.prepare(data=data)
         self.__folds = self.trainer.optimize(dataset=self.dataset, model=self.model)
         self.model.load_state_dict(self.folds[-1].best_test_metrics.model_state_dict)

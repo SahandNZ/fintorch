@@ -134,3 +134,11 @@ class Metrics:
 
     def __lt__(self, other):
         return self.__criterion.less_than(self.objective, other.objective)
+
+    def __getstate__(self):
+        dct = dict(self.__dict__)
+        del dct['_Metrics__model_state_dict']
+        del dct['_Metrics__y']
+        del dct['_Metrics__y_hat']
+        del dct['_Metrics__probability']
+        return dct

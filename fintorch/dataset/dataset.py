@@ -3,8 +3,8 @@ from typing import List
 
 import pandas as pd
 import torch
-from fintorch.data import Data
 
+from fintorch.data import Data
 from fintorch.transform.feature.transform import FeatureTransform
 from fintorch.transform.label.transform import LabelTransform
 
@@ -56,6 +56,10 @@ class Dataset:
     @property
     def df(self) -> pd.DataFrame:
         return self.__df
+
+    @property
+    def need_preparation(self) -> bool:
+        return self.x is None
 
     def reset(self):
         self.__x: torch.Tensor = None
