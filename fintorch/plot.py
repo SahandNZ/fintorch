@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import matplotlib.pyplot as plt
 import mplfinance as mpf
 import numpy as np
@@ -5,11 +7,12 @@ import pandas as pd
 from matplotlib.patches import Rectangle
 
 
-def draw_ohlcv_plot(df: pd.DataFrame, volume: bool = True, warn_too_much_data: int = 1000):
+def draw_ohlcv_plot(df: pd.DataFrame, volume: bool = True, figsize: Tuple[float, float] = (20, 10),
+                    warn_too_much_data: int = 1000):
     pdf = df.copy()
     pdf.index = pd.DatetimeIndex(pdf['datetime'])
     pdf = pdf[['open', 'high', 'low', 'close', 'volume']]
-    fig, axs = mpf.plot(pdf, type='candle', volume=volume, figsize=(20, 10), style='binance', returnfig=True,
+    fig, axs = mpf.plot(pdf, type='candle', volume=volume, figsize=figsize, style='binance', returnfig=True,
                         warn_too_much_data=warn_too_much_data)
     ohlc_ax = axs[0]
     volume_ax = axs[1]

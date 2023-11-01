@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -46,14 +46,15 @@ class LabelTransform(Transform, ABC):
             labels.append(label)
         return labels
 
-    def draw_ohlcv_plot(self, df: pd.DataFrame, prediction: np.array = None, volume: bool = False) -> plt.Figure:
+    def draw_ohlcv_plot(self, df: pd.DataFrame, prediction: np.array = None, volume: bool = False,
+                        figsize: Tuple[float, float] = (20, 10)) -> plt.Figure:
         df = df.copy()
         ldf = self._fit(df=df.copy()).drop(columns=df.columns)
         df = df.join(other=ldf, how="left")
         df["prediction"] = prediction if prediction is not None else np.nan
 
         df = df.reset_index()
-        fig, ohlcv_ax, volume_ax = draw_ohlcv_plot(df=df, volume=volume)
+        fig, ohlcv_ax, volume_ax = draw_ohlcv_plot(df=df, volume=volume, figsize=figsize)
         self._draw_lines(df=df, ohlcv_ax=ohlcv_ax, volume_ax=volume_ax)
 
         return fig
