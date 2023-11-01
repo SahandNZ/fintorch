@@ -3,9 +3,10 @@ from fintorch.cross_validation.fold import Fold
 
 
 class SlidingWindowCrossValidator(CrossValidation):
-    def __init__(self, window_size: int, train_percentage: float, dev_percentage: float):
+    def __init__(self, window_size: int, train_percentage: float, dev_percentage: float, window_step: int = None):
         super().__init__(train_percentage, dev_percentage)
         self.__window_size: int = window_size
+        self.__window_step: int = window_step
 
         self.__train_length: int = int(self.__window_size * self.train_percentage)
         self.__dev_length: int = int(self.__window_size * self.dev_percentage)
@@ -13,10 +14,17 @@ class SlidingWindowCrossValidator(CrossValidation):
 
         self._index: int = None
         self.__fold_count: int = None
+        self.__start_index: int = None
 
     @property
     def window_size(self) -> int:
         return self.__window_size
+
+    @property
+    def window_step(self) -> int:
+        if self.__window_step is None:
+            return self.__test_length
+        return self.__window_step
 
     @property
     def train_length(self) -> int:
@@ -38,7 +46,8 @@ class SlidingWindowCrossValidator(CrossValidation):
 
     def __iter__(self):
         self._index = -1
-        self.__fold_count = int(len(self.dataset) // self.window_size)
+        self.__fold_count = (len(self.dataset) - self.window_size) // self.window_step + 1
+        self.__start_index = len(self.dataset) - self.window_size - (self.fold_count - 1) * self.window_step
 
         if self.fold_count < 1:
             raise Exception("Dataset must have at least {} samples.")
@@ -48,7 +57,7 @@ class SlidingWindowCrossValidator(CrossValidation):
     def __next__(self) -> Fold:
         self._index += 1
         if self.index < self.fold_count:
-            train_start_index = self.index * self.window_size
+            train_start_index = self.__start_index + self.index * self.window_step
             train_stop_index = train_start_index + self.train_length
             dev_stop_index = train_stop_index + self.dev_length
             test_stop_index = dev_stop_index + self.test_length
