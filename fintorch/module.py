@@ -4,9 +4,9 @@ from typing import List
 
 import numpy as np
 import torch
-from fintorch.data import Data
 
 from fintorch.cross_validation.fold import Fold
+from fintorch.data import Data
 from fintorch.dataset.dataset import Dataset
 from fintorch.model.model import Model
 from fintorch.trainer import Trainer
@@ -51,7 +51,7 @@ class Module:
         self.__folds = self.trainer.optimize(dataset=self.dataset, model=self.model)
         self.model.load_state_dict(self.folds[-1].best_test_metrics.model_state_dict)
 
-    def predict(self, data: Data, timestamps: int, show_progress_bar: bool) -> np.array:
+    def predict(self, data: Data, timestamps: List[int], show_progress_bar: bool) -> np.array:
         x = self.dataset.preprocess(data=data, timestamps=timestamps, show_progress_bar=show_progress_bar)
         with torch.no_grad():
             self.model.eval()
