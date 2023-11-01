@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from fintorch.plot import draw_trend_rectangles
+from fintorch.plot import draw_trend
 from fintorch.transform.label.transform import LabelTransform
 
 
@@ -46,5 +46,5 @@ class NextFractalLabelTransform(LabelTransform):
         nf = df["next-fractal"]
         nf_lines = np.where(nf == nf.shift(1), nf, np.nan)
         ohlcv_ax.plot(nf_lines, label="Next Fractal")
-        draw_trend_rectangles(ax=ohlcv_ax, df=df)
+        draw_trend(ax=ohlcv_ax, df=df)
         ohlcv_ax.legend()

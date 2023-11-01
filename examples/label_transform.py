@@ -27,8 +27,7 @@ def main():
     timestamps = [label_dataframe.index.to_list()[-1], current_open_timestamp]
     labels = label_transform.transform(df=label_dataframe, timestamps=timestamps)
 
-    print(labels)
-
+    # draw ohlcv plot
     fig = label_transform.draw_ohlcv_plot(data=data)
     plt.show()
 

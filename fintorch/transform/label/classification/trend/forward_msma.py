@@ -1,7 +1,7 @@
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from fintorch.plot import draw_trend_rectangles
+from fintorch.plot import draw_trend
 from fintorch.transform.label.transform import LabelTransform
 
 
@@ -36,5 +36,5 @@ class ForwardMsmaLabelTransform(LabelTransform):
 
     def _draw_lines(self, df: pd.DataFrame, ohlcv_ax: plt.Axes, volume_ax: plt.Axes) -> pd.DataFrame:
         ohlcv_ax.plot(df.msma, label="Middle SMA")
-        draw_trend_rectangles(ax=ohlcv_ax, df=df)
+        draw_trend(ax=ohlcv_ax, df=df)
         ohlcv_ax.legend()

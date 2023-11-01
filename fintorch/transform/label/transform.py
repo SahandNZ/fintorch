@@ -46,21 +46,13 @@ class LabelTransform(Transform, ABC):
             labels.append(label)
         return labels
 
-    def draw_ohlcv_plot(self, df: pd.DataFrame = None, data: Data = None, volume: bool = False) -> plt.Figure:
-        if df is not None:
-            df = df.copy()
-            ldf = self._fit(df=df.copy())
-        elif data is not None:
-            df = data[self.symbol, self.time_frame].copy()
-            ldf = self.fit(data=data)
-        else:
-            raise ValueError("Either df or data must be passed.")
+    def draw_ohlcv_plot(self, df: pd.DataFrame, prediction: np.array = None, volume: bool = False) -> plt.Figure:
+        df = df.copy()
+        ldf = self._fit(df=df.copy()).drop(columns=df.columns)
+        df = df.join(other=ldf, how="left")
+        df["prediction"] = prediction if prediction is not None else np.nan
 
-        for col in ldf.columns:
-            if col not in df.columns:
-                df[col] = ldf[col]
         df = df.reset_index()
-
         fig, ohlcv_ax, volume_ax = draw_ohlcv_plot(df=df, volume=volume)
         self._draw_lines(df=df, ohlcv_ax=ohlcv_ax, volume_ax=volume_ax)
 
@@ -70,7 +62,7 @@ class LabelTransform(Transform, ABC):
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError()
 
-    def _transform(self, df: pd.DataFrame, timestamp: List[int]) -> np.array:
+    def _transform(self, df: pd.DataFrame, timestamp: int) -> np.array:
         if timestamp in df.index:
             label = df.loc[timestamp].label
             # regression

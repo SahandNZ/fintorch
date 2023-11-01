@@ -1,15 +1,16 @@
 import pickle
 
 import torch
+from matplotlib import pyplot as plt
 from pyccx.constant.time_frame import TimeFrame
 from pyccx.data.local import load_dataframes_dict
 from torch import nn
 
 from fintorch.criterion.bce_loss import BCELoss
 from fintorch.cross_validation.cross_validation import CrossValidation
+from fintorch.data import Data
 from fintorch.data_loader.data_loader import DataLoader
 from fintorch.dataset.bsf_dataset import BsfDataset
-from fintorch.data import Data
 from fintorch.model.feed_forward.feed_forward import FeedForward
 from fintorch.module import Module
 from fintorch.trainer import Trainer
@@ -22,13 +23,13 @@ def main():
     time_frames = [TimeFrame.MIN5, TimeFrame.MIN15]
 
     # preparing data
-    df_dict = load_dataframes_dict(exchange='binance', symbols=symbols, time_frames=time_frames)
+    df_dict = load_dataframes_dict(exchange='binance', symbols=symbols, time_frames=time_frames, update=True)
     data = Data(df_dict)
 
     # creating dataset
     feature_transform = RollingMeanStdTrRocFeatureTransform(symbols=symbols, time_frames=time_frames)
     label_transform = ForwardMsmaLabelTransform(symbol=symbols[0], time_frame=time_frames[0])
-    dataset = BsfDataset(samples_count=1000, feature_transform=feature_transform, label_transform=label_transform,
+    dataset = BsfDataset(samples_count=5000, feature_transform=feature_transform, label_transform=label_transform,
                          show_progress_bar=True)
 
     # prepare model
@@ -71,10 +72,16 @@ def main():
     df_dict = load_dataframes_dict(exchange='binance', symbols=symbols, time_frames=time_frames, update=True)
     data = Data(df_dict)
 
-    ldf = data[module.dataset.label_transform.symbol, module.dataset.label_transform.time_frame]
-    timestamps = ldf.index.to_list()[-16:]
+    df = data[module.dataset.label_transform.symbol, module.dataset.label_transform.time_frame]
+    timestamps = df.index.to_list()[-500:]
     y_hat = module.predict(data=data, timestamps=timestamps, show_progress_bar=True)
+    prediction = y_hat.argmax(-1)
     print(y_hat, y_hat.shape)
+
+    # draw ohlcv plot
+    pdf = df[timestamps[0] <= df.index.to_series()]
+    label_transform.draw_ohlcv_plot(df=pdf, prediction=prediction)
+    plt.show()
 
 
 if __name__ == '__main__':
