@@ -37,6 +37,10 @@ class Fold:
     def test_set(self) -> Dataset:
         return self.__test_set
 
+    @property
+    def best_dev_on_test_metrics(self) -> Metrics:
+        return self.test_metrics_list[self.best_dev_metrics.epoch]
+
     def print_classification_logs(self):
         for name, best_dataset_metrics in zip(["Dev set", "Test set"], [self.best_dev_metrics, self.best_test_metrics]):
             print(name)
