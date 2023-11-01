@@ -15,13 +15,9 @@ class ForwardRocLabelTransform(LabelTransform):
                         'if the sum value is negative, it assigns a "down trend" label to the data.',
             symbol=symbol,
             time_frame=time_frame,
+            look_ahead=look_ahead,
             num_classes=2
         )
-        self.__look_ahead: int = look_ahead
-
-    @property
-    def look_ahead(self) -> int:
-        return self.__look_ahead
 
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         df["roc"] = df.close / df.open - 1

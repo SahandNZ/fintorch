@@ -7,7 +7,7 @@ from fintorch.transform.label.transform import LabelTransform
 
 
 class NextFractalLabelTransform(LabelTransform):
-    def __init__(self, symbol: str, time_frame: int, length: int = 10):
+    def __init__(self, symbol: str, time_frame: int, look_ahead: int = 5, look_back: int = 5):
         super().__init__(
             name="Forward Fractal",
             short_name="F-Fractal",
@@ -15,19 +15,20 @@ class NextFractalLabelTransform(LabelTransform):
                         "to assign trend labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
+            look_ahead=look_ahead,
             num_classes=2
         )
-        self.__length: int = length
+        self.__look_back: int = look_back
 
     @property
-    def length(self) -> int:
-        return self.__length
+    def look_back(self) -> int:
+        return self.__look_back
 
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["bmin"] = df.low.rolling(self.length).min()
-        df["bmax"] = df.high.rolling(self.length).max()
-        df["fmin"] = df.low.rolling(self.length).min().shift(-self.length + 1)
-        df["fmax"] = df.high.rolling(self.length).max().shift(-self.length + 1)
+        df["bmin"] = df.low.rolling(self.look_back).min()
+        df["bmax"] = df.high.rolling(self.look_back).max()
+        df["fmin"] = df.low.rolling(self.look_ahead).min().shift(-self.look_ahead + 1)
+        df["fmax"] = df.high.rolling(self.look_ahead).max().shift(-self.look_ahead + 1)
 
         df['isfl'] = (df.low == df.fmin) & (df.low == df.bmin)
         df["isfh"] = (df.high == df.fmax) & (df.high == df.bmax)

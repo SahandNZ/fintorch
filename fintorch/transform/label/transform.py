@@ -11,11 +11,12 @@ from fintorch.transform.transform import Transform
 
 
 class LabelTransform(Transform, ABC):
-    def __init__(self, name: str, short_name: str, description: str, symbol: str, time_frame: int,
+    def __init__(self, name: str, short_name: str, description: str, symbol: str, time_frame: int, look_ahead: int,
                  num_classes: int = None):
         super().__init__(name, short_name, description)
         self.__symbol: str = symbol
         self.__time_frame: int = time_frame
+        self.__look_ahead: int = look_ahead
         self.__num_classes: int = num_classes
 
     @property
@@ -25,6 +26,10 @@ class LabelTransform(Transform, ABC):
     @property
     def time_frame(self) -> int:
         return self.__time_frame
+
+    @property
+    def look_ahead(self) -> int:
+        return self.__look_ahead
 
     @property
     def num_classes(self) -> int:

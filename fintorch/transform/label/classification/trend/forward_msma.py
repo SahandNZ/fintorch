@@ -6,7 +6,7 @@ from fintorch.transform.label.transform import LabelTransform
 
 
 class ForwardMsmaLabelTransform(LabelTransform):
-    def __init__(self, symbol: str, time_frame: int, length: int = 51, look_ahead: int = 12):
+    def __init__(self, symbol: str, time_frame: int, look_ahead: int = 12, length: int = 51):
         super().__init__(
             name="Forward Middle Simple Moving Average",
             short_name="F-MSMA",
@@ -15,18 +15,14 @@ class ForwardMsmaLabelTransform(LabelTransform):
                         "with the forward values to assign trend labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
+            look_ahead=look_ahead,
             num_classes=2
         )
         self.__length: int = length
-        self.__look_ahead: int = look_ahead
 
     @property
     def length(self) -> int:
         return self.__length
-
-    @property
-    def look_ahead(self) -> int:
-        return self.__look_ahead
 
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         df["msma"] = df.close.rolling(self.length).mean().shift(-self.length // 2)

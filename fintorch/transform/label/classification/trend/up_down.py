@@ -13,11 +13,12 @@ class UpDownLabelTransform(LabelTransform):
                         "to assign trend labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
+            look_ahead=1,
             num_classes=2
         )
 
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["up"] = df.open < df.close
+        df["up"] = df.close < df.close.shift(-self.look_ahead)
         df["label"] = df.up.astype(int)
         df.dropna(inplace=True)
 

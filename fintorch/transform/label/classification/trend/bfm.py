@@ -5,8 +5,8 @@ from fintorch.plot import draw_trend_rectangles
 from fintorch.transform.label.transform import LabelTransform
 
 
-class BfmLabelTransform(LabelTransform):
-    def __init__(self, symbol: str, time_frame: int, look_back: int = 10, look_ahead: int = 10):
+class BackwardForwardMinimumLabelTransform(LabelTransform):
+    def __init__(self, symbol: str, time_frame: int, look_ahead: int = 10, look_back: int = 10, ):
         super().__init__(
             name="Backward Forward Min",
             short_name="BFM",
@@ -14,18 +14,14 @@ class BfmLabelTransform(LabelTransform):
                         "the Forward Min series to assign trend labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
+            look_ahead=look_ahead,
             num_classes=2
         )
         self.__look_back: int = look_back
-        self.__look_ahead: int = look_ahead
 
     @property
     def look_back(self) -> int:
         return self.__look_back
-
-    @property
-    def look_ahead(self) -> int:
-        return self.__look_ahead
 
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         df["bmin"] = df.close.rolling(self.look_back).min()
