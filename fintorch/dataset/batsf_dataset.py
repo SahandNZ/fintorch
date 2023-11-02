@@ -26,17 +26,15 @@ class BatsfDataset(Dataset):
         labels = self.label_transform.transform(df=label_dataframe, timestamps=timestamps)
 
         x, y = [], []
-        start_timestamp = timestamps[-1]
-        for timestamp, feature, label in zip(timestamps, features, labels):
+        for feature, label in zip(features, labels):
             if not np.isnan(feature).max() and not np.isnan(label).max():
-                start_timestamp = min(start_timestamp, timestamp)
                 x.append(feature)
                 y.append(label)
 
         # convert x and y to tensor and slice dataframe
         x = torch.from_numpy(np.array(x)).float()
         y = torch.from_numpy(np.array(y)).float()
-        df = label_dataframe[start_timestamp <= label_dataframe.index.to_series()]
+        df = label_dataframe[timestamps[0] <= label_dataframe.index.to_series()]
 
         # set x, y, and df properties
         self.preset(x=x, y=y, df=df)
