@@ -196,7 +196,7 @@ class Trainer:
         self.reset(model)
         self.cross_validation.set_dataset(dataset)
 
-        over_all_metrics = Metrics(self.criterion)
+        overall_metrics = Metrics(self.criterion)
         for fold in self.cross_validation:
             if self.__print_logs:
                 print("#{} Fold".format(fold.index))
@@ -205,7 +205,7 @@ class Trainer:
             self.validation(fold=fold, model=model)
             self.test(fold=fold, model=model)
 
-            over_all_metrics.append(fold.best_dev_on_test_metrics.y, fold.best_dev_on_test_metrics.y_hat)
+            overall_metrics.append(fold.best_dev_on_test_metrics.y, fold.best_dev_on_test_metrics.y_hat)
             folds.append(fold)
 
             if self.show_learning_curve_plot:
@@ -214,4 +214,4 @@ class Trainer:
             if self.print_classification_logs:
                 fold.print_classification_logs()
 
-        return folds, over_all_metrics
+        return folds, overall_metrics
