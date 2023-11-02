@@ -91,6 +91,12 @@ class Metrics:
         denominator = denominator if 0 < denominator else denominator + 1
         return round(numerator / denominator * 100, 2)
 
+    def probability_recall(self, label: int) -> float:
+        numerator = (((label == self.actual) & (label == self.prediction)) * self.probability).sum().item()
+        denominator = ((label == self.actual) * self.probability).sum().item()
+        denominator = denominator if 0 < denominator else denominator + 1
+        return round(numerator / denominator * 100, 2)
+
     def precision(self, label: int) -> float:
         numerator = ((label == self.actual) & (label == self.prediction)).sum().item()
         denominator = (label == self.prediction).sum().item()
@@ -107,6 +113,15 @@ class Metrics:
         if self.actual is not None:
             r = self.recall(label)
             p = self.precision(label)
+            numerator = 2 * r * p
+            denominator = r + p
+            denominator = denominator if 0 < denominator else denominator + 1
+            return round(numerator / denominator, 2)
+
+    def probability_f1(self, label: int) -> float:
+        if self.actual is not None:
+            r = self.probability_recall(label)
+            p = self.probability_precision(label)
             numerator = 2 * r * p
             denominator = r + p
             denominator = denominator if 0 < denominator else denominator + 1

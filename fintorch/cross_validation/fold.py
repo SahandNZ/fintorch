@@ -44,20 +44,23 @@ class Fold:
     def print_classification_logs(self):
         names = ["Train set", "Dev set", "Test set", "Best Dev Model on Test set"]
         sets = [self.best_train_metrics, self.best_dev_metrics, self.best_test_metrics, self.best_dev_on_test_metrics]
-        for name, best_metrics in zip(names, sets):
+        for name, metrics in zip(names, sets):
             print(name)
-            print("\t{:<32}{}".format("Loss", best_metrics.objective))
-            print("\t{:<32}{}".format("Accuracy", best_metrics.accuracy))
-            print("\t{:<32}{}\n".format("Probability Accuracy", best_metrics.probability_accuracy))
+            print("\t{:<32}{}".format("Loss", metrics.objective))
+            print("\t{:<32}{}".format("Accuracy", metrics.accuracy))
+            print("\t{:<32}{}\n".format("Probability Accuracy", metrics.probability_accuracy))
 
-            print("\t{:<32}{:<16}{:<32}{:<16}{:<16}".format("Label \\ Measure", "Precision", "Probability Precision",
-                                                            "Recall", "F1-score"))
+            print("\t{:<32}{:<16}{:<32}{:<16}{:<32}{:<16}{:<32}".
+                  format("Label \\ Measure", "Precision", "Probability Precision", "Recall", "Probability Recall",
+                         "F1-score", "Probability F1-score"))
             for label in range(self.dev_set.label_transform.num_classes):
-                p = best_metrics.precision(label=label)
-                pp = best_metrics.f1(label=label)
-                r = best_metrics.recall(label=label)
-                f1 = best_metrics.f1(label=label)
-                print("\t{:<32}{:<16}{:<32}{:<16}{:<16}".format(label, p, pp, r, f1))
+                p = metrics.precision(label=label)
+                pp = metrics.f1(label=label)
+                r = metrics.recall(label=label)
+                pr = metrics.probability_recall(label=label)
+                f1 = metrics.f1(label=label)
+                pf1 = metrics.probability_f1(label=label)
+                print("\t{:<32}{:<16}{:<32}{:<16}{:<32}{:<16}{:<32}".format(label, p, pp, r, pr, f1, pf1))
             print()
 
     def show_learning_curve_plot(self):
