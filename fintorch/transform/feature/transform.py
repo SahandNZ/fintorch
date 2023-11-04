@@ -1,4 +1,3 @@
-import copy
 import itertools
 from abc import ABC, abstractmethod
 from typing import List
@@ -41,6 +40,7 @@ class FeatureTransform(Transform, ABC):
         for symbol, time_frame in itertools.product(self.symbols, self.time_frames):
             df = data[symbol, time_frame].copy()
             df = self._fit(df)
+            df = df[self.features]
             feature_data[symbol, time_frame] = df
 
         return feature_data
@@ -67,12 +67,12 @@ class FeatureTransform(Transform, ABC):
             tsf = []
             for time_frame in self.time_frames:
                 df = data[symbol, time_frame]
-                df = df[df.index.to_series() < timestamp]
-                df = df.iloc[-self.sequence_length:]
-                df = df[self.features]
-                if self.sequence_length != len(df):
+                stop_index = int((timestamp - df.index.to_list()[0]) / time_frame)
+                start_index = stop_index - self.sequence_length
+                if start_index < 0:
                     return np.nan
 
+                df = df.iloc[start_index: stop_index]
                 df = df / df.std()
                 sf = df.to_numpy()
 
