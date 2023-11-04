@@ -37,9 +37,9 @@ class FeatureTransform(Transform, ABC):
         return self.__features
 
     def fit(self, data: Data):
-        feature_data = copy.deepcopy(data)
+        feature_data = Data()
         for symbol, time_frame in itertools.product(self.symbols, self.time_frames):
-            df = feature_data[symbol, time_frame]
+            df = data[symbol, time_frame].copy()
             df = self._fit(df)
             feature_data[symbol, time_frame] = df
 
