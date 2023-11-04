@@ -4,7 +4,7 @@ from pyccx.data.local import load_dataframes_dict
 from fintorch.data import Data
 from fintorch.dataset.bsf_dataset import BsfDataset
 from fintorch.transform.feature.rms_tr_roc import RollingMeanStdTrRocFeatureTransform
-from fintorch.transform.label.classification.trend.bfm import BfmLabelTransform
+from fintorch.transform.label.classification.trend.bfm import BackwardForwardMinimumLabelTransform
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
 
     # creating dataset
     feature_transform = RollingMeanStdTrRocFeatureTransform(symbols=symbols, time_frames=time_frames)
-    label_transform = BfmLabelTransform(symbol=symbols[0], time_frame=time_frames[1])
+    label_transform = BackwardForwardMinimumLabelTransform(symbol=symbols[0], time_frame=time_frames[1])
     dataset = BsfDataset(samples_count=1000, feature_transform=feature_transform, label_transform=label_transform,
                          show_progress_bar=True)
     dataset.prepare(data=data)
