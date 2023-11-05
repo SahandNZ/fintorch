@@ -4,21 +4,14 @@ from abc import abstractmethod, ABC
 import torch
 from torch import nn
 
+from fintorch.component import Component
 
-class Model(nn.Module, ABC):
+
+class Model(nn.Module, Component, ABC):
     def __init__(self, name: str, short_name: str, auto_cuda: bool):
-        super().__init__()
-        self.__name: str = name
-        self.__short_name: str = short_name
+        nn.Module.__init__(self)
+        Component.__init__(self, name=name, short_name=short_name, description="")
         self.__auto_cuda: bool = auto_cuda
-
-    @property
-    def name(self) -> str:
-        return self.__name
-
-    @property
-    def short_name(self) -> str:
-        return self.__short_name
 
     @property
     def auto_cuda(self):
