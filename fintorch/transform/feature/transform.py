@@ -80,3 +80,6 @@ class FeatureTransform(Transform, ABC):
             atsf.append(tsf)
 
         return np.array(atsf)
+
+    def __eq__(self, other):
+        return super().__eq__(other) and self.symbols == other.symbols and self.time_frames == other.time_frames

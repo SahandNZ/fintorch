@@ -84,3 +84,6 @@ class LabelTransform(Transform, ABC):
     @abstractmethod
     def _draw_lines(self, df: pd.DataFrame, ohlcv_ax: plt.Axes, volume_ax: plt.Axes) -> pd.DataFrame:
         raise NotImplementedError()
+
+    def __eq__(self, other):
+        return super().__eq__(other) and self.symbol == other.symbol and self.time_frame == other.time_frame

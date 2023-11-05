@@ -105,6 +105,9 @@ class Dataset:
     def __str__(self) -> str:
         return self.name
 
+    def __eq__(self, other):
+        return self.feature_transform != other.feature_transform and self.label_transform != other.label_transform
+
     def __getstate__(self):
         dct = dict(self.__dict__)
         dct['_Dataset__x'] = None
