@@ -58,7 +58,7 @@ def main():
         print_classification_logs=True
     )
 
-    trainer.optimize(dataset=dataset, model=model)
+    folds, overall_fold = trainer.optimize(dataset=dataset, model=model)
 
 
 if __name__ == '__main__':

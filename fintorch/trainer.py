@@ -138,9 +138,6 @@ class Trainer:
             if self.scheduler is not None:
                 self.__scheduler.step()
 
-            if fold.best_train_metrics is None or fold.best_train_metrics < epoch_metrics:
-                fold.best_train_metrics = epoch_metrics
-
             if self.show_progress_bar:
                 learning_rate = next(iter(self.optimizer.param_groups))['lr']
                 postfix = "current {} | best {} | LR: {:.6f}" \
@@ -162,9 +159,6 @@ class Trainer:
             epoch_metrics.set_model_state_dict(train_metrics.model_state_dict)
             fold.dev_metrics_list.append(epoch_metrics)
 
-            if fold.best_dev_metrics is None or fold.best_dev_metrics < epoch_metrics:
-                fold.best_dev_metrics = epoch_metrics
-
             if self.show_progress_bar:
                 postfix = "current {} | best {}".format(epoch_metrics, fold.best_dev_metrics)
                 bar.set_postfix_str(postfix)
@@ -184,9 +178,6 @@ class Trainer:
             epoch_metrics.set_model_state_dict(train_metrics.model_state_dict)
             fold.test_metrics_list.append(epoch_metrics)
 
-            if fold.best_test_metrics is None or fold.best_test_metrics < epoch_metrics:
-                fold.best_test_metrics = epoch_metrics
-
             if self.show_progress_bar:
                 postfix = "current {} | best {}".format(epoch_metrics, fold.best_test_metrics)
                 bar.set_postfix_str(postfix)
@@ -196,7 +187,6 @@ class Trainer:
         self.reset(model)
         self.cross_validation.set_dataset(dataset)
 
-        overall_metrics = Metrics(self.criterion)
         for fold in self.cross_validation:
             if self.__print_logs:
                 print("#{} Fold".format(fold.index))
@@ -204,8 +194,6 @@ class Trainer:
             self.train(fold=fold, model=model)
             self.validation(fold=fold, model=model)
             self.test(fold=fold, model=model)
-
-            overall_metrics.append(fold.best_dev_on_test_metrics.y, fold.best_dev_on_test_metrics.y_hat)
             folds.append(fold)
 
             if self.show_learning_curve_plot:
@@ -214,4 +202,5 @@ class Trainer:
             if self.print_classification_logs:
                 fold.print_classification_logs()
 
-        return folds, overall_metrics
+        overall_fold = Fold.aggregate(folds)
+        return folds, overall_fold

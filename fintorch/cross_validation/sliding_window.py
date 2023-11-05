@@ -2,7 +2,7 @@ from fintorch.cross_validation.cross_validation import CrossValidation
 from fintorch.cross_validation.fold import Fold
 
 
-class SlidingWindowCrossValidator(CrossValidation):
+class SlidingWindowCrossValidation(CrossValidation):
     def __init__(self, window_size: int, train_percentage: float, dev_percentage: float, window_step: int = None):
         super().__init__(train_percentage, dev_percentage)
         self.__window_size: int = window_size

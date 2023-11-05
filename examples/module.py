@@ -7,7 +7,7 @@ from pyccx.data.local import load_dataframes_dict
 from torch import nn
 
 from fintorch.criterion.bce_loss import BCELoss
-from fintorch.cross_validation.cross_validation import CrossValidation
+from fintorch.cross_validation.sliding_window import SlidingWindowCrossValidation
 from fintorch.data import Data
 from fintorch.data_loader.data_loader import DataLoader
 from fintorch.dataset.bsf_dataset import BsfDataset
@@ -20,7 +20,7 @@ from fintorch.transform.label.classification.trend.forward_msma import ForwardMs
 
 def main():
     symbols = ['BTC-USDT']
-    time_frames = [TimeFrame.MIN5, TimeFrame.MIN15]
+    time_frames = [TimeFrame.MIN5]
 
     # preparing data
     df_dict = load_dataframes_dict(exchange='binance', symbols=symbols, time_frames=time_frames, update=True)
@@ -29,7 +29,7 @@ def main():
     # creating dataset
     feature_transform = RollingMeanStdTrRocFeatureTransform(symbols=symbols, time_frames=time_frames)
     label_transform = ForwardMsmaLabelTransform(symbol=symbols[0], time_frame=time_frames[0])
-    dataset = BsfDataset(samples_count=5000, feature_transform=feature_transform, label_transform=label_transform,
+    dataset = BsfDataset(samples_count=6000, feature_transform=feature_transform, label_transform=label_transform,
                          show_progress_bar=True)
 
     # prepare model
@@ -41,7 +41,7 @@ def main():
     model = FeedForward(layers=[input_dim, output_dim], dropout=0.5, activation_fn=nn.Softmax(dim=-1))
 
     # prepare trainer
-    cross_validation = CrossValidation(train_percentage=0.8, dev_percentage=0.1)
+    cross_validation = SlidingWindowCrossValidation(window_size=5000, train_percentage=0.8, dev_percentage=0.1)
     data_loader = DataLoader(batch_size=2 ** 8)
     criterion = BCELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-3)

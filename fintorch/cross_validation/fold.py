@@ -7,7 +7,9 @@ from fintorch.metrics import Metrics
 
 
 class Fold:
-    def __init__(self, index: int, train_set: Dataset, dev_set: Dataset, test_set: Dataset):
+    def __init__(self, index: int, train_set: Dataset, dev_set: Dataset, test_set: Dataset,
+                 best_train_metrics: Metrics = None, best_dev_metrics: Metrics = None,
+                 best_test_metrics: Metrics = None, best_dev_on_test_metrics: Metrics = None):
         self.__index: int = index
         self.__train_set: Dataset = train_set
         self.__dev_set: Dataset = dev_set
@@ -17,9 +19,23 @@ class Fold:
         self.dev_metrics_list: List[Metrics] = []
         self.test_metrics_list: List[Metrics] = []
 
-        self.best_train_metrics: Metrics = None
-        self.best_dev_metrics: Metrics = None
-        self.best_test_metrics: Metrics = None
+        self.__best_train_metrics: Metrics = best_train_metrics
+        self.__best_dev_metrics: Metrics = best_dev_metrics
+        self.__best_test_metrics: Metrics = best_test_metrics
+        self.__best_dev_on_test_metrics: Metrics = best_dev_on_test_metrics
+
+    @staticmethod
+    def aggregate(folds: List):
+        test_set = Dataset.aggregate([fold.test_set for fold in folds])
+        best_train_metrics = Metrics.aggregate([fold.best_train_metrics for fold in folds])
+        best_dev_metrics = Metrics.aggregate([fold.best_dev_metrics for fold in folds])
+        best_test_metrics = Metrics.aggregate([fold.best_test_metrics for fold in folds])
+        best_dev_on_test_metrics = Metrics.aggregate([fold.best_dev_on_test_metrics for fold in folds])
+        fold = Fold(index=None, train_set=None, dev_set=None, test_set=test_set, best_train_metrics=best_train_metrics,
+                    best_dev_metrics=best_dev_metrics, best_test_metrics=best_test_metrics,
+                    best_dev_on_test_metrics=best_dev_on_test_metrics)
+
+        return fold
 
     @property
     def index(self) -> int:
@@ -38,8 +54,28 @@ class Fold:
         return self.__test_set
 
     @property
+    def best_train_metrics(self) -> Metrics:
+        if self.__best_train_metrics is None:
+            self.__best_train_metrics = Metrics.get_best_metric(self.train_metrics_list)
+        return self.__best_train_metrics
+
+    @property
+    def best_dev_metrics(self) -> Metrics:
+        if self.__best_dev_metrics is None:
+            self.__best_dev_metrics = Metrics.get_best_metric(self.dev_metrics_list)
+        return self.__best_dev_metrics
+
+    @property
+    def best_test_metrics(self) -> Metrics:
+        if self.__best_test_metrics is None:
+            self.__best_test_metrics = Metrics.get_best_metric(self.test_metrics_list)
+        return self.__best_test_metrics
+
+    @property
     def best_dev_on_test_metrics(self) -> Metrics:
-        return self.test_metrics_list[self.best_dev_metrics.epoch]
+        if self.__best_dev_on_test_metrics is None:
+            self.__best_dev_on_test_metrics = self.test_metrics_list[self.best_dev_metrics.epoch]
+        return self.__best_dev_on_test_metrics
 
     def print_classification_logs(self):
         names = ["Train set", "Dev set", "Test set", "Best Dev Model on Test set"]
@@ -50,9 +86,9 @@ class Fold:
             print("\t{:<32}{}".format("Accuracy", metrics.accuracy))
             print("\t{:<32}{}\n".format("Probability Accuracy", metrics.probability_accuracy))
 
-            print("\t{:<32}{:<16}{:<32}{:<16}{:<32}{:<16}{:<32}".
-                  format("Label \\ Measure", "Precision", "Probability Precision", "Recall", "Probability Recall",
-                         "F1-score", "Probability F1-score"))
+            print("\t{:<32}{:<16}{:<32}{:<16}{:<32}{:<16}{:<32}"
+                  .format("Label \\ Measure", "Precision", "Probability Precision", "Recall", "Probability Recall",
+                          "F1-score", "Probability F1-score"))
             for label in range(self.dev_set.label_transform.num_classes):
                 p = metrics.precision(label=label)
                 pp = metrics.f1(label=label)

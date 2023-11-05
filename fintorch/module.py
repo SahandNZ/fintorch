@@ -8,7 +8,6 @@ import torch
 from fintorch.cross_validation.fold import Fold
 from fintorch.data import Data
 from fintorch.dataset.dataset import Dataset
-from fintorch.metrics import Metrics
 from fintorch.model.model import Model
 from fintorch.trainer import Trainer
 from fintorch.utils import create_directory
@@ -21,7 +20,7 @@ class Module:
         self.__model: Model = model
 
         self.__folds: List[Fold] = None
-        self.__overall_metrics: Metrics = None
+        self.__overall_fold: Fold = None
 
     @property
     def name(self) -> str:
@@ -48,13 +47,13 @@ class Module:
         return self.__folds
 
     @property
-    def overall_metrics(self) -> Metrics:
-        return self.__overall_metrics
+    def overall_fold(self) -> Fold:
+        return self.__overall_fold
 
     def optimize(self, data: Data):
         if self.dataset.need_preparation:
             self.dataset.prepare(data=data)
-        self.__folds, self.__overall_metrics = self.trainer.optimize(dataset=self.dataset, model=self.model)
+        self.__folds, self.__overall_fold = self.trainer.optimize(dataset=self.dataset, model=self.model)
         self.model.load_state_dict(self.folds[-1].best_test_metrics.model_state_dict)
 
     def predict(self, data: Data, timestamps: List[int], show_progress_bar: bool) -> np.array:

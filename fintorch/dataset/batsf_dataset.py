@@ -20,7 +20,7 @@ class BatsfDataset(Dataset):
         feature_data = self.feature_transform.fit(data)
         label_dataframe = self.label_transform.fit(data)
 
-        timestamps = label_dataframe.index.to_list()[-self.sample_count:]
+        timestamps = label_dataframe.index.to_list()[-self.samples_count:]
         features = self.feature_transform.transform(data=feature_data, timestamps=timestamps,
                                                     show_progress_bar=self.show_progress_bar)
         labels = self.label_transform.transform(df=label_dataframe, timestamps=timestamps)

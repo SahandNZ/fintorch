@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 import torch
 from torch import nn
@@ -16,6 +16,23 @@ class Metrics:
         self.__y: torch.Tensor = y.detach().clone().cpu() if y is not None else torch.tensor([])
         self.__y_hat: torch.Tensor = y_hat.detach().clone().cpu() if y_hat is not None else torch.tensor([])
         self.__probability: torch.Tensor = probability.detach().clone().cpu() if probability is not None else None
+
+    @staticmethod
+    def get_best_metric(metrics_list: List):
+        best_metric = None
+        for metric in metrics_list:
+            if best_metric is None or best_metric < metric:
+                best_metric = metric
+
+        return best_metric
+
+    @staticmethod
+    def aggregate(metrics_list: List):
+        aggregated_metrics = Metrics(metrics_list[0].criterion)
+        for metrics in metrics_list:
+            aggregated_metrics.append(metrics.y, metrics.y_hat)
+
+        return aggregated_metrics
 
     @property
     def epoch(self) -> int:
