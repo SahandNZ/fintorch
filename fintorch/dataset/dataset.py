@@ -144,7 +144,7 @@ class Dataset:
         return self.name
 
     def __eq__(self, other):
-        return self.feature_transform != other.feature_transform and self.label_transform != other.label_transform
+        return self.feature_transform == other.feature_transform and self.label_transform == other.label_transform
 
     def __getstate__(self):
         dct = dict(self.__dict__)
