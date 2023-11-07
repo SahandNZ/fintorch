@@ -15,14 +15,14 @@ class Fold:
         self.__dev_set: Dataset = dev_set
         self.__test_set: Dataset = test_set
 
-        self.train_metrics_list: List[Metrics] = []
-        self.dev_metrics_list: List[Metrics] = []
-        self.test_metrics_list: List[Metrics] = []
-
         self.__best_train_metrics: Metrics = best_train_metrics
         self.__best_dev_metrics: Metrics = best_dev_metrics
         self.__best_test_metrics: Metrics = best_test_metrics
         self.__best_dev_on_test_metrics: Metrics = best_dev_on_test_metrics
+
+        self.train_metrics_list: List[Metrics] = []
+        self.dev_metrics_list: List[Metrics] = []
+        self.test_metrics_list: List[Metrics] = []
 
     @staticmethod
     def aggregate(folds: List):
