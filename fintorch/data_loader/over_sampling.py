@@ -4,12 +4,9 @@ from fintorch.data_loader.data_loader import DataLoader
 
 
 class OverSamplingDataLoader(DataLoader):
-    def __init__(self, batch_size: int, shuffle: bool = True, auto_cuda: bool = True, print_memory_status: bool = False,
-                 select_randomly: bool = False):
-        super().__init__(batch_size, shuffle, auto_cuda, print_memory_status)
+    def __init__(self, batch_size: int, shuffle: bool = True, auto_cuda: bool = True, select_randomly: bool = False):
+        super().__init__(batch_size, shuffle, auto_cuda)
         self.select_randomly: bool = select_randomly
-
-        self._index: int = None
 
     def __iter__(self):
         self._index = -1
