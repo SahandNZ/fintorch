@@ -32,7 +32,7 @@ class DataLoader:
 
     @property
     def print_memory_status(self) -> bool:
-        return self.__auto_cuda
+        return self.__print_memory_status
 
     @property
     def dataset(self) -> Dataset:
