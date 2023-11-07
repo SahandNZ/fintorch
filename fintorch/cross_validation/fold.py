@@ -26,14 +26,16 @@ class Fold:
 
     @staticmethod
     def aggregate(folds: List):
+        train_set = Dataset.aggregate([fold.train_set for fold in folds])
+        dev_set = Dataset.aggregate([fold.dev_set for fold in folds])
         test_set = Dataset.aggregate([fold.test_set for fold in folds])
         best_train_metrics = Metrics.aggregate([fold.best_train_metrics for fold in folds])
         best_dev_metrics = Metrics.aggregate([fold.best_dev_metrics for fold in folds])
         best_test_metrics = Metrics.aggregate([fold.best_test_metrics for fold in folds])
         best_dev_on_test_metrics = Metrics.aggregate([fold.best_dev_on_test_metrics for fold in folds])
-        fold = Fold(index=None, train_set=None, dev_set=None, test_set=test_set, best_train_metrics=best_train_metrics,
-                    best_dev_metrics=best_dev_metrics, best_test_metrics=best_test_metrics,
-                    best_dev_on_test_metrics=best_dev_on_test_metrics)
+        fold = Fold(index=None, train_set=train_set, dev_set=dev_set, test_set=test_set,
+                    best_train_metrics=best_train_metrics, best_dev_metrics=best_dev_metrics,
+                    best_test_metrics=best_test_metrics, best_dev_on_test_metrics=best_dev_on_test_metrics)
 
         return fold
 
@@ -78,7 +80,7 @@ class Fold:
         return self.__best_dev_on_test_metrics
 
     def print_classification_logs(self):
-        names = ["Train set", "Dev set", "Test set", "Best Dev Model on Test set"]
+        names = ["Train set", "Dev set", "Test set", "Best Dev on Test set"]
         sets = [self.best_train_metrics, self.best_dev_metrics, self.best_test_metrics, self.best_dev_on_test_metrics]
         for name, metrics in zip(names, sets):
             print(name)
