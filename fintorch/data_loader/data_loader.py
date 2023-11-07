@@ -1,3 +1,4 @@
+import gc
 from typing import Tuple
 
 import torch
@@ -41,6 +42,9 @@ class DataLoader:
         if self.__auto_cuda and torch.cuda.is_available():
             x = x.cuda()
             y = y.cuda()
+
+            gc.collect()
+            torch.cuda.empty_cache()
 
         return x, y
 
