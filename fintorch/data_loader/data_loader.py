@@ -4,13 +4,16 @@ from typing import Tuple
 import torch
 
 from fintorch.dataset.dataset import Dataset
+from fintorch.utils.memory import print_memory_status
 
 
 class DataLoader:
-    def __init__(self, batch_size: int, shuffle: bool = True, auto_cuda: bool = True):
+    def __init__(self, batch_size: int, shuffle: bool = True, auto_cuda: bool = True,
+                 print_memory_status: bool = False):
         self.__batch_size: int = batch_size
         self.__shuffle: bool = shuffle
         self.__auto_cuda: bool = auto_cuda
+        self.__print_memory_status: bool = print_memory_status
 
         self._dataset: Dataset = None
         self._index: int = None
@@ -25,6 +28,10 @@ class DataLoader:
 
     @property
     def auto_cuda(self) -> bool:
+        return self.__auto_cuda
+
+    @property
+    def print_memory_status(self) -> bool:
         return self.__auto_cuda
 
     @property
@@ -45,6 +52,9 @@ class DataLoader:
 
             gc.collect()
             torch.cuda.empty_cache()
+
+        if self.print_memory_status:
+            print_memory_status()
 
         return x, y
 
