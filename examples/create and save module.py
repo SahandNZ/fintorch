@@ -6,7 +6,7 @@ from pyccx.constant.time_frame import TimeFrame
 from pyccx.data.local import load_dataframes_dict
 from torch import nn
 
-from fintorch.criterion.bce_loss import BCELoss
+from fintorch.criterion.ce import CELoss
 from fintorch.cross_validation.sliding_window import SlidingWindowCrossValidation
 from fintorch.data import Data
 from fintorch.data_loader.data_loader import DataLoader
@@ -43,7 +43,7 @@ def main():
     # prepare trainer
     cross_validation = SlidingWindowCrossValidation(window_size=5000, train_percentage=0.8, dev_percentage=0.1)
     data_loader = DataLoader(batch_size=2 ** 8)
-    criterion = BCELoss()
+    criterion = CELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-3)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9)
     trainer = Trainer(
