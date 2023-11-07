@@ -81,11 +81,11 @@ class Dataset:
         self.__df: pd.DataFrame = df
 
     def copy(self):
-        dataset = copy.deepcopy(self)
-
         x = self.x.clone().detach()
         y = self.y.clone().detach()
-        df = self.df.copy()
+        df = self.df.copy() if self.df is not None else None
+
+        dataset = copy.deepcopy(self)
         dataset.preset(x=x, y=y, df=df)
 
         return dataset
@@ -114,7 +114,7 @@ class Dataset:
             df = self.df[item] if self.df is not None else None
             dataset = Dataset(samples_count=len(y), feature_transform=self.feature_transform,
                               label_transform=self.label_transform, show_progress_bar=self.show_progress_bar)
-            dataset.preset(x, y, df)
+            dataset.preset(x=x, y=y, df=df)
 
             return dataset
 
@@ -128,7 +128,7 @@ class Dataset:
         samples_count = self.samples_count + other.samples_count
         x = torch.cat([self.x, other.x], dim=0)
         y = torch.cat([self.y, other.y], dim=0)
-        df = pd.concat([self.df, other.df])
+        df = pd.concat([self.df, other.df]) if self.df is not None and other.df is not None else None
 
         if not inplace:
             dataset = Dataset(samples_count=samples_count, feature_transform=self.feature_transform,
