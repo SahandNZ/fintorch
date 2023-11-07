@@ -19,7 +19,7 @@ class Criterion(nn.Module, ABC):
         return self.__reduction
 
     @abstractmethod
-    def forward(self, inputs: torch.Tensor, targets: torch.Tensor):
+    def forward(self, input: torch.Tensor, target: torch.Tensor):
         raise NotImplementedError()
 
     @abstractmethod

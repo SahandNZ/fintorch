@@ -12,8 +12,8 @@ class MNPLoss(Criterion):
     def fee_rate(self) -> float:
         return self.__fee_rate
 
-    def forward(self, qty: torch.Tensor, roc: torch.Tensor):
-        pnl = torch.sum(roc * qty - self.fee_rate * torch.abs(qty), dim=-1, keepdim=True)
+    def forward(self, input: torch.Tensor, target: torch.Tensor):
+        pnl = torch.sum(target * input - self.fee_rate * torch.abs(input), dim=-1, keepdim=True)
 
         return pnl.mean()
 
