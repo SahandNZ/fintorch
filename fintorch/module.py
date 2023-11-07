@@ -10,7 +10,7 @@ from fintorch.data import Data
 from fintorch.dataset.dataset import Dataset
 from fintorch.model.model import Model
 from fintorch.trainer import Trainer
-from fintorch.utils import create_directory
+from fintorch.utils.directory import create_directory
 
 
 class Module:
