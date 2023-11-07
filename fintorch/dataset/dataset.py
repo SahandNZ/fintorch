@@ -22,8 +22,6 @@ class Dataset:
         self.__y: torch.Tensor = None
         self.__df: pd.DataFrame = None
 
-        self.__ignore_data: bool = True
-
     @staticmethod
     def aggregate(datasets: List):
         aggregated = datasets[0].copy()
@@ -83,9 +81,12 @@ class Dataset:
         self.__df: pd.DataFrame = df
 
     def copy(self):
-        self.__ignore_data = False
         dataset = copy.deepcopy(self)
-        self.__ignore_data = True
+
+        x = self.x.clone().detach()
+        y = self.y.clone().detach()
+        df = self.df.copy()
+        dataset.preset(x=x, y=y, df=df)
 
         return dataset
 
@@ -148,9 +149,6 @@ class Dataset:
 
     def __getstate__(self):
         dct = dict(self.__dict__)
-        if self.__ignore_data:
-            dct['_Dataset__x'] = None
-            dct['_Dataset__y'] = None
-            dct['_Dataset__df'] = None
+        dct['_Dataset__x'] = None
 
         return dct
