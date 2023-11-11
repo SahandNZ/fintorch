@@ -114,6 +114,7 @@ class Trainer:
     def _common_step(self, x: torch.Tensor, y: torch.Tensor, model: Model, optimize: bool = False):
         if optimize:
             model.train()
+
             # forward prop
             y_hat = model(x)
             objective = self.criterion(y_hat, y)
@@ -178,7 +179,9 @@ class Trainer:
             for batch_x, batch_y in self.data_loader:
                 y, y_hat = self._common_step(x=batch_x, y=batch_y, model=model, optimize=True)
                 epoch_metrics.append(y=y, y_hat=y_hat)
-            epoch_metrics.set_model_state_dict(copy.deepcopy(model.state_dict()))
+
+            epoch_state_dict = {k: v.cpu() for k, v in copy.deepcopy(model.state_dict()).items()}
+            epoch_metrics.set_model_state_dict(epoch_state_dict)
             fold.train_metrics_list.append(epoch_metrics)
 
             if self.scheduler is not None:
