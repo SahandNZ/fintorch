@@ -90,6 +90,16 @@ class Dataset:
 
         return dataset
 
+    def shuffle(self):
+        random_index = torch.randperm(self.samples_count)
+        x = self.x[random_index]
+        y = self.y[random_index]
+        self.preset(x=x, y=y, df=None)
+
+    def to(self, device: str):
+        self.x.to(device)
+        self.y.to(device)
+
     @abstractmethod
     def prepare(self, data: Data):
         raise NotImplemented()
