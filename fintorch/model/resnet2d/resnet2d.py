@@ -8,8 +8,8 @@ from fintorch.model.model import Model
 
 class ResNet2D(Model):
     def __init__(self, block: nn.Module, channels: List[int], kernel_size: int, width: int, height: int, dropout: float,
-                 dim_output: int, activation_fn: nn.Module = None, auto_cuda: bool = True):
-        super().__init__(name="Residual Network 2D", short_name="RN2D", auto_cuda=auto_cuda)
+                 dim_output: int, activation_fn: nn.Module = None):
+        super().__init__(name="Residual Network 2D", short_name="RN2D")
 
         dim_reduction = kernel_size ** (2 * (len(channels) - 1))
         dim_input_ff = (width // dim_reduction) * (height // dim_reduction) * channels[-1]

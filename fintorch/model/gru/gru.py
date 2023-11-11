@@ -6,8 +6,8 @@ from fintorch.model.model import Model
 
 class GRU(Model):
     def __init__(self, dim_sequence: int, dim_feature: int, hidden_size: int, num_layer: int, dropout: float,
-                 dim_output: int, activation_fn: nn.Module, auto_cuda: bool = True):
-        super().__init__(name="Gated Recurrent Unit", short_name="GRU", auto_cuda=auto_cuda)
+                 dim_output: int, activation_fn: nn.Module):
+        super().__init__(name="Gated Recurrent Unit", short_name="GRU")
         self.gru = nn.GRU(input_size=dim_feature, hidden_size=hidden_size, num_layers=num_layer, batch_first=True,
                           dropout=dropout)
         self.ff = FeedForward(layers=[dim_sequence * hidden_size, dim_sequence, dim_output], dropout=dropout,
