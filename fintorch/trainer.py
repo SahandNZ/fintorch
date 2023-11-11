@@ -1,4 +1,5 @@
 import copy
+import gc
 from typing import Dict, List
 
 import torch
@@ -12,6 +13,7 @@ from fintorch.data_loader.data_loader import DataLoader
 from fintorch.dataset.dataset import Dataset
 from fintorch.metrics import Metrics
 from fintorch.model.model import Model
+from fintorch.utils.memory import get_memory_status
 
 
 class Trainer:
@@ -24,8 +26,10 @@ class Trainer:
             optimizer: torch.optim.Optimizer,
             scheduler: torch.optim.lr_scheduler.LRScheduler = None,
             gradient_clipping_threshold: float = None,
+            auto_cuda: bool = True,
             print_logs: bool = False,
             show_progress_bar: bool = False,
+            print_memory_status_logs: bool = False,
             show_learning_curve_plot: bool = False,
             print_classification_logs: bool = False,
     ):
@@ -37,8 +41,10 @@ class Trainer:
         self.__optimizer: torch.optim.Optimizer = optimizer
         self.__scheduler: torch.optim.lr_scheduler.LRScheduler = scheduler
         self.__gradient_clipping_threshold: float = gradient_clipping_threshold
+        self.__auto_cuda: bool = auto_cuda
         self.__print_logs: bool = print_logs
         self.__show_progress_bar: bool = show_progress_bar
+        self.__print_memory_status_logs: bool = print_memory_status_logs
         self.__show_learning_curve_plot: bool = show_learning_curve_plot
         self.__print_classification_logs: bool = print_classification_logs
 
@@ -78,12 +84,24 @@ class Trainer:
         return self.__gradient_clipping_threshold
 
     @property
+    def auto_cuda(self) -> bool:
+        return self.__auto_cuda
+
+    @property
+    def device(self) -> str:
+        return torch.device('cuda' if self.auto_cuda and torch.cuda.is_available() else 'cpu')
+
+    @property
     def print_logs(self) -> bool:
         return self.__print_logs
 
     @property
     def show_progress_bar(self) -> bool:
         return self.__show_progress_bar
+
+    @property
+    def print_memory_status_logs(self) -> bool:
+        return self.__print_memory_status_logs
 
     @property
     def show_learning_curve_plot(self) -> bool:
@@ -93,13 +111,7 @@ class Trainer:
     def print_classification_logs(self) -> bool:
         return self.__print_classification_logs
 
-    def reset(self, model: Model):
-        model.reset()
-        self.optimizer.load_state_dict(self.__optimizer_initial_state_dict)
-        if self.scheduler is not None:
-            self.scheduler.load_state_dict(self.__optimizer_initial_state_dict)
-
-    def common_step(self, x: torch.Tensor, y: torch.Tensor, model: Model, optimize: bool = False):
+    def _common_step(self, x: torch.Tensor, y: torch.Tensor, model: Model, optimize: bool = False):
         if optimize:
             model.train()
             # forward prop
@@ -119,6 +131,41 @@ class Trainer:
 
         return y, y_hat
 
+    def _val_test_common_step(self, dataset: Dataset, model: Model, train_metrics_list: List[Metrics],
+                              metrics_list: List[Metrics], best_metrics: Metrics, bar_description: str):
+        bar = train_metrics_list
+        if self.show_progress_bar:
+            bar = tqdm(bar)
+            bar.set_description(bar_description)
+
+        for train_metrics in bar:
+            model.load_state_dict(train_metrics.model_state_dict)
+            y, y_hat = self._common_step(x=dataset.x, y=dataset.y, model=model)
+            epoch_metrics = Metrics(criterion=train_metrics.criterion, epoch=train_metrics.epoch, y=y, y_hat=y_hat)
+            epoch_metrics.set_model_state_dict(train_metrics.model_state_dict)
+            metrics_list.append(epoch_metrics)
+
+            if self.show_progress_bar:
+                bar.set_postfix_str("current {} | best {}".format(epoch_metrics, best_metrics))
+
+    def _reset(self, model: Model):
+        model.reset()
+        self.optimizer.load_state_dict(self.__optimizer_initial_state_dict)
+        if self.scheduler is not None:
+            self.scheduler.load_state_dict(self.__optimizer_initial_state_dict)
+
+    def pre_logs(self, fold: Fold, model: Model):
+        if self.print_logs:
+            print("#{} Fold".format(fold.index))
+
+            if self.print_memory_status_logs:
+                print(get_memory_status(start="\t"))
+
+    def prepare(self, fold: Fold, model: Model):
+        self._reset(model=model)
+        fold.to(self.device)
+        model.to(self.device)
+
     def train(self, fold: Fold, model: Model):
         bar = range(self.epochs)
         if self.show_progress_bar:
@@ -126,11 +173,10 @@ class Trainer:
             bar.set_description("Train")
 
         for epoch in bar:
-            self.data_loader.set_dataset(fold.train_set)
-
             epoch_metrics = Metrics(criterion=self.criterion, epoch=epoch)
+            self.data_loader.set_dataset(fold.train_set)
             for batch_x, batch_y in self.data_loader:
-                y, y_hat = self.common_step(x=batch_x, y=batch_y, model=model, optimize=True)
+                y, y_hat = self._common_step(x=batch_x, y=batch_y, model=model, optimize=True)
                 epoch_metrics.append(y=y, y_hat=y_hat)
             epoch_metrics.set_model_state_dict(copy.deepcopy(model.state_dict()))
             fold.train_metrics_list.append(epoch_metrics)
@@ -145,62 +191,47 @@ class Trainer:
                 bar.set_postfix_str(postfix)
 
     def validation(self, fold: Fold, model: Model):
-        bar = fold.train_metrics_list
-        if self.show_progress_bar:
-            bar = tqdm(bar)
-            bar.set_description("Validation")
-
-        loaded_x, loaded_y = self.data_loader.load(x=fold.dev_set.x, y=fold.dev_set.y)
-
-        for train_metrics in bar:
-            model.load_state_dict(train_metrics.model_state_dict)
-            y, y_hat = self.common_step(x=loaded_x, y=loaded_y, model=model)
-            epoch_metrics = Metrics(criterion=self.criterion, epoch=train_metrics.epoch, y=y, y_hat=y_hat)
-            epoch_metrics.set_model_state_dict(train_metrics.model_state_dict)
-            fold.dev_metrics_list.append(epoch_metrics)
-
-            if self.show_progress_bar:
-                postfix = "current {} | best {}".format(epoch_metrics, fold.best_dev_metrics)
-                bar.set_postfix_str(postfix)
+        self._val_test_common_step(dataset=fold.dev_set, model=model, train_metrics_list=fold.train_metrics_list,
+                                   metrics_list=fold.dev_metrics_list, best_metrics=fold.best_dev_metrics,
+                                   bar_description="Validation")
 
     def test(self, fold: Fold, model: Model):
-        bar = fold.train_metrics_list
-        if self.show_progress_bar:
-            bar = tqdm(bar)
-            bar.set_description("Test")
+        self._val_test_common_step(dataset=fold.test_set, model=model, train_metrics_list=fold.train_metrics_list,
+                                   metrics_list=fold.test_metrics_list, best_metrics=fold.best_test_metrics,
+                                   bar_description="Test")
 
-        loaded_x, loaded_y = self.data_loader.load(x=fold.test_set.x, y=fold.test_set.y)
+    def free_memory(self, fold: Fold, model: Model):
+        device = "cpu"
+        fold.to(device)
+        model.to(device)
 
-        for train_metrics in bar:
-            model.load_state_dict(train_metrics.model_state_dict)
-            y, y_hat = self.common_step(x=loaded_x, y=loaded_y, model=model)
-            epoch_metrics = Metrics(criterion=self.criterion, epoch=train_metrics.epoch, y=y, y_hat=y_hat)
-            epoch_metrics.set_model_state_dict(train_metrics.model_state_dict)
-            fold.test_metrics_list.append(epoch_metrics)
+        gc.collect()
+        torch.cuda.empty_cache()
 
-            if self.show_progress_bar:
-                postfix = "current {} | best {}".format(epoch_metrics, fold.best_test_metrics)
-                bar.set_postfix_str(postfix)
-
-    def optimize(self, dataset: Dataset, model: Model) -> List[Fold]:
-        folds = []
-        self.reset(model)
-        self.cross_validation.set_dataset(dataset)
-
-        for fold in self.cross_validation:
-            if self.__print_logs:
-                print("#{} Fold".format(fold.index))
-
-            self.train(fold=fold, model=model)
-            self.validation(fold=fold, model=model)
-            self.test(fold=fold, model=model)
-            folds.append(fold)
+    def post_logs(self, fold: Fold, model: Model):
+        if self.print_logs:
+            if self.print_memory_status_logs:
+                print(get_memory_status(start="\t"))
 
             if self.show_learning_curve_plot:
                 fold.show_learning_curve_plot()
 
             if self.print_classification_logs:
                 fold.print_classification_logs()
+
+    def optimize(self, dataset: Dataset, model: Model) -> List[Fold]:
+        folds = []
+        self.cross_validation.set_dataset(dataset)
+        for fold in self.cross_validation:
+            folds.append(fold)
+
+            self.pre_logs(fold=fold, model=model)
+            self.prepare(fold=fold, model=model)
+            self.train(fold=fold, model=model)
+            self.validation(fold=fold, model=model)
+            self.test(fold=fold, model=model)
+            self.free_memory(fold=fold, model=model)
+            self.post_logs(fold=fold, model=model)
 
         overall_fold = Fold.aggregate(folds)
         return folds, overall_fold
