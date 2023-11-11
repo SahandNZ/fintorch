@@ -58,13 +58,25 @@ class Dataset:
     def x(self) -> torch.Tensor:
         return self.__x
 
+    @x.deleter
+    def x(self):
+        del self.__x
+
     @property
     def y(self) -> torch.Tensor:
         return self.__y
 
+    @y.deleter
+    def y(self):
+        del self.__y
+
     @property
     def df(self) -> pd.DataFrame:
         return self.__df
+
+    @df.deleter
+    def df(self):
+        del self.__df
 
     @property
     def need_preparation(self) -> bool:
