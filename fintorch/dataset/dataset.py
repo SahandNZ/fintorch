@@ -97,8 +97,8 @@ class Dataset:
         self.preset(x=x, y=y, df=None)
 
     def to(self, device: str):
-        self.x.to(device)
-        self.y.to(device)
+        self.__x = self.x.to(device)
+        self.__y = self.y.to(device)
 
     @abstractmethod
     def prepare(self, data: Data):
