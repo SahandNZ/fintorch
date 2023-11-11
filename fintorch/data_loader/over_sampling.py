@@ -8,10 +8,7 @@ class OverSamplingDataLoader(DataLoader):
         super().__init__(batch_size, shuffle, auto_cuda)
         self.select_randomly: bool = select_randomly
 
-    def __iter__(self):
-        self._index = -1
-
-        # resampling part
+    def over_resample(self):
         labels = torch.unique(self._dataset.y, dim=0)
         max_label_length = max([(self._dataset.y == cls).min(dim=1).values.sum() for cls in labels])
         x_dict, y_dict = {}, {}
@@ -38,11 +35,8 @@ class OverSamplingDataLoader(DataLoader):
         y = torch.concat(tuple(y_dict.values()), dim=0)
         self._dataset.preset(x=x, y=y, df=None)
 
-        # shuffle part
-        if self.shuffle:
-            random_index = torch.randperm(len(self._dataset))
-            x = self._dataset.x[random_index]
-            y = self._dataset.y[random_index]
-            self._dataset.preset(x=x, y=y, df=None)
+    def __iter__(self):
+        self.over_resample()
+        super().__iter__()
 
         return self

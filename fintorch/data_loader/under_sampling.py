@@ -8,10 +8,7 @@ class UnderSamplingDataLoader(DataLoader):
         super().__init__(batch_size, shuffle, auto_cuda)
         self.select_randomly: bool = select_randomly
 
-    def __iter__(self):
-        self._index = -1
-
-        # resampling part
+    def under_sample(self):
         labels = torch.unique(self._dataset.y, dim=0)
         min_label_length = min([(self._dataset.y == cls).min(dim=1).values.sum() for cls in labels])
         x_dict, y_dict = {}, {}
@@ -34,11 +31,8 @@ class UnderSamplingDataLoader(DataLoader):
         y = torch.concat(tuple(y_dict.values()), dim=0)
         self._dataset.preset(x=x, y=y, df=None)
 
-        # shuffle part
-        if self.shuffle:
-            random_index = torch.randperm(len(self._dataset))
-            x = self._dataset.x[random_index]
-            y = self._dataset.y[random_index]
-            self._dataset.preset(x=x, y=y, df=None)
+    def __iter__(self):
+        self.under_sample()
+        super().__iter__()
 
         return self

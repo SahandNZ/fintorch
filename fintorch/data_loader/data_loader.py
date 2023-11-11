@@ -3,7 +3,6 @@ from typing import Tuple
 import torch
 
 from fintorch.dataset.dataset import Dataset
-from fintorch.utils.memory import print_memory_status
 
 
 class DataLoader:
@@ -28,6 +27,10 @@ class DataLoader:
         return self.__auto_cuda
 
     @property
+    def device(self) -> str:
+        return torch.device('cuda' if self.auto_cuda and torch.cuda.is_available() else 'cpu')
+
+    @property
     def dataset(self) -> Dataset:
         return self._dataset
 
@@ -38,22 +41,10 @@ class DataLoader:
     def set_dataset(self, dataset: Dataset):
         self._dataset = dataset
 
-    def load(self, x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        if self.__auto_cuda and torch.cuda.is_available():
-            x = x.cuda()
-            y = y.cuda()
-
-        return x, y
-
     def __iter__(self):
         self._index = -1
-
-        # shuffle part
         if self.shuffle:
-            random_index = torch.randperm(len(self._dataset))
-            x = self._dataset.x[random_index]
-            y = self._dataset.y[random_index]
-            self._dataset.preset(x=x, y=y, df=None)
+            self._dataset.shuffle()
 
         return self
 
@@ -67,9 +58,6 @@ class DataLoader:
             batch_x = self._dataset.x[start_index: stop_index]
             batch_y = self._dataset.y[start_index: stop_index]
 
-            loaded_batch_x, loaded_batch_y = self.load(batch_x, batch_y)
-
-            return loaded_batch_x, loaded_batch_y
-
+            return batch_x, batch_y
         else:
             raise StopIteration
