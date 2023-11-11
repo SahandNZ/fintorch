@@ -79,6 +79,11 @@ class Fold:
             self.__best_dev_on_test_metrics = self.test_metrics_list[self.best_dev_metrics.epoch]
         return self.__best_dev_on_test_metrics
 
+    def to(self, device: str):
+        self.train_set.to(device)
+        self.dev_set.to(device)
+        self.test_set.to(device)
+
     def print_classification_logs(self):
         names = ["Train set", "Dev set", "Test set", "Best Dev on Test set"]
         sets = [self.best_train_metrics, self.best_dev_metrics, self.best_test_metrics, self.best_dev_on_test_metrics]
