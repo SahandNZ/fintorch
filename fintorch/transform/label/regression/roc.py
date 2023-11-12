@@ -1,4 +1,5 @@
 import pandas as pd
+from matplotlib import pyplot as plt
 
 from fintorch.transform.label.transform import LabelTransform
 
@@ -10,7 +11,8 @@ class RocLabelTransform(LabelTransform):
             short_name="ROC",
             description="",
             symbol=symbol,
-            time_frame=time_frame
+            time_frame=time_frame,
+            look_ahead=1,
         )
 
     def _fit(self, df: pd.DataFrame):
@@ -19,3 +21,7 @@ class RocLabelTransform(LabelTransform):
         df = df.dropna()
 
         return df
+
+    # TODO
+    def _draw_lines(self, df: pd.DataFrame, ohlcv_ax: plt.Axes, volume_ax: plt.Axes) -> pd.DataFrame:
+        pass
