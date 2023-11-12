@@ -1,10 +1,12 @@
 import copy
+import itertools
 import os
 import pickle
 from typing import List
 
 import numpy as np
 import torch
+from tqdm import tqdm
 
 from fintorch.cross_validation.fold import Fold
 from fintorch.data import Data
@@ -22,6 +24,33 @@ class Module:
 
         self.__folds: List[Fold] = None
         self.__overall_fold: Fold = None
+
+    @staticmethod
+    def create_and_save_modules(trainer: Trainer, datasets: List[Dataset], models: List[Model], root: str,
+                                show_progress_bar: bool = True):
+        bar = list(itertools.product([datasets, models]))
+        if show_progress_bar:
+            bar = tqdm(bar, desc="Creating and saving module")
+        for dataset, model in bar:
+            Module.create_and_save(trainer=trainer, dataset=dataset, model=model, root=root)
+
+    @staticmethod
+    def create_and_save(trainer: Trainer, dataset: Dataset, model: Model, root: str):
+        module = Module(trainer=trainer, dataset=dataset, model=model)
+        module.optimize()
+        module.save(root=root)
+        del module
+
+    @staticmethod
+    def load_modules(root: str) -> List:
+        modules = []
+        for item in os.listdir(root):
+            path = os.path.join(root, item)
+            if os.path.isfile(path):
+                module = Module.load(path)
+                modules.append(module)
+
+        return modules
 
     @property
     def name(self) -> str:
@@ -51,9 +80,7 @@ class Module:
     def overall_fold(self) -> Fold:
         return self.__overall_fold
 
-    def optimize(self, data: Data):
-        if self.dataset.need_preparation:
-            self.dataset.prepare(data=data)
+    def optimize(self):
         self.__folds, self.__overall_fold = self.trainer.optimize(dataset=self.dataset, model=self.model)
         self.model.load_state_dict(self.folds[-1].best_test_metrics.model_state_dict)
 
@@ -80,14 +107,3 @@ class Module:
             module = pickle.load(file)
 
         return module
-
-    @staticmethod
-    def load_modules(root: str) -> List:
-        modules = []
-        for item in os.listdir(root):
-            path = os.path.join(root, item)
-            if os.path.isfile(path):
-                module = Module.load(path)
-                modules.append(module)
-
-        return modules
