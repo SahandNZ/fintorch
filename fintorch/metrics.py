@@ -89,7 +89,7 @@ class Metrics:
     @property
     def labels(self) -> List[int]:
         if self.classification_task and self.__labels is None:
-            self.__labels = torch.unique(self.actual).item()
+            self.__labels = torch.unique(self.actual).tolist()
 
         return self.__labels
 
@@ -145,7 +145,7 @@ class Metrics:
 
     @property
     def accuracy(self) -> float:
-        if self.classification_task and self.accuracy is None and 0 < len(self.actual):
+        if self.classification_task and self.__accuracy is None and 0 < len(self.actual):
             self.__accuracy = round((self.actual == self.prediction).sum().item() / len(self.actual) * 100, 2)
 
         return self.__accuracy
@@ -272,7 +272,7 @@ class Metrics:
         self.__probability_f1_scores_dict = None
 
     def __str__(self):
-        return ("Classification" if self.criterion.is_classification_task else "Regression") + " Task Metrics"
+        return ("Classification" if self.classification_task else "Regression") + " Task Metrics"
 
     def __add__(self, other):
         y = torch.cat([self.y, other.y], dim=0)
