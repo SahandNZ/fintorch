@@ -143,7 +143,7 @@ class Trainer:
             model.load_state_dict(train_metrics.model_state_dict)
             y, y_hat = self._common_step(x=dataset.x, y=dataset.y, model=model)
             epoch_metrics = Metrics(criterion=train_metrics.criterion, epoch=train_metrics.epoch, y=y, y_hat=y_hat)
-            epoch_metrics.set_model_state_dict(train_metrics.model_state_dict)
+            epoch_metrics.model_state_dict = train_metrics.model_state_dict
             metrics_list.append(epoch_metrics)
 
             if self.show_progress_bar:
@@ -180,8 +180,8 @@ class Trainer:
                 y, y_hat = self._common_step(x=batch_x, y=batch_y, model=model, optimize=True)
                 epoch_metrics.append(y=y, y_hat=y_hat)
 
-            epoch_state_dict = {k: v.cpu() for k, v in copy.deepcopy(model.state_dict()).items()}
-            epoch_metrics.set_model_state_dict(epoch_state_dict)
+            cpu_state_dict = {k: v.cpu() for k, v in copy.deepcopy(model.state_dict()).items()}
+            epoch_metrics.model_state_dict = cpu_state_dict
             fold.train_metrics_list.append(epoch_metrics)
 
             if self.scheduler is not None:
