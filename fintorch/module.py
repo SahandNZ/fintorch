@@ -1,3 +1,4 @@
+import copy
 import os
 import pickle
 from typing import List
@@ -17,7 +18,7 @@ class Module:
     def __init__(self, trainer: Trainer, dataset: Dataset, model: Model):
         self.__dataset: Dataset = dataset
         self.__trainer: Trainer = trainer
-        self.__model: Model = model
+        self.__model: Model = copy.deepcopy(model)
 
         self.__folds: List[Fold] = None
         self.__overall_fold: Fold = None
@@ -76,6 +77,17 @@ class Module:
     @staticmethod
     def load(path: str):
         with open(path, 'rb') as file:
-            loaded_module = pickle.load(file)
+            module = pickle.load(file)
 
-        return loaded_module
+        return module
+
+    @staticmethod
+    def load_modules(root: str) -> List:
+        modules = []
+        for item in os.listdir(root):
+            path = os.path.join(root, item)
+            if os.path.isfile(path):
+                module = Module.load(path)
+                modules.append(module)
+
+        return modules
