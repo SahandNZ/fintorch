@@ -1,9 +1,8 @@
 import copy
 import gc
-from typing import Dict, List
+from typing import List
 
 import torch
-from torch import nn
 from tqdm.auto import tqdm
 
 from fintorch.criterion.criterion import Criterion
@@ -11,8 +10,10 @@ from fintorch.cross_validation.cross_validation import CrossValidation
 from fintorch.cross_validation.fold import Fold
 from fintorch.data_loader.data_loader import DataLoader
 from fintorch.dataset.dataset import Dataset
+from fintorch.lr_scheduler import LRScheduler
 from fintorch.metrics import Metrics
 from fintorch.model.model import Model
+from fintorch.optimizer import Optimizer
 from fintorch.utils.memory import get_memory_status
 
 
@@ -23,8 +24,8 @@ class Trainer:
             cross_validation: CrossValidation,
             data_loader: DataLoader,
             criterion: Criterion,
-            optimizer: torch.optim.Optimizer,
-            scheduler: torch.optim.lr_scheduler.LRScheduler = None,
+            optimizer: Optimizer,
+            scheduler: LRScheduler = None,
             gradient_clipping_threshold: float = None,
             auto_cuda: bool = True,
             print_logs: bool = False,
@@ -37,9 +38,9 @@ class Trainer:
         self.__epochs: int = epochs
         self.__cross_validation: CrossValidation = cross_validation
         self.__data_loader: DataLoader = data_loader
-        self.__criterion: nn.Module = criterion
-        self.__optimizer: torch.optim.Optimizer = optimizer
-        self.__scheduler: torch.optim.lr_scheduler.LRScheduler = scheduler
+        self.__criterion: Criterion = criterion
+        self.__optimizer: Optimizer = optimizer
+        self.__scheduler: LRScheduler = scheduler
         self.__gradient_clipping_threshold: float = gradient_clipping_threshold
         self.__auto_cuda: bool = auto_cuda
         self.__print_logs: bool = print_logs
@@ -47,9 +48,6 @@ class Trainer:
         self.__print_memory_status_logs: bool = print_memory_status_logs
         self.__show_learning_curve_plot: bool = show_learning_curve_plot
         self.__print_classification_logs: bool = print_classification_logs
-
-        self.__optimizer_initial_state_dict: Dict = copy.deepcopy(self.__optimizer.state_dict())
-        self.__scheduler_initial_state_dict: Dict = copy.deepcopy(self.__scheduler.state_dict())
 
     @property
     def name(self) -> str:
@@ -72,11 +70,11 @@ class Trainer:
         return self.__criterion
 
     @property
-    def optimizer(self) -> torch.optim.Optimizer:
+    def optimizer(self) -> Optimizer:
         return self.__optimizer
 
     @property
-    def scheduler(self) -> torch.optim.lr_scheduler.LRScheduler:
+    def scheduler(self) -> LRScheduler:
         return self.__scheduler
 
     @property
@@ -151,9 +149,9 @@ class Trainer:
 
     def _reset(self, model: Model):
         model.reset()
-        self.optimizer.load_state_dict(self.__optimizer_initial_state_dict)
+        self.optimizer.reset(model=model)
         if self.scheduler is not None:
-            self.scheduler.load_state_dict(self.__optimizer_initial_state_dict)
+            self.scheduler.reset(self.optimizer)
 
     def pre_logs(self, fold: Fold, model: Model):
         if self.print_logs:
@@ -185,12 +183,11 @@ class Trainer:
             fold.train_metrics_list.append(epoch_metrics)
 
             if self.scheduler is not None:
-                self.__scheduler.step()
+                self.scheduler.step()
 
             if self.show_progress_bar:
-                learning_rate = next(iter(self.optimizer.param_groups))['lr']
                 postfix = "current {} | best {} | LR: {:.6f}" \
-                    .format(epoch_metrics, fold.best_train_metrics, learning_rate)
+                    .format(epoch_metrics, fold.best_train_metrics, self.optimizer.lr)
                 bar.set_postfix_str(postfix)
 
     def validation(self, fold: Fold, model: Model):

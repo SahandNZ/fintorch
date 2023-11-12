@@ -1,14 +1,16 @@
 import torch
-from fintorch.criterion.ce import CELoss
 from pyccx.constant.time_frame import TimeFrame
 from pyccx.data.local import load_dataframes_dict
 from torch import nn
 
+from fintorch.criterion.ce import CELoss
 from fintorch.cross_validation.cross_validation import CrossValidation
 from fintorch.data import Data
 from fintorch.data_loader.data_loader import DataLoader
 from fintorch.dataset.bsf_dataset import BsfDataset
+from fintorch.lr_scheduler import LRScheduler
 from fintorch.model.feed_forward.feed_forward import FeedForward
+from fintorch.optimizer import Optimizer
 from fintorch.trainer import Trainer
 from fintorch.transform.feature.rms_tr_roc import RollingMeanStdTrRocFeatureTransform
 from fintorch.transform.label.classification.trend.forward_msma import ForwardMsmaLabelTransform
@@ -41,8 +43,8 @@ def main():
     cross_validation = CrossValidation(train_percentage=0.8, dev_percentage=0.1)
     data_loader = DataLoader(batch_size=2 ** 8)
     criterion = CELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-3)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9)
+    optimizer = Optimizer(cls=torch.optim.Adam, lr=1e-3, weight_decay=1e-3)
+    scheduler = LRScheduler(cls=torch.optim.lr_scheduler.StepLR, step_size=5, gamma=0.9)
 
     # prepare trainer
     trainer = Trainer(
