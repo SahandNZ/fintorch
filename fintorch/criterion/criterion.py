@@ -9,7 +9,7 @@ class Criterion(nn.Module, ABC):
         super().__init__()
         self.__name: str = name
         self.__reduction: str = reduction
-        self.__is_classification_task: bool = classification_criterion
+        self.__classification_criterion: bool = classification_criterion
 
     @property
     def name(self) -> str:
@@ -21,7 +21,7 @@ class Criterion(nn.Module, ABC):
 
     @property
     def classification_criterion(self) -> bool:
-        return self.__is_classification_task
+        return self.__classification_criterion
 
     @abstractmethod
     def forward(self, input_: torch.Tensor, target: torch.Tensor):
