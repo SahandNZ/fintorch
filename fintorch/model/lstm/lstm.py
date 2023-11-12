@@ -6,7 +6,7 @@ from fintorch.model.model import Model
 
 class LSTM(Model):
     def __init__(self, dim_sequence: int, dim_feature: int, hidden_size: int, num_layer: int, dropout: float,
-                 dim_output: int, activation_fn: nn.Module, auto_cuda: bool = True):
+                 dim_output: int, activation_fn: nn.Module):
         super().__init__(name="Long Short-Term Memory", short_name="LSTM")
         self.lstm = nn.LSTM(input_size=dim_feature, hidden_size=hidden_size, num_layers=num_layer, batch_first=True,
                             dropout=dropout)
