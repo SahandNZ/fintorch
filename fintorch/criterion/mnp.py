@@ -5,15 +5,15 @@ from fintorch.criterion.criterion import Criterion
 
 class MNPLoss(Criterion):
     def __init__(self, fee_rate: float = 2e-4):
-        super().__init__(name="MNP", reduction='mean')
+        super().__init__(name="MNP", reduction='mean', classification_criterion=False)
         self.__fee_rate: float = fee_rate
 
     @property
     def fee_rate(self) -> float:
         return self.__fee_rate
 
-    def forward(self, input: torch.Tensor, target: torch.Tensor):
-        pnl = torch.sum(target * input - self.fee_rate * torch.abs(input), dim=-1, keepdim=True)
+    def forward(self, input_: torch.Tensor, target: torch.Tensor):
+        pnl = torch.sum(target * input_ - self.fee_rate * torch.abs(input_), dim=-1, keepdim=True)
 
         return pnl.mean()
 

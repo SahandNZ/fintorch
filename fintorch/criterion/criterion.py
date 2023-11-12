@@ -5,10 +5,11 @@ from torch import nn
 
 
 class Criterion(nn.Module, ABC):
-    def __init__(self, name: str, reduction: str):
+    def __init__(self, name: str, reduction: str, classification_criterion: bool):
         super().__init__()
         self.__name: str = name
         self.__reduction: str = reduction
+        self.__is_classification_task: bool = classification_criterion
 
     @property
     def name(self) -> str:
@@ -18,8 +19,12 @@ class Criterion(nn.Module, ABC):
     def reduction(self) -> str:
         return self.__reduction
 
+    @property
+    def classification_criterion(self) -> bool:
+        return self.__is_classification_task
+
     @abstractmethod
-    def forward(self, input: torch.Tensor, target: torch.Tensor):
+    def forward(self, input_: torch.Tensor, target: torch.Tensor):
         raise NotImplementedError()
 
     @abstractmethod

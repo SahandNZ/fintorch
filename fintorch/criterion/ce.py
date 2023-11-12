@@ -6,13 +6,13 @@ from fintorch.criterion.criterion import Criterion
 
 class CELoss(Criterion):
     def __init__(self, reduction: str = 'mean'):
-        super().__init__(name="CE", reduction=reduction)
+        super().__init__(name="CE", reduction=reduction, classification_criterion=True)
 
-    def forward(self, input: torch.Tensor, target: torch.Tensor):
+    def forward(self, input_: torch.Tensor, target: torch.Tensor):
         actual = torch.argmax(target, dim=-1)
         _, counts = actual.unique(return_counts=True)
         weight = counts / len(actual)
-        return F.cross_entropy(input=input, target=target, weight=weight, reduction=self.reduction)
+        return F.cross_entropy(input=input_, target=target, weight=weight, reduction=self.reduction)
 
     def to_str(self, value: float) -> str:
         return "CE: {:.6f}".format(value)
