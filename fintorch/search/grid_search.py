@@ -1,5 +1,5 @@
 import itertools
-from typing import List, Callable, Any, Dict, Generator
+from typing import List, Callable, Any, Dict
 
 from fintorch.search.parameter import SearchParameter
 from fintorch.search.result import SearchResult
