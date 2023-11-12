@@ -272,7 +272,7 @@ class Metrics:
         self.__probability_f1_scores_dict = None
 
     def __str__(self):
-        return ("Classification" if self.classification_task else "Regression") + " Task Metrics"
+        return self.criterion.to_str(self.objective)
 
     def __add__(self, other):
         y = torch.cat([self.y, other.y], dim=0)
