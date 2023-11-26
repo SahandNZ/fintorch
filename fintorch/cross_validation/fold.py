@@ -20,9 +20,9 @@ class Fold:
         self.__best_test_metrics: Metrics = best_test_metrics
         self.__best_dev_on_test_metrics: Metrics = best_dev_on_test_metrics
 
-        self.train_metrics_list: List[Metrics] = []
-        self.dev_metrics_list: List[Metrics] = []
-        self.test_metrics_list: List[Metrics] = []
+        self.__train_metrics_list: List[Metrics] = []
+        self.__dev_metrics_list: List[Metrics] = []
+        self.__test_metrics_list: List[Metrics] = []
 
     @staticmethod
     def aggregate(folds: List):
@@ -56,6 +56,18 @@ class Fold:
         return self.__test_set
 
     @property
+    def train_metrics_list(self) -> List[Metrics]:
+        return self.__train_metrics_list
+
+    @property
+    def dev_metrics_list(self) -> List[Metrics]:
+        return self.__train_metrics_list
+
+    @property
+    def test_metrics_list(self) -> List[Metrics]:
+        return self.__train_metrics_list
+
+    @property
     def best_train_metrics(self) -> Metrics:
         if self.__best_train_metrics is None:
             self.__best_train_metrics = Metrics.get_best_metric(self.train_metrics_list)
@@ -79,11 +91,24 @@ class Fold:
             self.__best_dev_on_test_metrics = self.test_metrics_list[self.best_dev_metrics.epoch]
         return self.__best_dev_on_test_metrics
 
+    def append_train_metrics(self, metrics: Metrics):
+        self.__train_metrics_list.append(metrics)
+        self.__best_train_metrics = None
+
+    def append_dev_metrics(self, metrics: Metrics):
+        self.__dev_metrics_list.append(metrics)
+        self.__best_dev_metrics = None
+
+    def append_test_metrics(self, metrics: Metrics):
+        self.__test_metrics_list.append(metrics)
+        self.__best_test_metrics = None
+
     def to(self, device: str):
         self.train_set.to(device)
         self.dev_set.to(device)
         self.test_set.to(device)
 
+    # TODO Clean up indentations in logs
     def print_classification_logs(self):
         names = ["Train set", "Dev set", "Test set", "Best Dev on Test set"]
         sets = [self.best_train_metrics, self.best_dev_metrics, self.best_test_metrics, self.best_dev_on_test_metrics]
