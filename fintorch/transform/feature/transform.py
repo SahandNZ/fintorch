@@ -49,7 +49,7 @@ class FeatureTransform(Transform, ABC):
         bar = timestamps
         if show_progress_bar:
             bar = tqdm(bar)
-            bar.set_description_str("Creating feature set")
+            bar.set_description_str(f"Creating {self.short_name} feature set")
 
         features = []
         for timestamp in bar:
