@@ -2,7 +2,7 @@ import copy
 import itertools
 import os
 import pickle
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from typing import List, Type
 
 import pandas as pd
@@ -182,7 +182,7 @@ class Dataset(Component):
             y = self.y[item]
             df = self.df[item] if self.df is not None else None
 
-            dataset = Dataset(feature_transform=self.feature_transform, label_transform=self.label_transform)
+            dataset = self.__class__(feature_transform=self.feature_transform, label_transform=self.label_transform)
             dataset.preset(x=x, y=y, df=df)
             return dataset
 

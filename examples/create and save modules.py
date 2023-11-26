@@ -1,5 +1,4 @@
 import itertools
-from datetime import datetime
 
 import torch
 from pyccx.constant.time_frame import TimeFrame
@@ -95,7 +94,7 @@ def main():
     )
 
     # create modules
-    root = f"./data/modules/{int(datetime.now().timestamp())}"
+    root = f"./data/modules/"
     Module.create_and_save_modules(trainer=trainer, datasets=datasets, models=models, root=root)
 
 
