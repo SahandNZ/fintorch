@@ -144,7 +144,6 @@ class Dataset(Component):
         if self != other:
             raise ValueError("These two datasets cannot be concatenated.")
 
-        samples_count = len(self) + other.samples_count
         x = torch.cat([self.x, other.x], dim=0)
         y = torch.cat([self.y, other.y], dim=0)
         df = pd.concat([self.df, other.df]) if self.df is not None and other.df is not None else None
