@@ -130,21 +130,23 @@ class Trainer:
 
         return y, y_hat
 
-    def _val_test_common_step(self, dataset: Dataset, model: Model, train_metrics_list: List[Metrics],
-                              metrics_list: List[Metrics], best_metrics: Metrics, bar_description: str):
-        bar = train_metrics_list
+    def _val_test_common_step(self, fold: Fold, model: Model, validation: bool):
+        dataset = fold.dev_set if validation else fold.test_set
+
+        bar = fold.train_metrics_list
         if self.show_progress_bar:
-            bar = tqdm(bar)
-            bar.set_description(bar_description)
+            bar_description = "Validation" if validation else "Test"
+            bar = tqdm(bar, desc=bar_description)
 
         for train_metrics in bar:
             model.load_state_dict(train_metrics.model_state_dict)
             y, y_hat = self._common_step(x=dataset.x, y=dataset.y, model=model)
             epoch_metrics = Metrics(criterion=train_metrics.criterion, epoch=train_metrics.epoch, y=y, y_hat=y_hat)
             epoch_metrics.model_state_dict = train_metrics.model_state_dict
-            metrics_list.append(epoch_metrics)
+            fold.append_dev_metrics(epoch_metrics) if validation else fold.append_test_metrics(epoch_metrics)
 
             if self.show_progress_bar:
+                best_metrics = fold.best_dev_metrics if validation else fold.best_test_metrics
                 bar.set_postfix_str("current {} | best {}".format(epoch_metrics, best_metrics))
 
     def _reset(self, model: Model):
@@ -180,25 +182,21 @@ class Trainer:
 
             cpu_state_dict = {k: v.cpu() for k, v in copy.deepcopy(model.state_dict()).items()}
             epoch_metrics.model_state_dict = cpu_state_dict
-            fold.train_metrics_list.append(epoch_metrics)
+            fold.append_train_metrics(epoch_metrics)
 
             if self.scheduler is not None:
                 self.scheduler.step()
 
             if self.show_progress_bar:
-                postfix = "current {} | best {} | LR: {:.6f}" \
-                    .format(epoch_metrics, fold.best_train_metrics, self.optimizer.lr)
+                best_metric = fold.best_train_metrics
+                postfix = "current {} | best {} | LR: {:.6f}".format(epoch_metrics, best_metric, self.optimizer.lr)
                 bar.set_postfix_str(postfix)
 
     def validation(self, fold: Fold, model: Model):
-        self._val_test_common_step(dataset=fold.dev_set, model=model, train_metrics_list=fold.train_metrics_list,
-                                   metrics_list=fold.dev_metrics_list, best_metrics=fold.best_dev_metrics,
-                                   bar_description="Validation")
+        self._val_test_common_step(fold=fold, model=model, validation=True)
 
     def test(self, fold: Fold, model: Model):
-        self._val_test_common_step(dataset=fold.test_set, model=model, train_metrics_list=fold.train_metrics_list,
-                                   metrics_list=fold.test_metrics_list, best_metrics=fold.best_test_metrics,
-                                   bar_description="Test")
+        self._val_test_common_step(fold=fold, model=model, validation=False)
 
     def free_memory(self, fold: Fold, model: Model):
         device = "cpu"
@@ -222,7 +220,12 @@ class Trainer:
     def optimize(self, dataset: Dataset, model: Model) -> List[Fold]:
         folds = []
         self.cross_validation.set_dataset(dataset)
-        for fold in self.cross_validation:
+
+        bar = list(self.cross_validation)
+        if self.show_progress_bar:
+            bar = tqdm(bar, desc="Cross Validation")
+
+        for fold in bar:
             folds.append(fold)
 
             self.pre_logs(fold=fold, model=model)
