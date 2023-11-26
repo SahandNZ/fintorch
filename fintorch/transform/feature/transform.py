@@ -1,4 +1,6 @@
 import itertools
+import os.path
+import pickle
 from abc import ABC, abstractmethod
 from typing import List
 
@@ -8,6 +10,7 @@ from tqdm.auto import tqdm
 
 from fintorch.data import Data
 from fintorch.transform.transform import Transform
+from fintorch.utils.directory import create_directory
 
 
 class FeatureTransform(Transform, ABC):
@@ -18,6 +21,8 @@ class FeatureTransform(Transform, ABC):
         self.__time_frames: List[int] = time_frames
         self.__sequence_length: int = sequence_length
         self.__features: List[str] = features
+
+        self.__root: str = None
 
     @property
     def symbols(self) -> List[str]:
@@ -34,6 +39,15 @@ class FeatureTransform(Transform, ABC):
     @property
     def features(self) -> List[str]:
         return self.__features
+
+    @property
+    def root(self) -> str:
+        if self.__root is None:
+            data_root = os.environ.get("DATA_ROOT", "./data")
+            feature_transform_root = os.path.join(data_root, "transform/feature")
+            self.__root = os.path.join(feature_transform_root, str(self.__hash__()))
+
+        return self.__root
 
     def fit(self, data: Data):
         feature_data = Data()
@@ -53,7 +67,7 @@ class FeatureTransform(Transform, ABC):
 
         features = []
         for timestamp in bar:
-            feature = self._transform(data=data, timestamp=timestamp)
+            feature = self._pre_transform(data=data, timestamp=timestamp)
             features.append(feature)
         return features
 
@@ -61,18 +75,35 @@ class FeatureTransform(Transform, ABC):
     def _fit(self, df: pd.DataFrame):
         raise NotImplementedError()
 
+    def _pre_transform(self, data: Data, timestamp: int) -> np.array:
+        path = os.path.join(self.root, str(timestamp) + '.pkl')
+        # load features of specified timestamp
+        if os.path.exists(path):
+            with open(path, "rb") as file:
+                sample = pickle.load(file)
+            return sample
+
+        # create and save features of specified timestamp
+        else:
+            sample = self._transform(data=data, timestamp=timestamp)
+            if not os.path.exists(self.root):
+                create_directory(self.root)
+            with open(path, "wb+") as file:
+                pickle.dump(sample, file)
+            return sample
+
     def _transform(self, data: Data, timestamp: int) -> np.array:
-        atsf = []
+        atsf = []  # dimensions are (asset, time_frame, sequence, feature)
         for symbol in self.symbols:
             tsf = []
             for time_frame in self.time_frames:
                 df = data[symbol, time_frame]
-                stop_index = int((timestamp - df.index.to_list()[0]) / time_frame)
-                start_index = stop_index - self.sequence_length
-                if start_index < 0:
+                df = df[df.index < timestamp]
+                df = df.iloc[-self.sequence_length:]
+
+                if self.sequence_length != len(df):
                     return np.nan
 
-                df = df.iloc[start_index: stop_index]
                 df = df / df.std()
                 sf = df.to_numpy()
 
@@ -82,4 +113,15 @@ class FeatureTransform(Transform, ABC):
         return np.array(atsf)
 
     def __eq__(self, other):
-        return super().__eq__(other) and self.symbols == other.symbols and self.time_frames == other.time_frames
+        is_symbols_equal = self.symbols == other.symbols
+        is_time_frames_equal = self.time_frames == other.time_frames
+        is_sequence_lengths_equal = self.sequence_length == other.sequence_length
+
+        return super().__eq__(other) and is_symbols_equal and is_time_frames_equal and is_sequence_lengths_equal
+
+    def __hash__(self):
+        symbols_hash = np.prod([int.from_bytes(symbol.encode(), byteorder='big') for symbol in self.symbols]) % 10 ** 9
+        time_frames_hash = np.prod(self.time_frames) % 10 ** 9
+        total_hash = symbols_hash * time_frames_hash * self.sequence_length % 10 ** 9
+
+        return total_hash
