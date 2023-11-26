@@ -50,7 +50,7 @@ class SlidingWindowCrossValidation(CrossValidation):
         self.__start_index = len(self.dataset) - self.window_size - (self.fold_count - 1) * self.window_step
 
         if self.fold_count < 1:
-            raise Exception("Dataset must have at least {} samples.")
+            raise Exception(f"Dataset must have at least {self.window_size} samples.")
 
         return self
 
