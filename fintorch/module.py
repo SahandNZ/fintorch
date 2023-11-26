@@ -14,6 +14,7 @@ from fintorch.dataset.dataset import Dataset
 from fintorch.model.model import Model
 from fintorch.trainer import Trainer
 from fintorch.utils.directory import create_directory
+from fintorch.utils.unpickler import Unpickler
 
 
 class Module:
@@ -27,18 +28,27 @@ class Module:
 
     @staticmethod
     def create_and_save_modules(trainer: Trainer, datasets: List[Dataset], models: List[Model], root: str,
-                                show_progress_bar: bool = True):
-        bar = list(itertools.product([datasets, models]))
+                                show_progress_bar: bool = True, print_logs: bool = True):
+        bar = list(itertools.product(datasets, models))
         if show_progress_bar:
             bar = tqdm(bar, desc="Creating and saving module")
+
         for dataset, model in bar:
-            Module.create_and_save(trainer=trainer, dataset=dataset, model=model, root=root)
+            Module.create_and_save(trainer=trainer, dataset=dataset, model=model, root=root, print_logs=print_logs)
 
     @staticmethod
-    def create_and_save(trainer: Trainer, dataset: Dataset, model: Model, root: str):
+    def create_and_save(trainer: Trainer, dataset: Dataset, model: Model, root: str, print_logs: bool = True):
         module = Module(trainer=trainer, dataset=dataset, model=model)
+
+        if print_logs:
+            print("-" * 32, module.short_name, "-" * 32)
+
         module.optimize()
         module.save(root=root)
+
+        if print_logs:
+            module.overall_fold.print_classification_logs()
+
         del module
 
     @staticmethod
@@ -95,7 +105,7 @@ class Module:
     def save(self, root: str) -> str:
         if not os.path.exists(root):
             create_directory(root)
-        path = os.path.join(root, f'{self.name}.pkl')
+        path = os.path.join(root, f'{self.short_name}.pkl')
         with open(path, 'wb+') as file:
             pickle.dump(self, file)
 
@@ -104,6 +114,7 @@ class Module:
     @staticmethod
     def load(path: str):
         with open(path, 'rb') as file:
-            module = pickle.load(file)
+            unpickler = Unpickler(file)
+            module = unpickler.load()
 
         return module
