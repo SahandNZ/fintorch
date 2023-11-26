@@ -86,4 +86,8 @@ class LabelTransform(Transform, ABC):
         raise NotImplementedError()
 
     def __eq__(self, other):
-        return super().__eq__(other) and self.symbol == other.symbol and self.time_frame == other.time_frame
+        is_symbols_equal = self.symbol == other.symbol
+        is_time_frames_equal = self.time_frame == other.time_frame
+        is_look_ahead_equal = self.look_ahead == other.look_ahead
+
+        return super().__eq__(other) and is_symbols_equal and is_time_frames_equal and is_look_ahead_equal
