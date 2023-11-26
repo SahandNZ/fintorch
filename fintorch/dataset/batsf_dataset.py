@@ -10,19 +10,17 @@ from fintorch.transform.label.transform import LabelTransform
 
 
 class BatsfDataset(Dataset):
-    def __init__(self, samples_count: int, feature_transform: FeatureTransform, label_transform: LabelTransform,
-                 show_progress_bar: bool):
-        super().__init__(samples_count=samples_count, feature_transform=feature_transform,
-                         label_transform=label_transform, show_progress_bar=show_progress_bar)
+    def __init__(self, feature_transform: FeatureTransform, label_transform: LabelTransform):
+        super().__init__(feature_transform, label_transform)
 
-    def prepare(self, data: Data):
+    def prepare(self, data: Data, samples_count: int = -1, show_progress_bar: bool = False):
         # create dataframes
         feature_data = self.feature_transform.fit(data)
         label_dataframe = self.label_transform.fit(data)
 
-        timestamps = label_dataframe.index.to_list()[-self.samples_count:]
+        timestamps = label_dataframe.index.to_list()[-samples_count:]
         features = self.feature_transform.transform(data=feature_data, timestamps=timestamps,
-                                                    show_progress_bar=self.show_progress_bar)
+                                                    show_progress_bar=show_progress_bar)
         labels = self.label_transform.transform(df=label_dataframe, timestamps=timestamps)
 
         x, y = [], []
@@ -39,7 +37,7 @@ class BatsfDataset(Dataset):
         # set x, y, and df properties
         self.preset(x=x, y=y, df=df)
 
-    def preprocess(self, data: Data, timestamps: List[int], show_progress_bar: bool) -> torch.Tensor:
+    def preprocess(self, data: Data, timestamps: List[int], show_progress_bar: bool = False) -> torch.Tensor:
         feature_data = self.feature_transform.fit(data=data)
         features = self.feature_transform.transform(data=feature_data, timestamps=timestamps,
                                                     show_progress_bar=show_progress_bar)
