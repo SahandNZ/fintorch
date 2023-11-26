@@ -130,7 +130,7 @@ class Dataset(Component):
         self.__y = self.y.to(device)
 
     @abstractmethod
-    def prepare(self, data: Data, samples_count: int = -1, show_progress_bar: bool = False):
+    def prepare(self, data: Data, samples_count: int = 0, show_progress_bar: bool = False):
         raise NotImplemented()
 
     @abstractmethod

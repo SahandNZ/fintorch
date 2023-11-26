@@ -13,7 +13,7 @@ class BatsfDataset(Dataset):
     def __init__(self, feature_transform: FeatureTransform, label_transform: LabelTransform):
         super().__init__(feature_transform, label_transform)
 
-    def prepare(self, data: Data, samples_count: int = -1, show_progress_bar: bool = False):
+    def prepare(self, data: Data, samples_count: int = 0, show_progress_bar: bool = False):
         # create dataframes
         feature_data = self.feature_transform.fit(data)
         label_dataframe = self.label_transform.fit(data)

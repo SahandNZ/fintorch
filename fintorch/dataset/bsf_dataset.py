@@ -12,7 +12,7 @@ class BsfDataset(BatsfDataset):
     def __init__(self, feature_transform: FeatureTransform, label_transform: LabelTransform):
         super().__init__(feature_transform=feature_transform, label_transform=label_transform)
 
-    def prepare(self, data: Data, samples_count: int = -1, show_progress_bar: bool = False):
+    def prepare(self, data: Data, samples_count: int = 0, show_progress_bar: bool = False):
         super().prepare(data=data, samples_count=samples_count, show_progress_bar=show_progress_bar)
 
         x = self.x.permute(0, 3, 1, 2, 4)
