@@ -1,3 +1,5 @@
+import math
+
 from fintorch.cross_validation.cross_validation import CrossValidation
 from fintorch.cross_validation.fold import Fold
 
@@ -14,7 +16,6 @@ class SlidingWindowCrossValidation(CrossValidation):
 
         self._index: int = None
         self.__fold_count: int = None
-        self.__start_index: int = None
 
     @property
     def window_size(self) -> int:
@@ -45,19 +46,18 @@ class SlidingWindowCrossValidation(CrossValidation):
         return self.__fold_count
 
     def __iter__(self):
-        self._index = -1
-        self.__fold_count = (len(self.dataset) - self.window_size) // self.window_step + 1
-        self.__start_index = len(self.dataset) - self.window_size - (self.fold_count - 1) * self.window_step
-
-        if self.fold_count < 1:
+        if len(self.dataset) < self.window_size:
             raise Exception(f"Dataset must have at least {self.window_size} samples.")
+
+        self._index = -1
+        self.__fold_count = math.ceil((len(self.dataset) - self.window_size) / self.window_step) + 1
 
         return self
 
     def __next__(self) -> Fold:
         self._index += 1
         if self.index < self.fold_count:
-            train_start_index = self.__start_index + self.index * self.window_step
+            train_start_index = self.index * self.window_step
             train_stop_index = train_start_index + self.train_length
             dev_stop_index = train_stop_index + self.dev_length
             test_stop_index = dev_stop_index + self.test_length
