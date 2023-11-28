@@ -23,8 +23,13 @@ class Module:
         self.__trainer: Trainer = trainer
         self.__model: Model = copy.deepcopy(model)
 
+        # properties
         self.__folds: List[Fold] = None
         self.__overall_fold: Fold = None
+
+        # control fields
+        self.__root: str = None
+        self.__getstate_mode: str = None
 
     @staticmethod
     def create_and_save_modules(trainer: Trainer, datasets: List[Dataset], models: List[Model], root: str,
@@ -44,7 +49,7 @@ class Module:
             print("-" * 32, module.short_name, "-" * 32)
 
         module.optimize()
-        module.save(root=root)
+        module.save()
 
         if print_logs:
             module.overall_fold.print_classification_logs()
@@ -90,6 +95,15 @@ class Module:
     def overall_fold(self) -> Fold:
         return self.__overall_fold
 
+    @property
+    def root(self) -> str:
+        if self.__root is None:
+            data_root = os.environ.get("DATA_ROOT", "./data")
+            self.__root = os.path.join(data_root, "module")
+            create_directory(self.__root)
+
+        return self.__root
+
     def optimize(self):
         self.__folds, self.__overall_fold = self.trainer.optimize(dataset=self.dataset, model=self.model)
         self.model.load_state_dict(self.folds[-1].best_test_metrics.model_state_dict)
@@ -102,14 +116,18 @@ class Module:
 
         return y_hat
 
-    def save(self, root: str) -> str:
-        if not os.path.exists(root):
-            create_directory(root)
-        path = os.path.join(root, f'{self.short_name}.pkl')
+    def save(self, mode: str = "experiment"):
+        self.__getstate_mode = mode
+        self.__overall_fold.getstate_mode = mode
+
+        symbol = self.dataset.label_transform.symbol
+        time_frame = self.dataset.label_transform.time_frame
+        module_root = os.path.join(self.root, mode, symbol, str(time_frame))
+
+        create_directory(module_root)
+        path = os.path.join(module_root, f'{self.short_name}.pkl')
         with open(path, 'wb+') as file:
             pickle.dump(self, file)
-
-        return path
 
     @staticmethod
     def load(path: str):
@@ -118,3 +136,12 @@ class Module:
             module = unpickler.load()
 
         return module
+
+    def __getstate__(self):
+        dct = self.__dict__.copy()
+        dct["_Module__root"] = None
+        if "deployment" == self.__getstate_mode:
+            del dct["_Module__dataset"]
+            del dct["_Module__folds"]
+
+        return dct

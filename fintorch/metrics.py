@@ -286,6 +286,7 @@ class Metrics:
 
     def __getstate__(self):
         dct = dict(self.__dict__)
-        del dct['_Metrics__model_state_dict']
+        if "_Metrics__model_state_dict" in dct:
+            del dct['_Metrics__model_state_dict']
 
         return dct

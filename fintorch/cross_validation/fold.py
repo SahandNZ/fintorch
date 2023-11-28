@@ -24,6 +24,8 @@ class Fold:
         self.__dev_metrics_list: List[Metrics] = []
         self.__test_metrics_list: List[Metrics] = []
 
+        self.getstate_mode: str = "experiment"
+
     @staticmethod
     def aggregate(folds: List):
         train_set = Dataset.aggregate([fold.train_set for fold in folds])
@@ -61,11 +63,11 @@ class Fold:
 
     @property
     def dev_metrics_list(self) -> List[Metrics]:
-        return self.__train_metrics_list
+        return self.__dev_metrics_list
 
     @property
     def test_metrics_list(self) -> List[Metrics]:
-        return self.__train_metrics_list
+        return self.__test_metrics_list
 
     @property
     def best_train_metrics(self) -> Metrics:
@@ -141,3 +143,19 @@ class Fold:
         plt.legend()
         plt.grid()
         plt.show()
+
+    def __getstate__(self):
+        dct = self.__dict__.copy()
+        if "deployment" == self.getstate_mode:
+            del dct["_Fold__train_set"]
+            del dct["_Fold__dev_set"]
+
+            del dct["_Fold__train_metrics_list"]
+            del dct["_Fold__dev_metrics_list"]
+            del dct["_Fold__test_metrics_list"]
+
+            del dct["_Fold__best_train_metrics"]
+            del dct["_Fold__best_dev_metrics"]
+            del dct["_Fold__best_test_metrics"]
+
+        return dct

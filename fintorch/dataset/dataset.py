@@ -2,7 +2,7 @@ import copy
 import itertools
 import os
 import pickle
-from abc import abstractmethod, ABC
+from abc import abstractmethod
 from typing import List, Type
 
 import pandas as pd
@@ -29,23 +29,22 @@ class Dataset(Component):
         self.__y: torch.Tensor = None
         self.__df: pd.DataFrame = None
 
-        # control flags
-        self.__keep_x_in_getstate: bool = False
+        self.__root: str = None
 
     @staticmethod
     def create_and_save_datasets(dataset: Type, feature_transforms: List[FeatureTransform],
-                                 label_transforms: List[LabelTransform], data: Data, root: str, samples_count: int = -1,
+                                 label_transforms: List[LabelTransform], data: Data, samples_count: int = -1,
                                  show_progress_bar: bool = True):
         for feature_transform, label_transform in list(itertools.product(feature_transforms, label_transforms)):
-            Dataset.create_and_save(dataset, feature_transform, label_transform, data, root, samples_count,
+            Dataset.create_and_save(dataset, feature_transform, label_transform, data, samples_count,
                                     show_progress_bar)
 
     @staticmethod
     def create_and_save(dataset: Type, feature_transform: FeatureTransform, label_transform: LabelTransform, data: Data,
-                        root: str, samples_count: int = -1, show_progress_bar: bool = False):
+                        samples_count: int = -1, show_progress_bar: bool = False):
         d = dataset(feature_transform=feature_transform, label_transform=label_transform)
         d.prepare(data=data, samples_count=samples_count, show_progress_bar=show_progress_bar)
-        d.save(root=root)
+        d.save()
         del d
 
     @staticmethod
@@ -98,6 +97,15 @@ class Dataset(Component):
     @property
     def need_preparation(self) -> bool:
         return self.x is None
+
+    @property
+    def root(self) -> str:
+        if self.__root is None:
+            data_root = os.environ.get("DATA_ROOT", "./data")
+            self.__root = os.path.join(data_root, "/dataset")
+            create_directory(self.__root)
+
+        return self.__root
 
     def reset(self):
         self.__x: torch.Tensor = None
@@ -155,16 +163,10 @@ class Dataset(Component):
             dataset.preset(x=x, y=y, df=df)
             return dataset
 
-    def save(self, root: str):
-        if not os.path.exists(root):
-            create_directory(root)
-        path = os.path.join(root, f'{self.short_name}.pkl')
+    def save(self):
+        path = os.path.join(self.root, f'{self.short_name}.pkl')
         with open(path, 'wb+') as file:
-            self.__keep_x_in_getstate = True
             pickle.dump(self, file)
-            self.__keep_x_in_getstate = False
-
-        return path
 
     def __len__(self):
         return len(self.x)
@@ -195,9 +197,8 @@ class Dataset(Component):
         return self.feature_transform == other.feature_transform and self.label_transform == other.label_transform
 
     def __getstate__(self):
-        dct = dict(self.__dict__)
-        if not self.__keep_x_in_getstate:
-            del dct['_Dataset__x']
-            dct['_Dataset__keep_x_in_getstate'] = False
+        dct = self.__dict__.copy()
+        if "_Dataset__x" in dct:
+            del dct["_Dataset__x"]
 
         return dct
