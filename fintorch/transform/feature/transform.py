@@ -120,9 +120,12 @@ class FeatureTransform(Transform, ABC):
         return super().__eq__(other) and is_symbols_equal and is_time_frames_equal and is_sequence_lengths_equal
 
     def __hash__(self):
-        name_hash = int.from_bytes(self.name.encode(), byteorder='big') % 10 ** 9
-        symbols_hash = np.prod([int.from_bytes(symbol.encode(), byteorder='big') for symbol in self.symbols]) % 10 ** 9
-        time_frames_hash = np.prod(self.time_frames) % 10 ** 9
-        total_hash = name_hash * symbols_hash * time_frames_hash * self.sequence_length % 10 ** 9
+        name_hash = int.from_bytes(self.name.encode(), byteorder='big') % 10 ** 8
+        symbols_hash = np.prod([int.from_bytes(symbol.encode(), byteorder='big') for symbol in self.symbols]) % 10 ** 8
+        time_frames_hash = np.prod(self.time_frames) % 10 ** 8
+
+        total_hash = name_hash * symbols_hash % 10 ** 8
+        total_hash = total_hash * time_frames_hash % 10 ** 8
+        total_hash = total_hash * self.sequence_length % 10 ** 8
 
         return total_hash
