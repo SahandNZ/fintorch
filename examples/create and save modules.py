@@ -4,6 +4,7 @@ import torch
 from pyccx.constant.time_frame import TimeFrame
 from pyccx.data.local import load_dataframes_dict
 from torch import nn
+from tqdm import tqdm
 
 from fintorch.criterion.ce import CELoss
 from fintorch.cross_validation.sliding_window import SlidingWindowCrossValidation
@@ -11,12 +12,8 @@ from fintorch.data import Data
 from fintorch.data_loader.data_loader import DataLoader
 from fintorch.dataset.bsf_dataset import BsfDataset
 from fintorch.lr_scheduler import LRScheduler
-from fintorch.model.feed_forward.feed_forward import FeedForward
-from fintorch.model.gru.gru import GRU
 from fintorch.model.hybrid.hybrid import Hybrid
-from fintorch.model.lstm.lstm import LSTM
 from fintorch.model.resnet1d.residual1d import ResidualBlock1D
-from fintorch.model.resnet1d.resnet1d import ResNet1D
 from fintorch.module import Module
 from fintorch.optimizer import Optimizer
 from fintorch.trainer import Trainer
@@ -27,21 +24,21 @@ from fintorch.utils.function import call_with_dict
 
 def main():
     exchange = 'binance'
-    symbols = ['BTC-USDT']
-    time_frames = [TimeFrame.MIN5]
+    symbol = 'BTC-USDT'
+    time_frame = TimeFrame.MIN5
 
     # preparing data
-    df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=True)
+    df_dict = load_dataframes_dict(exchange=exchange, symbols=[symbol], time_frames=[time_frame], update=True)
     data = Data(df_dict)
 
     # create datasets
-    feature_transforms = [RollingMeanStdTrRocFeatureTransform(symbols=symbols, time_frames=time_frames)]
-    label_transforms = [ForwardMsmaLabelTransform(symbol=symbols[0], time_frame=time_frames[0])]
+    feature_transforms = [RollingMeanStdTrRocFeatureTransform(symbols=[symbol], time_frames=[time_frame])]
+    label_transforms = [ForwardMsmaLabelTransform(symbol=symbol, time_frame=time_frame)]
 
     datasets = []
     for feature_transform, label_transform in itertools.product(feature_transforms, label_transforms):
         dataset = BsfDataset(feature_transform=feature_transform, label_transform=label_transform)
-        dataset.prepare(data=data, samples_count=6000, show_progress_bar=True)
+        dataset.prepare(data=data, show_progress_bar=True)
         datasets.append(dataset)
         print(dataset.short_name)
 
@@ -68,7 +65,7 @@ def main():
     }
 
     models = []
-    model_classes = [GRU, LSTM, Hybrid, ResNet1D, FeedForward]
+    model_classes = [Hybrid]
     for model_cls in model_classes:
         model = call_with_dict(model_cls, model_params_dict)
         models.append(model)
@@ -86,16 +83,28 @@ def main():
         criterion=criterion,
         optimizer=optimizer,
         scheduler=scheduler,
-        print_logs=True,
+        print_logs=False,
         show_progress_bar=False,
-        print_memory_status_logs=True,
+        print_memory_status_logs=False,
         show_learning_curve_plot=False,
         print_classification_logs=False,
     )
 
     # create modules
-    root = f"./data/modules/"
-    Module.create_and_save_modules(trainer=trainer, datasets=datasets, models=models, root=root)
+    bar = list(itertools.product(datasets, models))[:2]
+    bar = tqdm(bar, desc="Creating and saving modules")
+    for dataset, model in bar:
+        symbol = dataset.label_transform.symbol
+        time_frame = dataset.label_transform.time_frame
+        module = Module(trainer=trainer, dataset=dataset, model=model)
+        print("{}{:^12}-{:^8}-{:^32}{}".format("*" * 32, symbol, time_frame, module.short_name, "*" * 32))
+
+        if dataset.need_preparation:
+            dataset.prepare(data=data, show_progress_bar=False)
+        module.optimize()
+        module.save(mode="experiment")
+
+        module.overall_fold.print_classification_logs()
 
 
 if __name__ == '__main__':
