@@ -1,3 +1,6 @@
+import sys
+from typing import Dict
+
 import psutil
 import torch
 
@@ -30,5 +33,25 @@ def get_memory_status(start: str = "", end: str = "\n") -> str:
         result += get_cpu_memory_status(start=sub_start, end=end) + get_cuda_memory_status(start=sub_start, end=end)
     else:
         result += get_cpu_memory_status(start=sub_start, end=end)
+
+    return result
+
+
+def format_size(size_: int) -> str:
+    for unit in ["", "K", "M", "G"]:
+        if size_ < 2 ** 10:
+            return "{:.2f} {}B".format(size_, unit)
+        size_ /= 2 ** 10
+
+    return "{:.2f} TB".format(size_)
+
+
+def get_local_variables_memory_usage(locals_: Dict, count: int = None) -> str:
+    sorted_locals = sorted(locals_.items(), key=lambda item: sys.getsizeof(item[1]), reverse=True)
+    if count is not None:
+        sorted_locals = sorted_locals[:count]
+    result = ""
+    for name, value in sorted_locals:
+        result += "{:<64}{}\n".format(name, format_size(sys.getsizeof(value)))
 
     return result
