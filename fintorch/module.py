@@ -130,9 +130,9 @@ class Module:
             pickle.dump(self, file)
 
     @staticmethod
-    def load(path: str):
+    def load(path: str, auto_cuda: bool = True):
         with open(path, 'rb') as file:
-            unpickler = Unpickler(file)
+            unpickler = Unpickler(file, auto_cuda)
             module = unpickler.load()
 
         return module
