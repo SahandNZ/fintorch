@@ -37,6 +37,18 @@ def get_memory_status(start: str = "", end: str = "\n") -> str:
     return result
 
 
+def deep_getsizeof(ob):
+    size = sys.getsizeof(ob)
+    if isinstance(ob, (list, tuple, set)):
+        for element in ob:
+            size += deep_getsizeof(element)
+    if isinstance(ob, dict):
+        for k, v in ob.items():
+            size += deep_getsizeof(k)
+            size += deep_getsizeof(v)
+    return size
+
+
 def format_size(size_: int) -> str:
     for unit in ["", "K", "M", "G"]:
         if size_ < 2 ** 10:
@@ -52,6 +64,6 @@ def get_local_variables_memory_usage(locals_: Dict, count: int = None) -> str:
         sorted_locals = sorted_locals[:count]
     result = ""
     for name, value in sorted_locals:
-        result += "{:<64}{}\n".format(name, format_size(sys.getsizeof(value)))
+        result += "{:<64}{}\n".format(name, format_size(deep_getsizeof(value)))
 
     return result
