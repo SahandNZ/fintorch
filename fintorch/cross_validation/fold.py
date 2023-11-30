@@ -147,15 +147,23 @@ class Fold:
     def __getstate__(self):
         dct = self.__dict__.copy()
         if "deployment" == self.getstate_mode:
-            del dct["_Fold__train_set"]
-            del dct["_Fold__dev_set"]
+            if "_Fold__train_set" in dct:
+                del dct["_Fold__train_set"]
+            if "_Fold__dev_set" in dct:
+                del dct["_Fold__dev_set"]
 
-            del dct["_Fold__train_metrics_list"]
-            del dct["_Fold__dev_metrics_list"]
-            del dct["_Fold__test_metrics_list"]
+            if "_Fold__train_metrics_list" in dct:
+                del dct["_Fold__train_metrics_list"]
+            if "_Fold__dev_metrics_list" in dct:
+                del dct["_Fold__dev_metrics_list"]
+            if "_Fold__test_metrics_list" in dct:
+                del dct["_Fold__test_metrics_list"]
 
-            del dct["_Fold__best_train_metrics"]
-            del dct["_Fold__best_dev_metrics"]
-            del dct["_Fold__best_test_metrics"]
+            if "_Fold__best_train_metrics" in dct:
+                del dct["_Fold__best_train_metrics"]
+            if "_Fold__best_dev_metrics" in dct:
+                del dct["_Fold__best_dev_metrics"]
+            if "_Fold__best_test_metrics" in dct:
+                del dct["_Fold__best_test_metrics"]
 
         return dct
