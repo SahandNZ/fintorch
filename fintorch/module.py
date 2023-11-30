@@ -147,6 +147,7 @@ class Module:
         dct = self.__dict__.copy()
         dct["_Module__root"] = None
         if "deployment" == self.__getstate_mode:
-            del dct["_Module__folds"]
+            if "_Module__folds" in dct:
+                del dct["_Module__folds"]
 
         return dct
