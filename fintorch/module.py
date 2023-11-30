@@ -6,8 +6,6 @@ from typing import List
 
 import numpy as np
 import torch
-from tqdm import tqdm
-
 from fintorch.cross_validation.fold import Fold
 from fintorch.data import Data
 from fintorch.dataset.dataset import Dataset
@@ -15,6 +13,7 @@ from fintorch.model.model import Model
 from fintorch.trainer import Trainer
 from fintorch.utils.directory import create_directory
 from fintorch.utils.unpickler import Unpickler
+from tqdm import tqdm
 
 
 class Module:
@@ -118,6 +117,7 @@ class Module:
 
     def save(self, mode: str = "experiment"):
         self.__getstate_mode = mode
+        self.__dataset.getstate_mode = mode
         self.__overall_fold.getstate_mode = mode
 
         symbol = self.dataset.label_transform.symbol
@@ -141,7 +141,6 @@ class Module:
         dct = self.__dict__.copy()
         dct["_Module__root"] = None
         if "deployment" == self.__getstate_mode:
-            del dct["_Module__dataset"]
             del dct["_Module__folds"]
 
         return dct

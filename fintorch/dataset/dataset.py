@@ -7,7 +7,6 @@ from typing import List, Type
 
 import pandas as pd
 import torch
-
 from fintorch.component import Component
 from fintorch.data import Data
 from fintorch.transform.feature.transform import FeatureTransform
@@ -21,15 +20,18 @@ class Dataset(Component):
         short_name = feature_transform.short_name + ' | ' + label_transform.short_name
         super().__init__(name=name, short_name=short_name, description="")
 
+        # properties
         self.__feature_transform: FeatureTransform = feature_transform
         self.__label_transform: LabelTransform = label_transform
-
-        # properties
         self.__x: torch.Tensor = None
         self.__y: torch.Tensor = None
         self.__df: pd.DataFrame = None
 
+        # save and load properties
         self.__root: str = None
+
+        # control flags
+        self.getstate_mode: str = "experiment"
 
     @staticmethod
     def create_and_save_datasets(dataset: Type, feature_transforms: List[FeatureTransform],
@@ -200,5 +202,11 @@ class Dataset(Component):
         dct = self.__dict__.copy()
         if "_Dataset__x" in dct:
             del dct["_Dataset__x"]
+
+        if "deployment" == self.getstate_mode:
+            if "_Dataset__y" in dct:
+                del dct["_Dataset__y"]
+            if "_Dataset__df" in dct:
+                del dct["_Dataset__df"]
 
         return dct
