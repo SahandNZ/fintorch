@@ -105,13 +105,11 @@ class Module:
         return self.__root
 
     def path(self, mode: str) -> str:
-        if self.__path is None:
-            symbol = self.dataset.label_transform.symbol
-            time_frame = self.dataset.label_transform.time_frame
-            module_root = os.path.join(self.root, mode, symbol, str(time_frame))
-            create_directory(module_root)
-
-            self.__path = os.path.join(module_root, f'{self.short_name}.pkl')
+        symbol = self.dataset.label_transform.symbol
+        time_frame = self.dataset.label_transform.time_frame
+        module_root = os.path.join(self.root, mode, symbol, str(time_frame))
+        create_directory(module_root)
+        self.__path = os.path.join(module_root, f'{self.short_name}.pkl')
 
         return self.__path
 
