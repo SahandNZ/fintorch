@@ -138,7 +138,7 @@ class Module:
     @staticmethod
     def load(path: str, auto_cuda: bool = True):
         with open(path, 'rb') as file:
-            unpickler = Unpickler(file, auto_cuda)
+            unpickler = Unpickler(file=file, auto_cuda=auto_cuda)
             module = unpickler.load()
 
         return module
