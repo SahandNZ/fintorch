@@ -104,8 +104,7 @@ class Module:
 
         return self.__root
 
-    @property
-    def path(self) -> str:
+    def path(self, mode: str = "experiment") -> str:
         if self.__path is None:
             symbol = self.dataset.label_transform.symbol
             time_frame = self.dataset.label_transform.time_frame
