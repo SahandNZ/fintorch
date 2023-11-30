@@ -113,7 +113,7 @@ class Module:
 
             self.__path = os.path.join(module_root, f'{self.short_name}.pkl')
 
-        return self.__root
+        return self.__path
 
     def optimize(self):
         self.__folds, self.__overall_fold = self.trainer.optimize(dataset=self.dataset, model=self.model)
