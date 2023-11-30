@@ -28,6 +28,7 @@ class Module:
 
         # control fields
         self.__root: str = None
+        self.__path: str = None
         self.__getstate_mode: str = None
 
     @staticmethod
@@ -103,6 +104,18 @@ class Module:
 
         return self.__root
 
+    @property
+    def path(self) -> str:
+        if self.__path is None:
+            symbol = self.dataset.label_transform.symbol
+            time_frame = self.dataset.label_transform.time_frame
+            module_root = os.path.join(self.root, mode, symbol, str(time_frame))
+            create_directory(module_root)
+
+            self.__path = os.path.join(module_root, f'{self.short_name}.pkl')
+
+        return self.__root
+
     def optimize(self):
         self.__folds, self.__overall_fold = self.trainer.optimize(dataset=self.dataset, model=self.model)
         self.model.load_state_dict(self.folds[-1].best_test_metrics.model_state_dict)
@@ -120,13 +133,7 @@ class Module:
         self.__dataset.getstate_mode = mode
         self.__overall_fold.getstate_mode = mode
 
-        symbol = self.dataset.label_transform.symbol
-        time_frame = self.dataset.label_transform.time_frame
-        module_root = os.path.join(self.root, mode, symbol, str(time_frame))
-
-        create_directory(module_root)
-        path = os.path.join(module_root, f'{self.short_name}.pkl')
-        with open(path, 'wb+') as file:
+        with open(self.path, 'wb+') as file:
             pickle.dump(self, file)
 
     @staticmethod
