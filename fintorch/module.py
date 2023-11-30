@@ -132,7 +132,7 @@ class Module:
         self.__dataset.getstate_mode = mode
         self.__overall_fold.getstate_mode = mode
 
-        with open(self.path, 'wb+') as file:
+        with open(self.path(), 'wb+') as file:
             pickle.dump(self, file)
 
     @staticmethod
