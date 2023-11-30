@@ -1,11 +1,6 @@
 import itertools
 
 import torch
-from pyccx.constant.time_frame import TimeFrame
-from pyccx.data.local import load_dataframes_dict
-from torch import nn
-from tqdm import tqdm
-
 from fintorch.criterion.ce import CELoss
 from fintorch.cross_validation.sliding_window import SlidingWindowCrossValidation
 from fintorch.data import Data
@@ -20,12 +15,16 @@ from fintorch.trainer import Trainer
 from fintorch.transform.feature.rms_tr_roc import RollingMeanStdTrRocFeatureTransform
 from fintorch.transform.label.classification.trend.forward_msma import ForwardMsmaLabelTransform
 from fintorch.utils.function import call_with_dict
+from pyccx.constant.time_frame import TimeFrame
+from pyccx.data.local import load_dataframes_dict
+from torch import nn
+from tqdm import tqdm
 
 
 def main():
     exchange = 'binance'
     symbol = 'BTC-USDT'
-    time_frame = TimeFrame.MIN5
+    time_frame = TimeFrame.MIN15
 
     # preparing data
     df_dict = load_dataframes_dict(exchange=exchange, symbols=[symbol], time_frames=[time_frame], update=True)
@@ -38,7 +37,7 @@ def main():
     datasets = []
     for feature_transform, label_transform in itertools.product(feature_transforms, label_transforms):
         dataset = BsfDataset(feature_transform=feature_transform, label_transform=label_transform)
-        dataset.prepare(data=data, show_progress_bar=True)
+        dataset.prepare(data=data, samples_count=5000, show_progress_bar=True)
         datasets.append(dataset)
         print(dataset.short_name)
 

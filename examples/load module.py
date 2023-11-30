@@ -17,7 +17,7 @@ def main():
     module_path = os.path.join(module_root, modules_file_name[0])
 
     # load module
-    module = Module.load(module_path)
+    module = Module.load(module_path, auto_cuda=False)
 
     # save module in deployment mode
     module.save(mode="deployment")
