@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from fintorch.utils.plot import draw_trend
 from fintorch.transform.label.transform import LabelTransform
+from fintorch.utils.plot import draw_trend
 
 
 class NextFractalLabelTransform(LabelTransform):

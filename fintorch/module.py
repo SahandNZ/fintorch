@@ -6,6 +6,8 @@ from typing import List
 
 import numpy as np
 import torch
+from tqdm import tqdm
+
 from fintorch.cross_validation.fold import Fold
 from fintorch.data import Data
 from fintorch.dataset.dataset import Dataset
@@ -13,7 +15,6 @@ from fintorch.model.model import Model
 from fintorch.trainer import Trainer
 from fintorch.utils.directory import create_directory
 from fintorch.utils.unpickler import Unpickler
-from tqdm import tqdm
 
 
 class Module:
@@ -27,8 +28,6 @@ class Module:
         self.__overall_fold: Fold = None
 
         # control fields
-        self.__root: str = None
-        self.__path: str = None
         self.__getstate_mode: str = None
 
     @staticmethod
@@ -96,22 +95,21 @@ class Module:
         return self.__overall_fold
 
     @property
-    def root(self) -> str:
-        if self.__root is None:
-            data_root = os.environ.get("DATA_ROOT", "./data")
-            self.__root = os.path.join(data_root, "module")
-            create_directory(self.__root)
+    def root_dir(self) -> str:
+        data_root_dir = os.environ.get("DATA_ROOT", "./data")
+        root_dir = os.path.join(data_root_dir, "module")
+        create_directory(root_dir)
 
-        return self.__root
+        return root_dir
 
     def path(self, mode: str) -> str:
         symbol = self.dataset.label_transform.symbol
         time_frame = self.dataset.label_transform.time_frame
-        module_root = os.path.join(self.root, mode, symbol, str(time_frame))
-        create_directory(module_root)
-        self.__path = os.path.join(module_root, f'{self.short_name}.pkl')
+        module_root_dir = os.path.join(self.root_dir, mode, symbol, str(time_frame))
+        create_directory(module_root_dir)
+        path = os.path.join(module_root_dir, f'{self.short_name}.pkl')
 
-        return self.__path
+        return path
 
     def optimize(self):
         self.__folds, self.__overall_fold = self.trainer.optimize(dataset=self.dataset, model=self.model)

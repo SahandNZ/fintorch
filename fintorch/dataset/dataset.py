@@ -7,6 +7,7 @@ from typing import List, Type
 
 import pandas as pd
 import torch
+
 from fintorch.component import Component
 from fintorch.data import Data
 from fintorch.transform.feature.transform import FeatureTransform

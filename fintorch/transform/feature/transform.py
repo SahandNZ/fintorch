@@ -41,13 +41,12 @@ class FeatureTransform(Transform, ABC):
         return self.__features
 
     @property
-    def root(self) -> str:
-        if self.__root is None:
-            data_root = os.environ.get("DATA_ROOT", "./data")
-            feature_transform_root = os.path.join(data_root, "transform/feature")
-            self.__root = os.path.join(feature_transform_root, str(self.__hash__()))
+    def root_dir(self) -> str:
+        data_dir = os.environ.get("DATA_ROOT", "./data")
+        feature_transform_root = os.path.join(data_dir, "transform/feature")
+        root_dir = os.path.join(feature_transform_root, str(self.__hash__()))
 
-        return self.__root
+        return root_dir
 
     def fit(self, data: Data):
         feature_data = Data()
@@ -76,7 +75,7 @@ class FeatureTransform(Transform, ABC):
         raise NotImplementedError()
 
     def _pre_transform(self, data: Data, timestamp: int) -> np.array:
-        path = os.path.join(self.root, str(timestamp) + '.pkl')
+        path = os.path.join(self.root_dir, str(timestamp) + '.pkl')
         # load features of specified timestamp
         if os.path.exists(path):
             with open(path, "rb") as file:
@@ -86,8 +85,8 @@ class FeatureTransform(Transform, ABC):
         # create and save features of specified timestamp
         else:
             sample = self._transform(data=data, timestamp=timestamp)
-            if not os.path.exists(self.root):
-                create_directory(self.root)
+            if not os.path.exists(self.root_dir):
+                create_directory(self.root_dir)
             with open(path, "wb+") as file:
                 pickle.dump(sample, file)
             return sample
