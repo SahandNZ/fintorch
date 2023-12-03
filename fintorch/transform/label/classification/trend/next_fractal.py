@@ -9,8 +9,8 @@ from fintorch.utils.plot import draw_trend
 class NextFractalLabelTransform(LabelTransform):
     def __init__(self, symbol: str, time_frame: int, look_ahead: int = 5, look_back: int = 5):
         super().__init__(
-            name="Forward Fractal",
-            short_name="F-Fractal",
+            name="Next Fractal",
+            short_name="N-Fractal",
             description="This labeling method works by comparing the next fractal with the current close price "
                         "to assign trend labels to the data.",
             symbol=symbol,
