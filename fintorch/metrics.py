@@ -123,23 +123,23 @@ class Metrics:
         return self.__probability
 
     @property
-    def objective(self):
+    def objective(self) -> float:
         if self.__objective is None:
-            self.__objective = self.criterion(self.y_hat, self.y)
+            self.__objective = self.criterion(self.y_hat, self.y).detach().item()
 
         return self.__objective
 
     @property
     def mse_loss(self) -> float:
         if self.__mse_loss is None:
-            self.__mse_loss = nn.functional.mse_loss(self.y_hat, self.y).detach().cpu().item()
+            self.__mse_loss = nn.functional.mse_loss(self.y_hat, self.y).detach().item()
 
         return self.__mse_loss
 
     @property
     def mae_loss(self) -> float:
         if self.__mae_loss is None:
-            self.__mae_loss = nn.functional.l1_loss(self.y_hat, self.y).detach().cpu().item()
+            self.__mae_loss = nn.functional.l1_loss(self.y_hat, self.y).detach().item()
 
         return self.__mae_loss
 
