@@ -1,5 +1,6 @@
+import math
 from abc import ABC, abstractmethod
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,6 +20,9 @@ class LabelTransform(Transform, ABC):
         self.__look_ahead: int = look_ahead
         self.__num_classes: int = num_classes
 
+        # temporal states
+        self.__label_dataframe: pd.DataFrame = None
+
     @property
     def symbol(self) -> str:
         return self.__symbol
@@ -35,16 +39,26 @@ class LabelTransform(Transform, ABC):
     def num_classes(self) -> int:
         return self.__num_classes
 
-    def fit(self, data: Data) -> pd.DataFrame:
-        df = data[self.symbol, self.time_frame].copy()
-        return self._fit(df=df)
+    @property
+    def label_dataframe(self) -> pd.DataFrame:
+        return self.__label_dataframe
 
-    def transform(self, df: pd.DataFrame, timestamps: List[int]) -> List[np.array]:
-        labels = []
+    def fit(self, data: Data) -> pd.DataFrame:
+        raw_dataframe = data[self.symbol, self.time_frame].copy()
+        self.__label_dataframe = self._fit(df=raw_dataframe)
+
+    def transform(self, timestamps: List[int]) -> Dict[int, np.array]:
+        timestamp_to_label = {}
         for timestamp in timestamps:
-            label = self._transform(df=df, timestamp=timestamp)
-            labels.append(label)
-        return labels
+            forward_timestamp = math.ceil(timestamp / self.time_frame) * self.time_frame
+            label = self._transform(timestamp=forward_timestamp)
+            timestamp_to_label[timestamp] = label
+
+        return timestamp_to_label
+
+    def fit_transform(self, data: Data, timestamps: List[int]) -> Dict[int, np.array]:
+        self.fit(data=data)
+        return self.transform(timestamps=timestamps)
 
     def draw_ohlcv_plot(self, df: pd.DataFrame, prediction: np.array = None, volume: bool = False,
                         figsize: Tuple[float, float] = (20, 10)) -> plt.Figure:
@@ -63,9 +77,9 @@ class LabelTransform(Transform, ABC):
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError()
 
-    def _transform(self, df: pd.DataFrame, timestamp: int) -> np.array:
-        if timestamp in df.index:
-            label = df.loc[timestamp].label
+    def _transform(self, timestamp: int) -> np.array:
+        if timestamp in self.__label_dataframe.index:
+            label = self.__label_dataframe.loc[timestamp].label
             # regression
             if self.num_classes is None:
                 return label.to_numpy()
@@ -76,10 +90,7 @@ class LabelTransform(Transform, ABC):
                 one_hot[label] = 1
                 return one_hot
         else:
-            if self.num_classes is None:
-                return np.nan
-            else:
-                return [np.nan] * self.num_classes
+            return np.nan
 
     @abstractmethod
     def _draw_lines(self, df: pd.DataFrame, ohlcv_ax: plt.Axes, volume_ax: plt.Axes) -> pd.DataFrame:
@@ -91,3 +102,9 @@ class LabelTransform(Transform, ABC):
         is_look_ahead_equal = self.look_ahead == other.look_ahead
 
         return super().__eq__(other) and is_symbols_equal and is_time_frames_equal and is_look_ahead_equal
+
+    def __getstate__(self):
+        dct = self.__dict__.copy()
+        del dct["_LabelTransform__label_dataframe"]
+
+        return dct

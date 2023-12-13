@@ -2,7 +2,7 @@ import itertools
 import os.path
 import pickle
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Dict, Set
 
 import numpy as np
 import pandas as pd
@@ -22,7 +22,9 @@ class FeatureTransform(Transform, ABC):
         self.__sequence_length: int = sequence_length
         self.__features: List[str] = features
 
-        self.__root: str = None
+        # temporal states
+        self.__feature_data: Data = None
+        self.__nan_timestamps: Set[int] = set()
 
     @property
     def symbols(self) -> List[str]:
@@ -41,62 +43,84 @@ class FeatureTransform(Transform, ABC):
         return self.__features
 
     @property
+    def feature_data(self) -> Data:
+        return self.__feature_data
+
+    @property
     def root_dir(self) -> str:
         data_dir = os.environ.get("DATA_ROOT", "./data")
-        feature_transform_root = os.path.join(data_dir, "transform/feature")
-        root_dir = os.path.join(feature_transform_root, str(self.__hash__()))
+        feature_transform_dir = os.path.join(data_dir, "transform/feature")
+        root_dir = os.path.join(feature_transform_dir, str(self.__hash__()))
 
         return root_dir
 
     def fit(self, data: Data):
-        feature_data = Data()
+        self.__feature_data = Data()
         for symbol, time_frame in itertools.product(self.symbols, self.time_frames):
             df = data[symbol, time_frame].copy()
             df = self._fit(df)
             df = df[self.features]
-            feature_data[symbol, time_frame] = df
+            self.__feature_data[symbol, time_frame] = df
 
-        return feature_data
-
-    def transform(self, data: Data, timestamps: List[int], show_progress_bar: bool = False) -> List[np.array]:
+    def transform(self, timestamps: List[int], show_progress_bar: bool = False) -> Dict[int, np.array]:
         bar = timestamps
         if show_progress_bar:
             bar = tqdm(bar)
             bar.set_description_str(f"Creating {self.short_name} feature set")
 
-        features = []
+        min_time_frames = min(self.time_frames)
+        timestamp_to_feature = {}
         for timestamp in bar:
-            feature = self._pre_transform(data=data, timestamp=timestamp)
-            features.append(feature)
-        return features
+            backward_timestamp = int(timestamp // min_time_frames * min_time_frames)
+            feature = self._pre_transform(timestamp=backward_timestamp)
+            timestamp_to_feature[timestamp] = feature
+
+        return timestamp_to_feature
+
+    def fit_transform(self, data: Data, timestamps: List[int], show_progress_bar: bool = False):
+        self.fit(data=data)
+        return self.transform(timestamps=timestamps, show_progress_bar=show_progress_bar)
 
     @abstractmethod
     def _fit(self, df: pd.DataFrame):
         raise NotImplementedError()
 
-    def _pre_transform(self, data: Data, timestamp: int) -> np.array:
+    def _pre_transform(self, timestamp: int) -> np.array:
+        # load features from storage if its file exists
         path = os.path.join(self.root_dir, str(timestamp) + '.pkl')
-        # load features of specified timestamp
         if os.path.exists(path):
             with open(path, "rb") as file:
-                sample = pickle.load(file)
-            return sample
+                feature = pickle.load(file)
+            return feature
 
-        # create and save features of specified timestamp
+        # return nan if timestamp exists in nan_timestamps
+        elif timestamp in self.__nan_timestamps:
+            return np.nan
+
+        # create and save features of timestamp
         else:
-            sample = self._transform(data=data, timestamp=timestamp)
-            if not os.path.exists(self.root_dir):
-                create_directory(self.root_dir)
-            with open(path, "wb+") as file:
-                pickle.dump(sample, file)
-            return sample
+            # create feature
+            feature = self._transform(timestamp=timestamp)
 
-    def _transform(self, data: Data, timestamp: int) -> np.array:
+            # append timestamp to nan_timestamps if it's nan
+            if np.isnan(feature).max():
+                self.__nan_timestamps.add(timestamp)
+
+            # save feature on storage if it's not nan
+            else:
+                if not os.path.exists(self.root_dir):
+                    create_directory(self.root_dir)
+                with open(path, "wb+") as file:
+                    pickle.dump(feature, file)
+
+            return feature
+
+    def _transform(self, timestamp: int) -> np.array:
         atsf = []  # dimensions are (asset, time_frame, sequence, feature)
         for symbol in self.symbols:
             tsf = []
             for time_frame in self.time_frames:
-                df = data[symbol, time_frame]
+                df = self.__feature_data[symbol, time_frame]
                 df = df[df.index < timestamp]
                 df = df.iloc[-self.sequence_length:]
 
@@ -128,3 +152,10 @@ class FeatureTransform(Transform, ABC):
         total_hash = total_hash * self.sequence_length % 10 ** 8
 
         return total_hash
+
+    def __getstate__(self):
+        dct = self.__dict__.copy()
+        del dct["_FeatureTransform__feature_data"]
+        del dct["_FeatureTransform__nan_timestamps"]
+
+        return dct
