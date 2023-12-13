@@ -5,7 +5,7 @@ from fintorch.transform.label.transform import LabelTransform
 from fintorch.utils.plot import draw_trend
 
 
-class ForwardIchiLabelTransform(LabelTransform):
+class ForwardIchimokuLabelTransform(LabelTransform):
     def __init__(self, symbol: str, time_frame: int, look_ahead: int = 12, base_length: int = 5,
                  conversion_length: int = 20):
         super().__init__(

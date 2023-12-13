@@ -5,11 +5,11 @@ from fintorch.transform.label.transform import LabelTransform
 from fintorch.utils.plot import draw_trend
 
 
-class BackwardForwardMinimumLabelTransform(LabelTransform):
+class ForwardBackwardMinimumLabelTransform(LabelTransform):
     def __init__(self, symbol: str, time_frame: int, look_ahead: int = 10, look_back: int = 10, ):
         super().__init__(
-            name="Backward Forward Min",
-            short_name="BFM",
+            name="Forward Backward Min",
+            short_name="F.B-Min",
             description="This labeling method works by comparing the Backward Min series with "
                         "the Forward Min series to assign trend labels to the data.",
             symbol=symbol,

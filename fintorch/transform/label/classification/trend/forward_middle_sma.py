@@ -5,11 +5,11 @@ from fintorch.transform.label.transform import LabelTransform
 from fintorch.utils.plot import draw_trend
 
 
-class ForwardMsmaLabelTransform(LabelTransform):
+class ForwardMiddleSmaLabelTransform(LabelTransform):
     def __init__(self, symbol: str, time_frame: int, look_ahead: int = 12, length: int = 51):
         super().__init__(
             name="Forward Middle Simple Moving Average",
-            short_name="F-MSMA",
+            short_name="F.M-SMA",
             description="This labeling method works by smoothing the close price using a lookahead and "
                         "the Simple Moving Average (SMA) method. It then compares the current smoothed close price "
                         "with the forward values to assign trend labels to the data.",
