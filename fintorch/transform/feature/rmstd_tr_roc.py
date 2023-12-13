@@ -9,7 +9,7 @@ class RollingMeanStdTrRocFeatureTransform(FeatureTransform):
     def __init__(self, symbols: List[str], time_frames: List[int], look_back: int = 4, sequence_length: int = 32):
         super().__init__(
             name="Rolling Mean and Standard deviation of True Range and Rate Of Change",
-            short_name="RMS TR-ROC",
+            short_name="RMSTD",
             description="",
             symbols=symbols,
             time_frames=time_frames,

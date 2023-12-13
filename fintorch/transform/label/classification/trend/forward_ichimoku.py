@@ -10,7 +10,7 @@ class ForwardIchiLabelTransform(LabelTransform):
                  conversion_length: int = 20):
         super().__init__(
             name="Forward Ichimoku",
-            short_name="F-Ichi",
+            short_name="F-Ichimoku",
             description="This labeling method works by comparing the base line with the conversion line of "
                         "the Ichimoku indicator, and then shifting back the comparison values to assign trend "
                         "labels to the data.",
