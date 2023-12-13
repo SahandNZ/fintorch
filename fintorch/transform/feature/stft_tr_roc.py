@@ -11,7 +11,7 @@ class StftTrRocFeatureTransform(FeatureTransform):
                  sequence_length: int = 32):
         super().__init__(
             name="Short Term Fourier Transform of True Range and Rate of Change",
-            short_name="STFT TR-ROC",
+            short_name="STFT",
             description="",
             symbols=symbols,
             time_frames=time_frames,
