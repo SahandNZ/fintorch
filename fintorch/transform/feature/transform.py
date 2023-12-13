@@ -23,8 +23,8 @@ class FeatureTransform(Transform, ABC):
         self.__features: List[str] = features
 
         # temporal states
-        self.__feature_data: Data = None
-        self.__nan_timestamps: Set[int] = set()
+        self.__data: Data = None
+        self.__none_timestamps: Set[int] = set()
 
     @property
     def symbols(self) -> List[str]:
@@ -43,8 +43,8 @@ class FeatureTransform(Transform, ABC):
         return self.__features
 
     @property
-    def feature_data(self) -> Data:
-        return self.__feature_data
+    def data(self) -> Data:
+        return self.__data
 
     @property
     def root_dir(self) -> str:
@@ -55,12 +55,12 @@ class FeatureTransform(Transform, ABC):
         return root_dir
 
     def fit(self, data: Data):
-        self.__feature_data = Data()
+        self.__data = Data()
         for symbol, time_frame in itertools.product(self.symbols, self.time_frames):
             df = data[symbol, time_frame].copy()
             df = self._fit(df)
             df = df[self.features]
-            self.__feature_data[symbol, time_frame] = df
+            self.__data[symbol, time_frame] = df
 
     def transform(self, timestamps: List[int], show_progress_bar: bool = False) -> Dict[int, np.array]:
         bar = timestamps
@@ -73,7 +73,8 @@ class FeatureTransform(Transform, ABC):
         for timestamp in bar:
             backward_timestamp = int(timestamp // min_time_frames * min_time_frames)
             feature = self._pre_transform(timestamp=backward_timestamp)
-            timestamp_to_feature[timestamp] = feature
+            if feature is not None:
+                timestamp_to_feature[timestamp] = feature
 
         return timestamp_to_feature
 
@@ -94,8 +95,8 @@ class FeatureTransform(Transform, ABC):
             return feature
 
         # return nan if timestamp exists in nan_timestamps
-        elif timestamp in self.__nan_timestamps:
-            return np.nan
+        elif timestamp in self.__none_timestamps:
+            return None
 
         # create and save features of timestamp
         else:
@@ -103,8 +104,8 @@ class FeatureTransform(Transform, ABC):
             feature = self._transform(timestamp=timestamp)
 
             # append timestamp to nan_timestamps if it's nan
-            if np.isnan(feature).max():
-                self.__nan_timestamps.add(timestamp)
+            if feature is None:
+                self.__none_timestamps.add(timestamp)
 
             # save feature on storage if it's not nan
             else:
@@ -120,12 +121,12 @@ class FeatureTransform(Transform, ABC):
         for symbol in self.symbols:
             tsf = []
             for time_frame in self.time_frames:
-                df = self.__feature_data[symbol, time_frame]
+                df = self.__data[symbol, time_frame]
                 df = df[df.index < timestamp]
                 df = df.iloc[-self.sequence_length:]
 
                 if self.sequence_length != len(df):
-                    return np.nan
+                    return None
 
                 df = df / df.std()
                 sf = df.to_numpy()
@@ -155,7 +156,9 @@ class FeatureTransform(Transform, ABC):
 
     def __getstate__(self):
         dct = self.__dict__.copy()
-        del dct["_FeatureTransform__feature_data"]
-        del dct["_FeatureTransform__nan_timestamps"]
+        if "_FeatureTransform__data" in dct:
+            del dct["_FeatureTransform__data"]
+        if "_FeatureTransform__none_timestamps" in dct:
+            del dct["_FeatureTransform__none_timestamps"]
 
         return dct

@@ -15,24 +15,23 @@ class BatsfDataset(Dataset):
 
     def prepare(self, data: Data, samples_count: int = 0, show_progress_bar: bool = False):
         sampling_time_frame = min(max(self.feature_transform.time_frames), self.label_transform.time_frame)
-        timestamps = data[data.symbols[0], sampling_time_frame].index.to_list()[-samples_count:]
+        timestamps = data[data.symbols[0], sampling_time_frame].index.to_list()
 
-        timestamp_to_feature = self.feature_transform.fit_transform(data, timestamps, show_progress_bar)
         timestamp_to_label = self.label_transform.fit_transform(data=data, timestamps=timestamps)
+        timestamps = list(timestamp_to_label.keys())[-samples_count:]
+        timestamp_to_feature = self.feature_transform.fit_transform(data, timestamps, show_progress_bar)
 
         start_timestamp, x, y = None, [], []
         for timestamp in timestamps:
-            feature = timestamp_to_feature[timestamp]
-            label = timestamp_to_label[timestamp]
-            if not np.isnan(feature).max() and not np.isnan(label).max():
+            if timestamp in timestamp_to_feature and timestamp in timestamp_to_label:
                 start_timestamp = start_timestamp or timestamp
-                x.append(feature)
-                y.append(label)
+                x.append(timestamp_to_feature[timestamp])
+                y.append(timestamp_to_label[timestamp])
 
         # convert x and y to tensor and slice dataframe
         x = torch.from_numpy(np.array(x)).float()
         y = torch.from_numpy(np.array(y)).float()
-        df = self.label_transform.label_dataframe.copy()
+        df = self.label_transform.dataframe.copy()
         df = df[start_timestamp <= df.index.to_series()]
 
         # set x, y, and df properties

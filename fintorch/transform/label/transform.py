@@ -1,6 +1,6 @@
 import math
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,7 +21,7 @@ class LabelTransform(Transform, ABC):
         self.__num_classes: int = num_classes
 
         # temporal states
-        self.__label_dataframe: pd.DataFrame = None
+        self.__dataframe: pd.DataFrame = None
 
     @property
     def symbol(self) -> str:
@@ -40,19 +40,20 @@ class LabelTransform(Transform, ABC):
         return self.__num_classes
 
     @property
-    def label_dataframe(self) -> pd.DataFrame:
-        return self.__label_dataframe
+    def dataframe(self) -> pd.DataFrame:
+        return self.__dataframe
 
     def fit(self, data: Data) -> pd.DataFrame:
         raw_dataframe = data[self.symbol, self.time_frame].copy()
-        self.__label_dataframe = self._fit(df=raw_dataframe)
+        self.__dataframe = self._fit(df=raw_dataframe)
 
     def transform(self, timestamps: List[int]) -> Dict[int, np.array]:
         timestamp_to_label = {}
         for timestamp in timestamps:
             forward_timestamp = math.ceil(timestamp / self.time_frame) * self.time_frame
             label = self._transform(timestamp=forward_timestamp)
-            timestamp_to_label[timestamp] = label
+            if label is not None:
+                timestamp_to_label[timestamp] = label
 
         return timestamp_to_label
 
@@ -77,9 +78,9 @@ class LabelTransform(Transform, ABC):
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError()
 
-    def _transform(self, timestamp: int) -> np.array:
-        if timestamp in self.__label_dataframe.index:
-            label = self.__label_dataframe.loc[timestamp].label
+    def _transform(self, timestamp: int) -> Union[np.array, None]:
+        if timestamp in self.__dataframe.index:
+            label = self.__dataframe.loc[timestamp].label
             # regression
             if self.num_classes is None:
                 return label.to_numpy()
@@ -90,7 +91,7 @@ class LabelTransform(Transform, ABC):
                 one_hot[label] = 1
                 return one_hot
         else:
-            return np.nan
+            return None
 
     @abstractmethod
     def _draw_lines(self, df: pd.DataFrame, ohlcv_ax: plt.Axes, volume_ax: plt.Axes) -> pd.DataFrame:
@@ -105,6 +106,7 @@ class LabelTransform(Transform, ABC):
 
     def __getstate__(self):
         dct = self.__dict__.copy()
-        del dct["_LabelTransform__label_dataframe"]
+        if "_LabelTransform__dataframe" in dct:
+            del dct["_LabelTransform__dataframe"]
 
         return dct
