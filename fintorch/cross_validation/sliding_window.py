@@ -1,4 +1,5 @@
 import math
+import warnings
 
 from fintorch.cross_validation.cross_validation import CrossValidation
 from fintorch.cross_validation.fold import Fold
@@ -47,7 +48,8 @@ class SlidingWindowCrossValidation(CrossValidation):
 
     def __iter__(self):
         if len(self.dataset) < self.window_size:
-            raise Exception(f"Dataset must have at least {self.window_size} samples.")
+            warnings.warn(f"Dataset should have at least {self.window_size} samples.")
+            self.__window_size = len(self.dataset)
 
         self._index = -1
         self.__fold_count = math.ceil((len(self.dataset) - self.window_size) / self.window_step) + 1
