@@ -9,15 +9,10 @@ class CELoss(Criterion):
         super().__init__(name="CE", reduction=reduction, classification_criterion=True)
 
     def forward(self, input_: torch.Tensor, target: torch.Tensor):
-        num_classes = target.shape[1]
-        device_index = target.get_device()
-        device = "cpu" if device_index < 0 else f"cuda:{device_index}"
+        weight = torch.sum(target, dim=0) / len(target)
+        loss = F.cross_entropy(input=input_, target=target, weight=weight, reduction=self.reduction)
 
-        actual = torch.argmax(target, dim=-1)
-        count = torch.tensor([(actual == label).sum() for label in range(num_classes)]).to(device)
-        weight = count / len(actual)
-
-        return F.cross_entropy(input=input_, target=target, weight=weight, reduction=self.reduction)
+        return loss
 
     def to_str(self, value: float) -> str:
         return "CE: {:.6f}".format(value)
