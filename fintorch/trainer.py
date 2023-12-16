@@ -114,11 +114,12 @@ class Trainer:
             model.train()
 
             # forward prop
-            y_hat = model(x)
-            objective = self.criterion(y_hat, y)
+            with torch.autocast(device_type="cuda"):
+                y_hat = model(x)
+                loss = self.criterion(y_hat, y)
 
             # backward prop
-            objective.backward()
+            loss.backward()
             if self.gradient_clipping_threshold:
                 torch.nn.utils.clip_grad_norm(model.parameters(), self.gradient_clipping_threshold)
             self.optimizer.step()
