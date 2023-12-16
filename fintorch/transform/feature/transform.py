@@ -52,7 +52,7 @@ class FeatureTransform(Transform, ABC):
         feature_transform_dir = os.path.join(data_dir, "transform/feature")
         symbols_str = ", ".join([str(symbol) for symbol in self.symbols])
         time_frames_str = ", ".join([str(time_frame) for time_frame in self.time_frames])
-        directory = os.path.join(feature_transform_dir, symbols_str, time_frames_str)
+        directory = os.path.join(feature_transform_dir, self.short_name, symbols_str, time_frames_str)
         create_directory(directory)
 
         return directory
