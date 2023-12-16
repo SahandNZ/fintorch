@@ -47,12 +47,15 @@ class FeatureTransform(Transform, ABC):
         return self.__data
 
     @property
-    def root_dir(self) -> str:
+    def directory(self) -> str:
         data_dir = os.environ.get("DATA_ROOT", "./data")
         feature_transform_dir = os.path.join(data_dir, "transform/feature")
-        root_dir = os.path.join(feature_transform_dir, str(self.__hash__()))
+        symbols_str = ", ".join([str(symbol) for symbol in self.symbols])
+        time_frames_str = ", ".join([str(time_frame) for time_frame in self.time_frames])
+        directory = os.path.join(feature_transform_dir, symbols_str, time_frames_str)
+        create_directory(directory)
 
-        return root_dir
+        return directory
 
     def fit(self, data: Data):
         self.__data = Data()
@@ -87,14 +90,14 @@ class FeatureTransform(Transform, ABC):
         raise NotImplementedError()
 
     def _pre_transform(self, timestamp: int) -> np.array:
-        # load features from storage if its file exists
-        path = os.path.join(self.root_dir, str(timestamp) + '.pkl')
-        if os.path.exists(path):
-            with open(path, "rb") as file:
+        # load features from storage if its file exists and it doesn't empty
+        file_path = os.path.join(self.directory, str(timestamp) + '.pkl')
+        if os.path.exists(file_path) and 0 < os.path.getsize(file_path):
+            with open(file_path, "rb") as file:
                 feature = pickle.load(file)
             return feature
 
-        # return nan if timestamp exists in nan_timestamps
+        # return none if timestamp exists in nan_timestamps
         elif timestamp in self.__none_timestamps:
             return None
 
@@ -103,15 +106,13 @@ class FeatureTransform(Transform, ABC):
             # create feature
             feature = self._transform(timestamp=timestamp)
 
-            # append timestamp to nan_timestamps if it's nan
+            # append timestamp to none_timestamps if it's None
             if feature is None:
                 self.__none_timestamps.add(timestamp)
 
-            # save feature on storage if it's not nan
+            # save feature on storage if it's not None
             else:
-                if not os.path.exists(self.root_dir):
-                    create_directory(self.root_dir)
-                with open(path, "wb+") as file:
+                with open(file_path, "wb+") as file:
                     pickle.dump(feature, file)
 
             return feature
@@ -142,17 +143,6 @@ class FeatureTransform(Transform, ABC):
         is_sequence_lengths_equal = self.sequence_length == other.sequence_length
 
         return super().__eq__(other) and is_symbols_equal and is_time_frames_equal and is_sequence_lengths_equal
-
-    def __hash__(self):
-        name_hash = int.from_bytes(self.name.encode(), byteorder='big') % 10 ** 8
-        symbols_hash = np.prod([int.from_bytes(symbol.encode(), byteorder='big') for symbol in self.symbols]) % 10 ** 8
-        time_frames_hash = np.prod(self.time_frames) % 10 ** 8
-
-        total_hash = name_hash * symbols_hash % 10 ** 8
-        total_hash = total_hash * time_frames_hash % 10 ** 8
-        total_hash = total_hash * self.sequence_length % 10 ** 8
-
-        return total_hash
 
     def __getstate__(self):
         dct = self.__dict__.copy()
