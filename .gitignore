@@ -1,6 +1,7 @@
 # project
 **/data
 **/examples/modules.json
+**/examples/datasets.json
 
 # Python environments
 **/env/
