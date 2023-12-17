@@ -166,7 +166,7 @@ def main():
         with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
             futures = []
             for symbol, time_frame, ft_cls, lt_cls, model in items:
-                future = executor.submit(work, exchange, symbol, time_frame, ft_cls, lt_cls, model, show_progress_bar)
+                future = executor.submit(work, symbol, time_frame, ft_cls, lt_cls, model)
                 futures.append(future)
 
             for future in futures:
