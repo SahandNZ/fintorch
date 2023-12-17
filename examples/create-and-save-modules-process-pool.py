@@ -145,7 +145,7 @@ def main():
 
     # create modules
     items = list(itertools.product(symbols, time_frames, feature_transforms_cls, label_transforms_cls, models))
-    bar = tqdm(items, description="Create and saving modules")
+    bar = tqdm(items, desc="Create and saving modules")
     with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
         futures = []
         for symbol, time_frame, ft_cls, lt_cls, model in items:
