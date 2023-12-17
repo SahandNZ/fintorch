@@ -86,7 +86,7 @@ def work(
     module = Module(trainer=trainer, dataset=dataset, model=model)
     print("{}{:^12}-{:^8}-{:^32}{}".format("*" * 32, symbol, time_frame, module.short_name, "*" * 32))
     if not os.path.exists(module.path(mode="experiment")):
-        dataset.prepare(data=data, show_progress_bar=show_progress_bar)
+        dataset.prepare(data=data, progress=progress)
         module.optimize()
         module.save(mode="experiment")
 
