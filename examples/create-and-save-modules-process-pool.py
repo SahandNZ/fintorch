@@ -146,7 +146,7 @@ def main():
 
     # run jobs concurrently
     exchange = args.exchange
-    show_progress_bar = args.show_prgoress_bar
+    show_progress_bar = args.show_progress_bar
 
     items = list(itertools.product(symbols, time_frames, feature_transforms_cls, label_transforms_cls, models))
     bar = tqdm(items, desc="Create and saving modules")
