@@ -51,7 +51,8 @@ def work(
     # load candlestick date
     symbols = [symbol]
     time_frames = [time_frame]
-    df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=True)
+    df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=True,
+                                   show_progress_bar=False)
     data = Data(df_dict)
 
     # create dataset
@@ -144,7 +145,7 @@ def main():
 
     # create modules
     items = list(itertools.product(symbols, time_frames, feature_transforms_cls, label_transforms_cls, models))
-    bar = tqdm(items)
+    bar = tqdm(items, description="Create and saving modules")
     with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
         futures = []
         for symbol, time_frame, ft_cls, lt_cls, model in items:
