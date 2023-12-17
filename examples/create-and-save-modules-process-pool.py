@@ -40,6 +40,7 @@ from fintorch.utils.function import call_with_dict
 
 exchange: str = None
 show_progress_bar: bool = None
+print_classification_logs: bool = None
 
 
 def work(
@@ -75,11 +76,11 @@ def work(
         criterion=criterion,
         optimizer=optimizer,
         scheduler=scheduler,
-        print_logs=False,
+        print_logs=print_classification_logs,
         show_progress_bar=show_progress_bar,
         print_memory_status_logs=False,
         show_learning_curve_plot=False,
-        print_classification_logs=False,
+        print_classification_logs=print_classification_logs,
     )
 
     # create and save trained module
@@ -92,17 +93,19 @@ def work(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--show-progress-bar", action="store_true", required=False)
     parser.add_argument("--sequential", action="store_true", required=False)
+    parser.add_argument("--show-progress-bar", action="store_true", required=False)
+    parser.add_argument("--print-classification-logs", action="store_true", required=False)
     parser.add_argument("--max-workers", action="store", type=int, required=False, default=32)
     parser.add_argument("--exchange", action="store", type=str, required=False, default="binance")
     parser.add_argument("--modules-path", action="store", type=str, required=False, default="modules.json")
     args = parser.parse_args()
 
     # set global variables
-    global exchange, show_progress_bar
+    global exchange, show_progress_bar, print_classification_logs
     exchange = args.exchange
     show_progress_bar = args.show_progress_bar
+    print_classification_logs = args.print_classification_logs
 
     # load symbols and time_frames
     with open(args.modules_path, "r") as file:
