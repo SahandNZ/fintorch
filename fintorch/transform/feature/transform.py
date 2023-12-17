@@ -6,7 +6,7 @@ from typing import List, Dict, Set
 
 import numpy as np
 import pandas as pd
-from tqdm.auto import tqdm
+from rich.progress import Progress
 
 from fintorch.data import Data
 from fintorch.transform.transform import Transform
@@ -65,25 +65,29 @@ class FeatureTransform(Transform, ABC):
             df = df[self.features]
             self.__data[symbol, time_frame] = df
 
-    def transform(self, timestamps: List[int], show_progress_bar: bool = False) -> Dict[int, np.array]:
-        bar = timestamps
-        if show_progress_bar:
-            bar = tqdm(bar)
-            bar.set_description_str(f"Creating {self.short_name} feature set")
+    def transform(self, timestamps: List[int], progress: Progress = None) -> Dict[int, np.array]:
+        if progress is not None:
+            symbols_str = ", ".join([symbol for symbol in self.symbols])
+            time_frames_str = ", ".join([str(time_frame) for time_frame in self.time_frames])
+            desc = "[green]Creating ({} - {} - {}) features".format(symbols_str, time_frames_str, self.short_name)
+            task = progress.add_task(description=desc, total=len(timestamps))
 
         min_time_frames = min(self.time_frames)
-        timestamp_to_feature = {}
-        for timestamp in bar:
+        features_dict = {}
+        for timestamp in timestamps:
             backward_timestamp = int(timestamp // min_time_frames * min_time_frames)
             feature = self._pre_transform(timestamp=backward_timestamp)
             if feature is not None:
-                timestamp_to_feature[timestamp] = feature
+                features_dict[timestamp] = feature
 
-        return timestamp_to_feature
+            if progress is not None:
+                progress.advance(task, advance=1)
 
-    def fit_transform(self, data: Data, timestamps: List[int], show_progress_bar: bool = False):
+        return features_dict
+
+    def fit_transform(self, data: Data, timestamps: List[int], progress: Progress = None):
         self.fit(data=data)
-        return self.transform(timestamps=timestamps, show_progress_bar=show_progress_bar)
+        return self.transform(timestamps=timestamps, progress=progress)
 
     @abstractmethod
     def _fit(self, df: pd.DataFrame):

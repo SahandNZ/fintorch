@@ -48,14 +48,14 @@ class LabelTransform(Transform, ABC):
         self.__dataframe = self._fit(df=raw_dataframe)
 
     def transform(self, timestamps: List[int]) -> Dict[int, np.array]:
-        timestamp_to_label = {}
+        labels_dict = {}
         for timestamp in timestamps:
             forward_timestamp = math.ceil(timestamp / self.time_frame) * self.time_frame
             label = self._transform(timestamp=forward_timestamp)
             if label is not None:
-                timestamp_to_label[timestamp] = label
+                labels_dict[timestamp] = label
 
-        return timestamp_to_label
+        return labels_dict
 
     def fit_transform(self, data: Data, timestamps: List[int]) -> Dict[int, np.array]:
         self.fit(data=data)
