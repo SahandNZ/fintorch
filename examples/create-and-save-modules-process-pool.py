@@ -61,7 +61,6 @@ def work(
     feature_transform = feature_transform_cls(symbols=symbols, time_frames=time_frames)
     label_transform = label_transform_cls(symbol=symbol, time_frame=time_frame)
     dataset = BsfDataset(feature_transform=feature_transform, label_transform=label_transform)
-    dataset.prepare(data=data, show_progress_bar=show_progress_bar)
 
     # create trainer
     cross_validation = SlidingWindowCrossValidation(window_size=5000, train_percentage=0.8, dev_percentage=0.1)
@@ -87,6 +86,7 @@ def work(
     module = Module(trainer=trainer, dataset=dataset, model=model)
     print("{}{:^12}-{:^8}-{:^32}{}".format("*" * 32, symbol, time_frame, module.short_name, "*" * 32))
     if not os.path.exists(module.path(mode="experiment")):
+        dataset.prepare(data=data, show_progress_bar=show_progress_bar)
         module.optimize()
         module.save(mode="experiment")
 
