@@ -1,5 +1,6 @@
 import copy
 import gc
+import warnings
 from typing import List
 
 import torch
@@ -87,7 +88,11 @@ class Trainer:
 
     @property
     def device(self) -> str:
-        return torch.device('cuda' if self.auto_cuda and torch.cuda.is_available() else 'cpu')
+        if self.auto_cuda and not torch.cuda.is_available():
+            warnings.warn("Cuda device is not available while auto_cuda is active.")
+        device = torch.device('cuda' if self.auto_cuda and torch.cuda.is_available() else 'cpu')
+
+        return device
 
     @property
     def print_logs(self) -> bool:
