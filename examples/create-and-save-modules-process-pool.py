@@ -45,22 +45,41 @@ def work(
         time_frame: TimeFrame,
         feature_transform_cls: Type,
         label_transform_cls: Type,
-        samples_count: int,
         model: Model,
-        trainer: Trainer,
+        show_progress_bar: bool = False
 ):
     # load candlestick date
     symbols = [symbol]
     time_frames = [time_frame]
     df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=True,
-                                   show_progress_bar=False)
+                                   show_progress_bar=show_progress_bar)
     data = Data(df_dict)
 
     # create dataset
     feature_transform = feature_transform_cls(symbols=symbols, time_frames=time_frames)
     label_transform = label_transform_cls(symbol=symbol, time_frame=time_frame)
     dataset = BsfDataset(feature_transform=feature_transform, label_transform=label_transform)
-    dataset.prepare(data=data, samples_count=samples_count, show_progress_bar=True)
+    dataset.prepare(data=data, show_progress_bar=show_progress_bar)
+
+    # create trainer
+    cross_validation = SlidingWindowCrossValidation(window_size=5000, train_percentage=0.8, dev_percentage=0.1)
+    data_loader = DataLoader(batch_size=2 ** 10)
+    criterion = CELoss()
+    optimizer = Optimizer(cls=torch.optim.Adam, lr=1e-3, weight_decay=5e-3)
+    scheduler = LRScheduler(cls=torch.optim.lr_scheduler.StepLR, step_size=5, gamma=0.9)
+    trainer = Trainer(
+        epochs=50,
+        cross_validation=cross_validation,
+        data_loader=data_loader,
+        criterion=criterion,
+        optimizer=optimizer,
+        scheduler=scheduler,
+        print_logs=False,
+        show_progress_bar=show_progress_bar,
+        print_memory_status_logs=False,
+        show_learning_curve_plot=False,
+        print_classification_logs=False,
+    )
 
     # create and save trained module
     module = Module(trainer=trainer, dataset=dataset, model=model)
@@ -71,6 +90,7 @@ def work(
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--show-progress-bar", action="store_true", required=False)
     parser.add_argument("--max-workers", action="store", type=int, required=False, default=32)
     parser.add_argument("--exchange", action="store", type=str, required=False, default="binance")
     parser.add_argument("--modules-path", action="store", type=str, required=False, default="modules.json")
@@ -124,33 +144,16 @@ def main():
         model = call_with_dict(model_cls, model_params_dict)
         models.append(model)
 
-    # create trainer
-    cross_validation = SlidingWindowCrossValidation(window_size=5000, train_percentage=0.8, dev_percentage=0.1)
-    data_loader = DataLoader(batch_size=2 ** 10)
-    criterion = CELoss()
-    optimizer = Optimizer(cls=torch.optim.Adam, lr=1e-3, weight_decay=5e-3)
-    scheduler = LRScheduler(cls=torch.optim.lr_scheduler.StepLR, step_size=5, gamma=0.9)
-    trainer = Trainer(
-        epochs=50,
-        cross_validation=cross_validation,
-        data_loader=data_loader,
-        criterion=criterion,
-        optimizer=optimizer,
-        scheduler=scheduler,
-        print_logs=False,
-        show_progress_bar=False,
-        print_memory_status_logs=False,
-        show_learning_curve_plot=False,
-        print_classification_logs=False,
-    )
+    # run jobs concurrently
+    exchange = args.exchange
+    show_progress_bar = args.show_prgoress_bar
 
-    # create modules
     items = list(itertools.product(symbols, time_frames, feature_transforms_cls, label_transforms_cls, models))
     bar = tqdm(items, desc="Create and saving modules")
     with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
         futures = []
         for symbol, time_frame, ft_cls, lt_cls, model in items:
-            future = executor.submit(work, args.exchange, symbol, time_frame, ft_cls, lt_cls, None, model, trainer)
+            future = executor.submit(work, exchange, symbol, time_frame, ft_cls, lt_cls, model, show_progress_bar)
             futures.append(future)
 
         for future in futures:
