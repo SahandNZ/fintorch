@@ -1,7 +1,7 @@
 import argparse
 import itertools
 import json
-import warnings
+import os.path
 from concurrent.futures import ProcessPoolExecutor
 from typing import Type
 
@@ -38,21 +38,22 @@ from fintorch.transform.label.classification.trend.next_fractal import NextFract
 from fintorch.transform.label.classification.trend.up_down import UpDownLabelTransform
 from fintorch.utils.function import call_with_dict
 
+exchange: str = None
+show_progress_bar: bool = None
+
 
 def work(
-        exchange: str,
         symbol: str,
         time_frame: TimeFrame,
         feature_transform_cls: Type,
         label_transform_cls: Type,
         model: Model,
-        show_progress_bar: bool = False
 ):
     # load candlestick date
     symbols = [symbol]
     time_frames = [time_frame]
-    df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=True,
-                                   show_progress_bar=show_progress_bar)
+    df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=False,
+                                   show_progress_bar=False)
     data = Data(df_dict)
 
     # create dataset
@@ -84,17 +85,24 @@ def work(
     # create and save trained module
     module = Module(trainer=trainer, dataset=dataset, model=model)
     print("{}{:^12}-{:^8}-{:^32}{}".format("*" * 32, symbol, time_frame, module.short_name, "*" * 32))
-    module.optimize()
-    module.save(mode="experiment")
+    if not os.path.exists(module.path(mode="experiment")):
+        module.optimize()
+        module.save(mode="experiment")
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--show-progress-bar", action="store_true", required=False)
+    parser.add_argument("--sequential", action="store_true", required=False)
     parser.add_argument("--max-workers", action="store", type=int, required=False, default=32)
     parser.add_argument("--exchange", action="store", type=str, required=False, default="binance")
     parser.add_argument("--modules-path", action="store", type=str, required=False, default="modules.json")
     args = parser.parse_args()
+
+    # set global variables
+    global exchange, show_progress_bar
+    exchange = args.exchange
+    show_progress_bar = args.show_progress_bar
 
     # load symbols and time_frames
     with open(args.modules_path, "r") as file:
@@ -144,23 +152,24 @@ def main():
         model = call_with_dict(model_cls, model_params_dict)
         models.append(model)
 
-    # run jobs concurrently
-    exchange = args.exchange
-    show_progress_bar = args.show_progress_bar
-
+    # run jobs
     items = list(itertools.product(symbols, time_frames, feature_transforms_cls, label_transforms_cls, models))
     bar = tqdm(items, desc="Create and saving modules")
-    with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
-        futures = []
-        for symbol, time_frame, ft_cls, lt_cls, model in items:
-            future = executor.submit(work, exchange, symbol, time_frame, ft_cls, lt_cls, model, show_progress_bar)
-            futures.append(future)
 
-        for future in futures:
-            future.result()
-            bar.update(1)
+    if args.sequential:
+        for symbol, time_frame, ft_cls, lt_cls, model in bar:
+            work(symbol, time_frame, ft_cls, lt_cls, model)
+    else:
+        with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
+            futures = []
+            for symbol, time_frame, ft_cls, lt_cls, model in items:
+                future = executor.submit(work, exchange, symbol, time_frame, ft_cls, lt_cls, model, show_progress_bar)
+                futures.append(future)
+
+            for future in futures:
+                future.result()
+                bar.update(1)
 
 
 if __name__ == '__main__':
-    warnings.filterwarnings("ignore")
     main()
