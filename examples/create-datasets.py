@@ -12,11 +12,12 @@ from fintorch.data import Data
 from fintorch.transform.feature.rmstd_tr_roc import RollingMeanStdTrRocFeatureTransform
 from fintorch.transform.feature.stft_tr_roc import StftTrRocFeatureTransform
 
+exchange: str = "binance"
 max_workers: int = None
 progress_bar_columns: List = None
 
 
-def work(exchange: str, symbol: str, time_frame: int, feature_transform_cls: Type, progress: Progress):
+def work(symbol: str, time_frame: int, feature_transform_cls: Type, progress: Progress):
     symbols = [symbol]
     time_frames = [time_frame]
     df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=False,
@@ -28,14 +29,14 @@ def work(exchange: str, symbol: str, time_frame: int, feature_transform_cls: Typ
     feature_transform.fit_transform(data=data, timestamps=timestamps, progress=progress)
 
 
-def run_multi_thread(exchange: str, items: List):
+def run_multi_thread(items: List):
     with Progress(*progress_bar_columns) as progress:
         main_task = progress.add_task(description="[red]Creating datasets", total=len(items))
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = []
             for symbol, time_frame, feature_transform_cls in items:
-                future = executor.submit(work, exchange, symbol, time_frame, feature_transform_cls, progress)
+                future = executor.submit(work, symbol, time_frame, feature_transform_cls, progress)
                 futures.append(future)
 
             for future in futures:
@@ -43,11 +44,11 @@ def run_multi_thread(exchange: str, items: List):
                 progress.update(main_task, advance=1)
 
 
-def run_multi_process(exchange: str, items: List):
+def run_multi_process(items: List):
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = []
         for symbol, time_frame, feature_transform_cls in items:
-            future = executor.submit(work, exchange, symbol, time_frame, feature_transform_cls, None)
+            future = executor.submit(work, symbol, time_frame, feature_transform_cls, None)
             futures.append(future)
 
         with Progress(*progress_bar_columns) as progress:
@@ -58,12 +59,12 @@ def run_multi_process(exchange: str, items: List):
                 progress.update(main_task, advance=1)
 
 
-def run_sequential(exchange: str, items: List):
+def run_sequential(items: List):
     with Progress(*progress_bar_columns) as progress:
         main_task = progress.add_task(description="[red]Creating datasets", total=len(items))
 
         for symbol, time_frame, feature_transform_cls in items:
-            work(exchange, symbol, time_frame, feature_transform_cls, progress)
+            work(symbol, time_frame, feature_transform_cls, progress)
             progress.update(main_task, advance=1)
 
 
@@ -72,12 +73,12 @@ def main():
     parser.add_argument("--multi-thread", action="store_true", required=False)
     parser.add_argument("--multi-process", action="store_true", required=False)
     parser.add_argument("--max-workers", action="store", type=int, required=False, default=16)
-    parser.add_argument("--exchange", action="store", type=str, required=False, default="binance")
     parser.add_argument("--config-path", action="store", type=str, required=False, default="datasets.json")
     args = parser.parse_args()
 
     # set values of global variables
-    global max_workers, progress_bar_columns
+    global exchange, max_workers, progress_bar_columns
+    exchange = args.exchange
     max_workers = args.max_workers
     progress_bar_columns = [
         SpinnerColumn(),
@@ -105,7 +106,7 @@ def main():
     # run works
     items = list(itertools.product(symbols, time_frames, feature_transforms_cls))
     run_func = run_multi_thread if args.multi_thread else (run_multi_process if args.multi_process else run_sequential)
-    run_func(exchange=args.exchange, items=items)
+    run_func(items=items)
 
 
 if __name__ == '__main__':
