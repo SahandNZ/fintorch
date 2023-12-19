@@ -77,8 +77,7 @@ def main():
     args = parser.parse_args()
 
     # set values of global variables
-    global exchange, max_workers, progress_bar_columns
-    exchange = args.exchange
+    global max_workers, progress_bar_columns
     max_workers = args.max_workers
     progress_bar_columns = [
         SpinnerColumn(),
