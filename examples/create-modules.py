@@ -2,14 +2,15 @@ import argparse
 import itertools
 import json
 import os.path
-from concurrent.futures import ProcessPoolExecutor
-from typing import Type
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from typing import Type, List
 
 import torch
 from pyccx.constant.time_frame import TimeFrame
-from pyccx.data.local import load_dataframes_dict
+from pyccx.data import load_dataframes_dict
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, MofNCompleteColumn, \
+    TimeElapsedColumn, TimeRemainingColumn
 from torch import nn
-from tqdm.rich import tqdm
 
 from fintorch.criterion.ce import CELoss
 from fintorch.cross_validation.sliding_window import SlidingWindowCrossValidation
@@ -38,23 +39,18 @@ from fintorch.transform.label.classification.trend.next_fractal import NextFract
 from fintorch.transform.label.classification.trend.up_down import UpDownLabelTransform
 from fintorch.utils.function import call_with_dict
 
-exchange: str = None
-show_progress_bar: bool = None
-print_classification_logs: bool = None
+exchange: str = "binance"
+max_workers: int = None
+progress_bar_columns: List = None
 
 
-def work(
-        symbol: str,
-        time_frame: TimeFrame,
-        feature_transform_cls: Type,
-        label_transform_cls: Type,
-        model: Model,
-):
+def work(symbol: str, time_frame: TimeFrame, feature_transform_cls: Type, label_transform_cls: Type, model: Model,
+         progress: Progress):
     # load candlestick date
     symbols = [symbol]
     time_frames = [time_frame]
     df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=False,
-                                   show_progress_bar=False)
+                                   progress=progress)
     data = Data(df_dict)
 
     # create dataset
@@ -64,7 +60,7 @@ def work(
 
     # create trainer
     cross_validation = SlidingWindowCrossValidation(window_size=5000, train_percentage=0.8, dev_percentage=0.1)
-    data_loader = DataLoader(batch_size=2 ** 10)
+    data_loader = DataLoader(batch_size=2 ** 8)
     criterion = CELoss()
     optimizer = Optimizer(cls=torch.optim.Adam, lr=1e-3, weight_decay=5e-3)
     scheduler = LRScheduler(cls=torch.optim.lr_scheduler.StepLR, step_size=5, gamma=0.9)
@@ -75,37 +71,79 @@ def work(
         criterion=criterion,
         optimizer=optimizer,
         scheduler=scheduler,
-        print_logs=print_classification_logs,
-        show_progress_bar=show_progress_bar,
+        print_logs=False,
+        show_progress_bar=False,
         print_memory_status_logs=False,
         show_learning_curve_plot=False,
-        print_classification_logs=print_classification_logs,
+        print_classification_logs=False,
     )
 
     # create and save trained module
     module = Module(trainer=trainer, dataset=dataset, model=model)
-    print("{}{:^12}-{:^8}-{:^32}{}".format("*" * 32, symbol, time_frame, module.short_name, "*" * 32))
     if not os.path.exists(module.path(mode="experiment")):
         dataset.prepare(data=data, progress=progress)
         module.optimize()
         module.save(mode="experiment")
 
 
+def run_multi_thread(items: List):
+    with Progress(*progress_bar_columns) as progress:
+        main_task = progress.add_task(description="[red]Creating datasets", total=len(items))
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = []
+            for symbol, time_frame, feature_transform_cls in items:
+                future = executor.submit(work, symbol, time_frame, feature_transform_cls, progress)
+                futures.append(future)
+
+            for future in futures:
+                future.result()
+                progress.update(main_task, advance=1)
+
+
+def run_multi_process(items: List):
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        futures = []
+        for symbol, time_frame, ft_cls, lt_cls, model in items:
+            future = executor.submit(work, symbol, time_frame, ft_cls, lt_cls, model, None)
+            futures.append(future)
+
+        with Progress(*progress_bar_columns) as progress:
+            main_task = progress.add_task(description="[red]Creating datasets", total=len(items))
+            for future in futures:
+                future.result()
+                progress.update(main_task, advance=1)
+
+
+def run_sequential(items: List):
+    with Progress(*progress_bar_columns) as progress:
+        main_task = progress.add_task(description="[red]Creating datasets", total=len(items))
+
+        for symbol, time_frame, ft_cls, lt_cls, model in items:
+            work(symbol, time_frame, ft_cls, lt_cls, model, progress)
+            progress.update(main_task, advance=1)
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--sequential", action="store_true", required=False)
-    parser.add_argument("--show-progress-bar", action="store_true", required=False)
-    parser.add_argument("--print-classification-logs", action="store_true", required=False)
+    parser.add_argument("--multi-thread", action="store_true", required=False)
+    parser.add_argument("--multi-process", action="store_true", required=False)
     parser.add_argument("--max-workers", action="store", type=int, required=False, default=32)
-    parser.add_argument("--exchange", action="store", type=str, required=False, default="binance")
     parser.add_argument("--modules-path", action="store", type=str, required=False, default="modules.json")
     args = parser.parse_args()
 
     # set global variables
-    global exchange, show_progress_bar, print_classification_logs
-    exchange = args.exchange
-    show_progress_bar = args.show_progress_bar
-    print_classification_logs = args.print_classification_logs
+    global max_workers, progress_bar_columns
+    max_workers = args.max_workers
+    progress_bar_columns = [
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(show_speed=True),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        TimeRemainingColumn(),
+    ]
 
     # load symbols and time_frames
     with open(args.modules_path, "r") as file:
@@ -157,21 +195,8 @@ def main():
 
     # run jobs
     items = list(itertools.product(symbols, time_frames, feature_transforms_cls, label_transforms_cls, models))
-    bar = tqdm(items, desc="Create and saving modules")
-
-    if args.sequential:
-        for symbol, time_frame, ft_cls, lt_cls, model in bar:
-            work(symbol, time_frame, ft_cls, lt_cls, model)
-    else:
-        with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
-            futures = []
-            for symbol, time_frame, ft_cls, lt_cls, model in items:
-                future = executor.submit(work, symbol, time_frame, ft_cls, lt_cls, model)
-                futures.append(future)
-
-            for future in futures:
-                future.result()
-                bar.update(1)
+    run_func = run_multi_thread if args.multi_thread else (run_multi_process if args.multi_process else run_sequential)
+    run_func(items=items)
 
 
 if __name__ == '__main__':
