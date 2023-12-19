@@ -2,6 +2,7 @@ import argparse
 import itertools
 import json
 import os.path
+import warnings
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from typing import Type, List
 
@@ -200,4 +201,5 @@ def main():
 
 
 if __name__ == '__main__':
+    warnings.filterwarnings("ignore")
     main()
