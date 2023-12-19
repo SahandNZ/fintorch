@@ -88,7 +88,7 @@ def work(symbol: str, time_frame: TimeFrame, feature_transform_cls: Type, label_
 
 def run_multi_thread(items: List):
     with Progress(*progress_bar_columns) as progress:
-        main_task = progress.add_task(description="[red]Creating datasets", total=len(items))
+        main_task = progress.add_task(description="[red]Creating modules", total=len(items))
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = []
@@ -109,7 +109,7 @@ def run_multi_process(items: List):
             futures.append(future)
 
         with Progress(*progress_bar_columns) as progress:
-            main_task = progress.add_task(description="[red]Creating datasets", total=len(items))
+            main_task = progress.add_task(description="[red]Creating modules", total=len(items))
             for future in futures:
                 future.result()
                 progress.update(main_task, advance=1)
@@ -117,7 +117,7 @@ def run_multi_process(items: List):
 
 def run_sequential(items: List):
     with Progress(*progress_bar_columns) as progress:
-        main_task = progress.add_task(description="[red]Creating datasets", total=len(items))
+        main_task = progress.add_task(description="[red]Creating modules", total=len(items))
 
         for symbol, time_frame, ft_cls, lt_cls, model in items:
             work(symbol, time_frame, ft_cls, lt_cls, model, progress)
