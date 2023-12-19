@@ -115,6 +115,10 @@ class Trainer:
         return self.__print_classification_logs
 
     def _common_step(self, x: torch.Tensor, y: torch.Tensor, model: Model, optimize: bool = False):
+        model.to(self.device)
+        x = x.to(self.device)
+        y = y.to(self.device)
+
         if optimize:
             model.train()
 
@@ -134,7 +138,7 @@ class Trainer:
             with torch.no_grad():
                 y_hat = model(x)
 
-        return y, y_hat
+        return y.cpu(), y_hat.cpu()
 
     def _val_test_common_step(self, fold: Fold, model: Model, validation: bool):
         dataset = fold.dev_set if validation else fold.test_set
@@ -170,8 +174,6 @@ class Trainer:
 
     def prepare(self, fold: Fold, model: Model):
         self._reset(model=model)
-        fold.to(self.device)
-        model.to(self.device)
 
     def train(self, fold: Fold, model: Model):
         bar = range(self.epochs)
