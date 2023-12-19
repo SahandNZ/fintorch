@@ -115,6 +115,7 @@ class Trainer:
         return self.__print_classification_logs
 
     def _common_step(self, x: torch.Tensor, y: torch.Tensor, model: Model, optimize: bool = False):
+        # move to tensors and model cuda if it's available
         model.to(self.device)
         x = x.to(self.device)
         y = y.to(self.device)
@@ -137,6 +138,10 @@ class Trainer:
             model.eval()
             with torch.no_grad():
                 y_hat = model(x)
+
+        # move tensors to cpu
+        x.cpu()
+        y.cpu()
 
         return y.cpu(), y_hat.cpu()
 
