@@ -1,0 +1,9 @@
+{
+    "symbols": [
+        "BTC-USDT",
+        "ETH-USDT"
+    ],
+    "time-frames": [
+        14400
+    ]
+}

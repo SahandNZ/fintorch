@@ -130,7 +130,7 @@ def main():
     parser.add_argument("--multi-thread", action="store_true", required=False)
     parser.add_argument("--multi-process", action="store_true", required=False)
     parser.add_argument("--max-workers", action="store", type=int, required=False, default=32)
-    parser.add_argument("--modules-path", action="store", type=str, required=False, default="modules.json")
+    parser.add_argument("--modules-path", action="store", type=str, required=False, default="config/modules.json")
     args = parser.parse_args()
 
     # set global variables
