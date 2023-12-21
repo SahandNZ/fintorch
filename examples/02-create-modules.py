@@ -45,24 +45,14 @@ max_workers: int = None
 progress_bar_columns: List = None
 
 
-def work(symbol: str, time_frame: TimeFrame, feature_transform_cls: Type, label_transform_cls: Type, model: Model,
-         progress: Progress):
+def work(symbol: str, time_frame: TimeFrame, data: Data, feature_transform_cls: Type, label_transform_cls: Type,
+         model: Model, progress: Progress):
     # define symbols and time_frames
     symbols = [symbol]
-    if TimeFrame.DAY1 == time_frame:
-        time_frames = [TimeFrame.HOUR4, time_frame]
-        ft_time_frames = [TimeFrame.HOUR4]
-    else:
-        time_frames = [time_frame]
-        ft_time_frames = time_frames
-
-    # load candlestick date
-    df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=False,
-                                   progress=progress)
-    data = Data(df_dict)
+    time_frames = [TimeFrame.HOUR4] if TimeFrame.DAY1 == time_frame else [time_frame]
 
     # create dataset
-    feature_transform = feature_transform_cls(symbols=symbols, time_frames=ft_time_frames)
+    feature_transform = feature_transform_cls(symbols=symbols, time_frames=time_frames)
     label_transform = label_transform_cls(symbol=symbol, time_frame=time_frame)
     dataset = BsfDataset(feature_transform=feature_transform, label_transform=label_transform)
 
@@ -94,14 +84,14 @@ def work(symbol: str, time_frame: TimeFrame, feature_transform_cls: Type, label_
         module.save(mode="experiment")
 
 
-def run_multi_thread(items: List):
+def run_multi_thread(data: Data, items: List):
     with Progress(*progress_bar_columns) as progress:
         main_task = progress.add_task(description="[red]Creating modules", total=len(items))
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = []
-            for symbol, time_frame, feature_transform_cls in items:
-                future = executor.submit(work, symbol, time_frame, feature_transform_cls, progress)
+            for symbol, time_frame, ft_cls, lt_cls, model in items:
+                future = executor.submit(work, symbol, time_frame, data, ft_cls, lt_cls, model, progress)
                 futures.append(future)
 
             for future in futures:
@@ -109,11 +99,11 @@ def run_multi_thread(items: List):
                 progress.update(main_task, advance=1)
 
 
-def run_multi_process(items: List):
+def run_multi_process(data: Data, items: List):
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = []
         for symbol, time_frame, ft_cls, lt_cls, model in items:
-            future = executor.submit(work, symbol, time_frame, ft_cls, lt_cls, model, None)
+            future = executor.submit(work, symbol, time_frame, data, ft_cls, lt_cls, model, None)
             futures.append(future)
 
         with Progress(*progress_bar_columns) as progress:
@@ -123,12 +113,12 @@ def run_multi_process(items: List):
                 progress.update(main_task, advance=1)
 
 
-def run_sequential(items: List):
+def run_sequential(data: Data, items: List):
     with Progress(*progress_bar_columns) as progress:
         main_task = progress.add_task(description="[red]Creating modules", total=len(items))
 
         for symbol, time_frame, ft_cls, lt_cls, model in items:
-            work(symbol, time_frame, ft_cls, lt_cls, model, progress)
+            work(symbol, time_frame, data, ft_cls, lt_cls, model, progress)
             progress.update(main_task, advance=1)
 
 
@@ -201,10 +191,14 @@ def main():
         model = call_with_dict(model_cls, model_params_dict)
         models.append(model)
 
+    # load candlestick data
+    df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=False)
+    data = Data(df_dict)
+
     # run jobs
     items = list(itertools.product(symbols, time_frames, feature_transforms_cls, label_transforms_cls, models))
     run_func = run_multi_thread if args.multi_thread else (run_multi_process if args.multi_process else run_sequential)
-    run_func(items=items)
+    run_func(data=data, items=items)
 
 
 if __name__ == '__main__':
