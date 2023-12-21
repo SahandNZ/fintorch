@@ -47,15 +47,22 @@ progress_bar_columns: List = None
 
 def work(symbol: str, time_frame: TimeFrame, feature_transform_cls: Type, label_transform_cls: Type, model: Model,
          progress: Progress):
-    # load candlestick date
+    # define symbols and time_frames
     symbols = [symbol]
-    time_frames = [time_frame]
+    if TimeFrame.DAY1 == time_frame:
+        time_frames = [TimeFrame.HOUR4, time_frame]
+        ft_time_frames = [TimeFrame.HOUR4]
+    else:
+        time_frames = [time_frame]
+        ft_time_frames = time_frames
+
+    # load candlestick date
     df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=False,
                                    progress=progress)
     data = Data(df_dict)
 
     # create dataset
-    feature_transform = feature_transform_cls(symbols=symbols, time_frames=time_frames)
+    feature_transform = feature_transform_cls(symbols=symbols, time_frames=ft_time_frames)
     label_transform = label_transform_cls(symbol=symbol, time_frame=time_frame)
     dataset = BsfDataset(feature_transform=feature_transform, label_transform=label_transform)
 
