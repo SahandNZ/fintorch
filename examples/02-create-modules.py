@@ -49,8 +49,8 @@ def work(symbol: str, time_frame: TimeFrame, feature_transform_cls: Type, label_
          progress: Progress):
     # define symbols and time_frames
     symbols = [symbol]
-    time_frames = [TimeFrame.HOUR4] if TimeFrame.DAY1 == time_frame else [time_frame]
-    ft_time_frames = [TimeFrame.HOUR4, TimeFrame.DAY1] if TimeFrame.DAY1 == time_frame else [time_frame]
+    time_frames = [TimeFrame.HOUR4, TimeFrame.DAY1] if TimeFrame.DAY1 == time_frame else [time_frame]
+    ft_time_frames = [TimeFrame.HOUR4] if TimeFrame.DAY1 == time_frame else [time_frame]
 
     # load candlestick data
     df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=False)
