@@ -199,7 +199,7 @@ def main():
     # run jobs
     items = list(itertools.product(symbols, time_frames, feature_transforms_cls, label_transforms_cls, models))
     run_func = run_multi_thread if args.multi_thread else (run_multi_process if args.multi_process else run_sequential)
-    run_func(data=data, items=items)
+    run_func(items=items)
 
 
 if __name__ == '__main__':
