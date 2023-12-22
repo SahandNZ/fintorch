@@ -50,8 +50,7 @@ def main():
         for module_experiment_path in modules_paths:
             module_deployment_path = module_experiment_path.replace("experiment", "deployment")
             if not os.path.exists(module_deployment_path):
-                path = os.path.join(module_experiment_root, file_name)
-                module = Module.load(path=path, auto_cuda=False)
+                module = Module.load(path=module_experiment_path, auto_cuda=False)
                 module.save(mode="deployment")
 
             progress.update(task, advance=1)
