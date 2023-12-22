@@ -52,10 +52,6 @@ def work(symbol: str, time_frame: TimeFrame, feature_transform_cls: Type, label_
     time_frames = [TimeFrame.HOUR4, TimeFrame.DAY1] if TimeFrame.DAY1 == time_frame else [time_frame]
     ft_time_frames = [TimeFrame.HOUR4] if TimeFrame.DAY1 == time_frame else [time_frame]
 
-    # load candlestick data
-    df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=False)
-    data = Data(df_dict)
-
     # create dataset
     feature_transform = feature_transform_cls(symbols=symbols, time_frames=ft_time_frames)
     label_transform = label_transform_cls(symbol=symbol, time_frame=time_frame)
@@ -84,6 +80,9 @@ def work(symbol: str, time_frame: TimeFrame, feature_transform_cls: Type, label_
     # create and save trained module
     module = Module(trainer=trainer, dataset=dataset, model=model)
     if not os.path.exists(module.path(mode="experiment")):
+        df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=False)
+        data = Data(df_dict)
+
         dataset.prepare(data=data, progress=progress)
         module.optimize()
         module.save(mode="experiment")
