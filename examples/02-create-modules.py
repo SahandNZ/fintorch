@@ -45,14 +45,19 @@ max_workers: int = None
 progress_bar_columns: List = None
 
 
-def work(symbol: str, time_frame: TimeFrame, data: Data, feature_transform_cls: Type, label_transform_cls: Type,
-         model: Model, progress: Progress):
+def work(symbol: str, time_frame: TimeFrame, feature_transform_cls: Type, label_transform_cls: Type, model: Model,
+         progress: Progress):
     # define symbols and time_frames
     symbols = [symbol]
     time_frames = [TimeFrame.HOUR4] if TimeFrame.DAY1 == time_frame else [time_frame]
+    ft_time_frames = [TimeFrame.HOUR4, TimeFrame.DAY1] if TimeFrame.DAY1 == time_frame else [time_frame]
+
+    # load candlestick data
+    df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=False)
+    data = Data(df_dict)
 
     # create dataset
-    feature_transform = feature_transform_cls(symbols=symbols, time_frames=time_frames)
+    feature_transform = feature_transform_cls(symbols=symbols, time_frames=ft_time_frames)
     label_transform = label_transform_cls(symbol=symbol, time_frame=time_frame)
     dataset = BsfDataset(feature_transform=feature_transform, label_transform=label_transform)
 
@@ -84,14 +89,14 @@ def work(symbol: str, time_frame: TimeFrame, data: Data, feature_transform_cls: 
         module.save(mode="experiment")
 
 
-def run_multi_thread(data: Data, items: List):
+def run_multi_thread(items: List):
     with Progress(*progress_bar_columns) as progress:
         main_task = progress.add_task(description="[red]Creating modules", total=len(items))
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = []
             for symbol, time_frame, ft_cls, lt_cls, model in items:
-                future = executor.submit(work, symbol, time_frame, data, ft_cls, lt_cls, model, progress)
+                future = executor.submit(work, symbol, time_frame, ft_cls, lt_cls, model, progress)
                 futures.append(future)
 
             for future in futures:
@@ -99,11 +104,11 @@ def run_multi_thread(data: Data, items: List):
                 progress.update(main_task, advance=1)
 
 
-def run_multi_process(data: Data, items: List):
+def run_multi_process(items: List):
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = []
         for symbol, time_frame, ft_cls, lt_cls, model in items:
-            future = executor.submit(work, symbol, time_frame, data, ft_cls, lt_cls, model, None)
+            future = executor.submit(work, symbol, time_frame, ft_cls, lt_cls, model, None)
             futures.append(future)
 
         with Progress(*progress_bar_columns) as progress:
@@ -113,12 +118,12 @@ def run_multi_process(data: Data, items: List):
                 progress.update(main_task, advance=1)
 
 
-def run_sequential(data: Data, items: List):
+def run_sequential(items: List):
     with Progress(*progress_bar_columns) as progress:
         main_task = progress.add_task(description="[red]Creating modules", total=len(items))
 
         for symbol, time_frame, ft_cls, lt_cls, model in items:
-            work(symbol, time_frame, data, ft_cls, lt_cls, model, progress)
+            work(symbol, time_frame, ft_cls, lt_cls, model, progress)
             progress.update(main_task, advance=1)
 
 
@@ -190,10 +195,6 @@ def main():
     for model_cls in model_classes:
         model = call_with_dict(model_cls, model_params_dict)
         models.append(model)
-
-    # load candlestick data
-    df_dict = load_dataframes_dict(exchange=exchange, symbols=symbols, time_frames=time_frames, update=False)
-    data = Data(df_dict)
 
     # run jobs
     items = list(itertools.product(symbols, time_frames, feature_transforms_cls, label_transforms_cls, models))
