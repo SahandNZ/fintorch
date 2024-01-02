@@ -66,6 +66,9 @@ class FeatureTransform(Transform, ABC):
             self.__data[symbol, time_frame] = df
 
     def transform(self, timestamps: List[int], progress: Progress = None) -> Dict[int, np.array]:
+        if isinstance(progress, bool) and progress:
+            progress = Progress()
+
         if progress is not None:
             symbols_str = ", ".join([symbol for symbol in self.symbols])
             time_frames_str = ", ".join([str(time_frame) for time_frame in self.time_frames])
@@ -81,7 +84,8 @@ class FeatureTransform(Transform, ABC):
                 features_dict[timestamp] = feature
 
             if progress is not None:
-                progress.advance(task, advance=1)
+                with progress:
+                    progress.advance(task, advance=1)
 
         return features_dict
 

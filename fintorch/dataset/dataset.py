@@ -7,6 +7,7 @@ from typing import List, Type
 
 import pandas as pd
 import torch
+from rich.progress import Progress
 
 from fintorch.component import Component
 from fintorch.data import Data
@@ -141,11 +142,11 @@ class Dataset(Component):
         self.__y = self.y.to(device)
 
     @abstractmethod
-    def prepare(self, data: Data, samples_count: int = 0, show_progress_bar: bool = False):
+    def prepare(self, data: Data, samples_count: int = 0, progress: Progress = None):
         raise NotImplemented()
 
     @abstractmethod
-    def preprocess(self, data: Data, timestamps: List[int], show_progress_bar: bool = False) -> torch.Tensor:
+    def preprocess(self, data: Data, timestamps: List[int], progress: Progress = None) -> torch.Tensor:
         raise NotImplemented()
 
     def update(self, data: Data, show_progress_bar: bool = False):
