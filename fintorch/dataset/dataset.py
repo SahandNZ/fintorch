@@ -8,7 +8,7 @@ import torch
 from rich.progress import Progress
 
 from fintorch.data import Data
-from fintorch.dataset.smaple import Sample
+from fintorch.dataset.sample import Sample
 from fintorch.defaults import DATA_DIR
 from fintorch.transform.feature.transform import FeatureTransform
 from fintorch.transform.label.transform import LabelTransform
