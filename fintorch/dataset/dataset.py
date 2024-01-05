@@ -1,214 +1,191 @@
-import copy
-import itertools
+import math
 import os
 import pickle
-from abc import abstractmethod
-from typing import List, Type
+from typing import List, Union
 
-import pandas as pd
+import numpy as np
 import torch
 from rich.progress import Progress
 
-from fintorch.component import Component
 from fintorch.data import Data
+from fintorch.dataset.smaple import Sample
+from fintorch.defaults import DATA_DIR
 from fintorch.transform.feature.transform import FeatureTransform
 from fintorch.transform.label.transform import LabelTransform
 from fintorch.utils.directory import create_directory
+from fintorch.utils.hash import list_hash
 
 
-class Dataset(Component):
-    def __init__(self, feature_transform: FeatureTransform, label_transform: LabelTransform):
-        name = feature_transform.name + ' | ' + label_transform.name
-        short_name = feature_transform.short_name + ' | ' + label_transform.short_name
-        super().__init__(name=name, short_name=short_name, description="")
+class Dataset:
+    def __init__(self, symbols: str, time_frames: List[int], sequence_length: int, sampling_time_frame: int,
+                 feature_transforms: List[FeatureTransform], label_transforms: List[LabelTransform]):
 
-        # properties
-        self.__feature_transform: FeatureTransform = feature_transform
-        self.__label_transform: LabelTransform = label_transform
-        self.__x: torch.Tensor = None
-        self.__y: torch.Tensor = None
-        self.__df: pd.DataFrame = None
+        self.__symbols: List[str] = symbols
+        self.__time_frames: List[int] = time_frames
+        self.__sequence_length: int = sequence_length
+        self.__sampling_time_frame: int = sampling_time_frame
+        self.__feature_transforms: List[FeatureTransform] = feature_transforms
+        self.__label_transforms: List[LabelTransform] = label_transforms
 
-        # save and load properties
-        self.__root: str = None
-
-        # control flags
-        self.getstate_mode: str = "experiment"
-
-    @staticmethod
-    def create_and_save_datasets(dataset: Type, feature_transforms: List[FeatureTransform],
-                                 label_transforms: List[LabelTransform], data: Data, samples_count: int = -1,
-                                 show_progress_bar: bool = True):
-        for feature_transform, label_transform in list(itertools.product(feature_transforms, label_transforms)):
-            Dataset.create_and_save(dataset, feature_transform, label_transform, data, samples_count,
-                                    show_progress_bar)
-
-    @staticmethod
-    def create_and_save(dataset: Type, feature_transform: FeatureTransform, label_transform: LabelTransform, data: Data,
-                        samples_count: int = -1, show_progress_bar: bool = False):
-        d = dataset(feature_transform=feature_transform, label_transform=label_transform)
-        d.prepare(data=data, samples_count=samples_count, show_progress_bar=show_progress_bar)
-        d.save()
-        del d
-
-    @staticmethod
-    def load(path: str):
-        with open(path, 'rb') as file:
-            dataset = pickle.load(file)
-
-        return dataset
-
-    @staticmethod
-    def aggregate(datasets: List):
-        aggregated = datasets[0].copy()
-        for dataset in datasets[1:]:
-            aggregated.append(dataset, inplace=True)
-
-        return aggregated
+        self.__directory: str = os.path.join(DATA_DIR, "dataset", str(self.__hash__()))
+        create_directory(self.__directory)
 
     @property
-    def feature_transform(self) -> FeatureTransform:
-        return self.__feature_transform
+    def symbols(self) -> List[str]:
+        return self.__symbols
 
     @property
-    def label_transform(self) -> LabelTransform:
-        return self.__label_transform
+    def time_frames(self) -> List[int]:
+        return self.__time_frames
 
     @property
-    def x(self) -> torch.Tensor:
-        return self.__x
-
-    @x.deleter
-    def x(self):
-        del self.__x
+    def sequence_length(self) -> int:
+        return self.__sequence_length
 
     @property
-    def y(self) -> torch.Tensor:
-        return self.__y
-
-    @y.deleter
-    def y(self):
-        del self.__y
+    def sampling_time_frame(self) -> int:
+        return self.__sampling_time_frame
 
     @property
-    def df(self) -> pd.DataFrame:
-        return self.__df
-
-    @df.deleter
-    def df(self):
-        del self.__df
+    def feature_transforms(self) -> List[FeatureTransform]:
+        return self.__feature_transforms
 
     @property
-    def need_preparation(self) -> bool:
-        return self.x is None
+    def label_transforms(self) -> List[LabelTransform]:
+        return self.__label_transforms
 
     @property
-    def root(self) -> str:
-        if self.__root is None:
-            data_root = os.environ.get("DATA_ROOT", "./data")
-            self.__root = os.path.join(data_root, "/dataset")
-            create_directory(self.__root)
+    def directory(self) -> str:
+        return self.__directory
 
-        return self.__root
+    def prepare(self, data: Data, progress: Progress = None):
+        self._fit_data(data=data, progress=progress)
 
-    def reset(self):
-        self.__x: torch.Tensor = None
-        self.__y: torch.Tensor = None
-        self.__df: pd.DataFrame = None
+        start_timestamp = max(max(df.index.min() for df in ft.data.dataframes) for ft in self.feature_transforms)
+        stop_timestamp = min(min(df.index.max() for df in lt.data.dataframes) for lt in self.label_transforms)
 
-    def preset(self, x: torch.Tensor = None, y: torch.Tensor = None, df: pd.DataFrame = None):
-        self.__x: torch.Tensor = x
-        self.__y: torch.Tensor = y
-        self.__df: pd.DataFrame = df
+        start_timestamp = start_timestamp + self.sequence_length * max(self.time_frames)
+        start_timestamp = math.ceil(start_timestamp / self.sampling_time_frame) * self.sampling_time_frame
+        stop_timestamp = math.floor(stop_timestamp / self.sampling_time_frame) * self.sampling_time_frame
+        timestamps = range(start_timestamp, stop_timestamp + 1, self.sampling_time_frame)
 
-    def copy(self):
-        x = self.x.clone().detach()
-        y = self.y.clone().detach()
-        df = self.df.copy() if self.df is not None else None
+        self._create_samples(timestamps=timestamps, progress=progress)
 
-        dataset = copy.deepcopy(self)
-        dataset.preset(x=x, y=y, df=df)
+    def preprocess(self, data: Data, timestamp: int) -> Sample:
+        self._fit_data(data=data, progress=None)
+        return self._create_sample(timestamp=timestamp)
 
-        return dataset
+    def _fit_data(self, data: Data, progress: Progress):
+        # create new task in rich progress bar for fitting data to feature transforms
+        if progress is not None:
+            desc = "[green]Fit data to feature transforms"
+            task = progress.add_task(description=desc, total=len(self.feature_transforms))
 
-    def shuffle(self):
-        random_index = torch.randperm(len(self))
-        x = self.x[random_index]
-        y = self.y[random_index]
-        self.preset(x=x, y=y, df=None)
+        # fitting data to feature transforms
+        for feature_transform in self.feature_transforms:
+            feature_transform.fit(data=data)
+            if progress is not None:
+                progress.update(task, advance=1)
 
-    def to(self, device: str):
-        self.__x = self.x.to(device)
-        self.__y = self.y.to(device)
+        # create new task in rich progress bar for fitting data to label transforms
+        if progress is not None:
+            desc = "[green]Fit data to label transforms"
+            task = progress.add_task(description=desc, total=len(self.label_transforms))
 
-    @abstractmethod
-    def prepare(self, data: Data, samples_count: int = 0, progress: Progress = None):
-        raise NotImplemented()
+        # fitting data to label transforms
+        for label_transform in self.label_transforms:
+            label_transform.fit(data=data)
+            if progress is not None:
+                progress.update(task, advance=1)
 
-    @abstractmethod
-    def preprocess(self, data: Data, timestamps: List[int], progress: Progress = None) -> torch.Tensor:
-        raise NotImplemented()
+    def _create_samples(self, timestamps: List[int], progress: Progress):
+        # create new task in rich progress bar for creating samples
+        if progress is not None:
+            desc = "[green]Creating Dataset samples"
+            task = progress.add_task(description=desc, total=len(timestamps))
 
-    def update(self, data: Data, show_progress_bar: bool = False):
-        pass
+        # iterate over timestamps to create and save missing samples
+        for timestamp in timestamps:
+            file_path = os.path.join(self.directory, str(timestamp) + ".pkl")
+            if not os.path.exists(file_path) or 0 == os.path.getsize(file_path):
+                sample = self._create_sample(timestamp=timestamp)
+                if sample.feature is not None and sample.label is not None:
+                    with open(file_path, "wb+") as file:
+                        pickle.dump(sample, file)
 
-    def append(self, other, inplace: bool = False):
-        if self != other:
-            raise ValueError("These two datasets cannot be concatenated.")
+            if progress is not None:
+                progress.update(task, advance=1)
 
-        x = torch.cat([self.x, other.x], dim=0)
-        y = torch.cat([self.y, other.y], dim=0)
-        df = pd.concat([self.df, other.df]) if self.df is not None and other.df is not None else None
+    def _create_sample(self, timestamp: int) -> Sample:
+        feature_array = self._create_feature(timestamp=timestamp)
+        label_array = self._create_label(timestamp=timestamp)
 
-        if inplace:
-            self.preset(x=x, y=y, df=df)
-        else:
-            dataset = Dataset(feature_transform=self.feature_transform, label_transform=self.label_transform)
-            dataset.preset(x=x, y=y, df=df)
-            return dataset
+        # convert to tensor
+        feature_tensor = torch.from_numpy(feature_array).float() if feature_array is not None else None
+        label_tensor = torch.from_numpy(label_array).float() if label_array is not None else None
 
-    def save(self):
-        path = os.path.join(self.root, f'{self.short_name}.pkl')
-        with open(path, 'wb+') as file:
-            pickle.dump(self, file)
+        return Sample(timestamp=timestamp, feature=feature_tensor, label=label_tensor)
 
-    def __len__(self):
-        return len(self.x)
+    def _create_feature(self, timestamp: int) -> Union[np.array, None]:
+        matsf = []  # dimensions (feature transform method, asset, time frame, sequence, feature)
+        for feature_transform in self.feature_transforms:
+            atsf = []  # dimensions (asset, time frame, sequence, feature)
+            for symbol in self.symbols:
+                tsf = []  # dimensions (time frame, sequence, feature)
+                for time_frame in self.time_frames:
+                    sf = feature_transform.transform(timestamp, symbol, time_frame, self.sequence_length)
+                    if sf is None:
+                        return None
 
-    def __getitem__(self, item):
+                    tsf.append(sf)
+                atsf.append(tsf)
+            matsf.append(atsf)
+
+        return np.array(matsf)
+
+    def _create_label(self, timestamp: int) -> Union[np.array, None]:
+        matl = []  # dimensions (label transform method, asset, time frame, one hot encoded label)
+        for label_transform in self.label_transforms:
+            atl = []  # dimensions (asset, time frame, one hot encoded label)
+            for symbol in self.symbols:
+                tl = []  # dimensions (time frame, one hot encoded label)
+                for time_frame in self.time_frames:
+                    label = label_transform.transform(timestamp=timestamp, symbol=symbol, time_frame=time_frame)
+                    if label is None:
+                        return None
+
+                    tl.append(label)
+                atl.append(tl)
+            matl.append(atl)
+
+        return np.array(matl)
+
+    def _load_samples(self, timestamps: List[int]) -> List[Sample]:
+        samples = []
+        for timestamp in timestamps:
+            file_path = os.path.join(self.directory, str(timestamp) + ".pkl")
+            with open(file_path, "rb") as file:
+                sample = pickle.load(file)
+            samples.append(sample)
+
+        return samples
+
+    def __getitem__(self, item: Union[int, List[int]]) -> List[Sample]:
         if isinstance(item, int):
-            x = self.x[item]
-            y = self.y[item]
-
-            return x, y
-
-        elif isinstance(item, slice):
-            x = self.x[item]
-            y = self.y[item]
-            df = self.df[item] if self.df is not None else None
-
-            dataset = self.__class__(feature_transform=self.feature_transform, label_transform=self.label_transform)
-            dataset.preset(x=x, y=y, df=df)
-            return dataset
-
+            return self._load_samples(timestamps=[item])
+        elif isinstance(item, list):
+            return self._load_samples(timestamps=item)
         else:
-            raise Exception("type of item must be int or slice.")
+            raise ValueError("item parameter must be int (single timestamp) or list of ints (multiple timestamps).")
 
-    def __str__(self) -> str:
-        return self.name
+    def __hash__(self):
+        hash_values = [
+            list_hash(self.symbols),
+            list_hash(self.time_frames),
+            self.sequence_length,
+            list_hash(sorted([ft.short_name for ft in self.feature_transforms])),
+            list_hash(sorted([lt.short_name for lt in self.label_transforms]))
+        ]
 
-    def __eq__(self, other):
-        return self.feature_transform == other.feature_transform and self.label_transform == other.label_transform
-
-    def __getstate__(self):
-        dct = self.__dict__.copy()
-        if "_Dataset__x" in dct:
-            del dct["_Dataset__x"]
-
-        if "deployment" == self.getstate_mode:
-            if "_Dataset__y" in dct:
-                del dct["_Dataset__y"]
-            if "_Dataset__df" in dct:
-                del dct["_Dataset__df"]
-
-        return dct
+        total_hash = list_hash(hash_values)
+        return total_hash
