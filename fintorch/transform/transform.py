@@ -44,10 +44,3 @@ class Transform(Component):
 
     def __str__(self):
         return self.name
-
-    def __getstate__(self):
-        dct = self.__dict__.copy()
-        if "_Transform__data" in dct:
-            del dct["_Transform__data"]
-
-        return dct
