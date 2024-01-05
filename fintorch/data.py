@@ -17,6 +17,10 @@ class Data:
     def time_frames(self) -> List[str]:
         return list(self.__time_frames)
 
+    @property
+    def dataframes(self) -> List[pd.DataFrame]:
+        return list(self.__dict.values())
+
     def crop(self, start_timestamp: int = None, stop_timestamp: int = None):
         if start_timestamp is None and stop_timestamp is None:
             raise ValueError("Either start_timestamp or stop_timestamp must be passed.")
