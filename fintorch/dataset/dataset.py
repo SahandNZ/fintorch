@@ -1,6 +1,7 @@
 import math
 import os
 import pickle
+from concurrent.futures import ProcessPoolExecutor
 from typing import List, Union
 
 import numpy as np
@@ -58,7 +59,7 @@ class Dataset:
     def directory(self) -> str:
         return self.__directory
 
-    def prepare(self, data: Data, progress: Progress = None):
+    def prepare(self, data: Data, max_workers: int = 24, progress: Progress = None) -> None:
         self._fit_data(data=data, progress=progress)
 
         start_timestamp = max(max(df.index.min() for df in ft.data.dataframes) for ft in self.feature_transforms)
@@ -69,7 +70,19 @@ class Dataset:
         stop_timestamp = math.floor(stop_timestamp / self.sampling_time_frame) * self.sampling_time_frame
         timestamps = range(start_timestamp, stop_timestamp + 1, self.sampling_time_frame)
 
-        self._create_samples(timestamps=timestamps, progress=progress)
+        # create new task in rich progress bar for creating samples
+        if progress is not None:
+            desc = "[green]Creating Dataset samples"
+            task = progress.add_task(description=desc, total=len(timestamps))
+
+        # iterate over timestamps to create and save missing samples
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(self._create_sample, timestamp) for timestamp in timestamps]
+
+            for future in futures:
+                future.result()
+                if progress is not None:
+                    progress.update(task, advance=1)
 
     def preprocess(self, data: Data, timestamp: int) -> Sample:
         self._fit_data(data=data, progress=None)
@@ -84,33 +97,29 @@ class Dataset:
         for label_transform in self.label_transforms:
             label_transform.fit(data=data, progress=progress)
 
-    def _create_samples(self, timestamps: List[int], progress: Progress):
-        # create new task in rich progress bar for creating samples
-        if progress is not None:
-            desc = "[green]Creating Dataset samples"
-            task = progress.add_task(description=desc, total=len(timestamps))
-
-        # iterate over timestamps to create and save missing samples
-        for timestamp in timestamps:
-            file_path = os.path.join(self.directory, str(timestamp) + ".pkl")
-            if not os.path.exists(file_path) or 0 == os.path.getsize(file_path):
-                sample = self._create_sample(timestamp=timestamp)
-                if sample.feature is not None and sample.label is not None:
-                    with open(file_path, "wb+") as file:
-                        pickle.dump(sample, file)
-
-            if progress is not None:
-                progress.update(task, advance=1)
-
     def _create_sample(self, timestamp: int) -> Sample:
+        file_path = os.path.join(self.directory, str(timestamp) + ".pkl")
+
+        # load sample and return it if exists
+        if os.path.exists(file_path) and 0 < os.path.getsize(file_path):
+            with open(file_path, "rb") as file:
+                sample = pickle.load(file)
+            return sample
+
+        # create feature and label arrays
         feature_array = self._create_feature(timestamp=timestamp)
         label_array = self._create_label(timestamp=timestamp)
 
         # convert to tensor
         feature_tensor = torch.from_numpy(feature_array).float() if feature_array is not None else None
         label_tensor = torch.from_numpy(label_array).float() if label_array is not None else None
+        sample = Sample(timestamp=timestamp, feature=feature_tensor, label=label_tensor)
 
-        return Sample(timestamp=timestamp, feature=feature_tensor, label=label_tensor)
+        # store and return sample
+        with open(file_path, "wb+") as file:
+            pickle.dump(sample, file)
+
+        return sample
 
     def _create_feature(self, timestamp: int) -> Union[np.array, None]:
         matsf = []  # dimensions (feature transform method, asset, time frame, sequence, feature)
@@ -169,6 +178,7 @@ class Dataset:
             static_list_hash(self.symbols),
             static_list_hash(self.time_frames),
             self.sequence_length,
+            self.sampling_time_frame,
             static_list_hash(sorted([ft.short_name for ft in self.feature_transforms])),
             static_list_hash(sorted([lt.short_name for lt in self.label_transforms]))
         ]

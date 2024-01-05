@@ -16,6 +16,7 @@ def main():
     parser.add_argument("--exchange", action="store", type=str, required=False, default="binance")
     parser.add_argument("--sequence-length", action="store", type=int, required=False, default=2 ** 8)
     parser.add_argument("--sampling-time-frame", action="store", type=int, required=False, default=3600)
+    parser.add_argument("--max-workers", action="store", type=int, required=False, default=24)
     parser.add_argument("--config-path", action="store", type=str, required=False, default="config/datasets.json")
     args = parser.parse_args()
 
@@ -42,7 +43,7 @@ def main():
         data = Data(df_dict)
 
         # creating samples
-        dataset.prepare(data=data, progress=progress)
+        dataset.prepare(data=data, max_workers=args.max_workers, progress=progress)
 
 
 if __name__ == '__main__':
