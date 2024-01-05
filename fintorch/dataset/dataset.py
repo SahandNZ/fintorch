@@ -13,7 +13,7 @@ from fintorch.defaults import DATA_DIR
 from fintorch.transform.feature.transform import FeatureTransform
 from fintorch.transform.label.transform import LabelTransform
 from fintorch.utils.directory import create_directory
-from fintorch.utils.hash import list_hash
+from fintorch.utils.hash import static_list_hash
 
 
 class Dataset:
@@ -76,27 +76,13 @@ class Dataset:
         return self._create_sample(timestamp=timestamp)
 
     def _fit_data(self, data: Data, progress: Progress):
-        # create new task in rich progress bar for fitting data to feature transforms
-        if progress is not None:
-            desc = "[green]Fit data to feature transforms"
-            task = progress.add_task(description=desc, total=len(self.feature_transforms))
-
         # fitting data to feature transforms
         for feature_transform in self.feature_transforms:
-            feature_transform.fit(data=data)
-            if progress is not None:
-                progress.update(task, advance=1)
-
-        # create new task in rich progress bar for fitting data to label transforms
-        if progress is not None:
-            desc = "[green]Fit data to label transforms"
-            task = progress.add_task(description=desc, total=len(self.label_transforms))
+            feature_transform.fit(data=data, progress=progress)
 
         # fitting data to label transforms
         for label_transform in self.label_transforms:
-            label_transform.fit(data=data)
-            if progress is not None:
-                progress.update(task, advance=1)
+            label_transform.fit(data=data, progress=progress)
 
     def _create_samples(self, timestamps: List[int], progress: Progress):
         # create new task in rich progress bar for creating samples
@@ -180,12 +166,12 @@ class Dataset:
 
     def __hash__(self):
         hash_values = [
-            list_hash(self.symbols),
-            list_hash(self.time_frames),
+            static_list_hash(self.symbols),
+            static_list_hash(self.time_frames),
             self.sequence_length,
-            list_hash(sorted([ft.short_name for ft in self.feature_transforms])),
-            list_hash(sorted([lt.short_name for lt in self.label_transforms]))
+            static_list_hash(sorted([ft.short_name for ft in self.feature_transforms])),
+            static_list_hash(sorted([lt.short_name for lt in self.label_transforms]))
         ]
 
-        total_hash = list_hash(hash_values)
+        total_hash = static_list_hash(hash_values)
         return total_hash
