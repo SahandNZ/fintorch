@@ -29,6 +29,3 @@ class DfftTransform(Transform):
         clean_f = np.real(np.fft.ifft(clean_f_hat))
 
         return clean_f
-
-    def fit_transform(self, *args):
-        pass

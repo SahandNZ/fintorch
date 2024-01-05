@@ -18,10 +18,6 @@ class Transform(Component):
     def transform(self, *args) -> np.array:
         NotImplemented()
 
-    @abstractmethod
-    def fit_transform(self, *args):
-        NotImplemented()
-
     def __str__(self):
         return self.name
 
