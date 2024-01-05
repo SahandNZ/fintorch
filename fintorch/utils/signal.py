@@ -1,20 +1,13 @@
 import numpy as np
-import pandas as pd
-
-from fintorch.transform.transform import Transform
 
 
-class DfftTransform(Transform):
+class DFFT:
     def __init__(self, muting_percentage: int):
-        super().__init__(name="Discrete Fast Fourier Transform", short_name="DFFT", description="")
         self.__muting_percentage: str = muting_percentage
 
     @property
     def muting_percentage(self) -> int:
         return self.__muting_percentage
-
-    def fit(self, df: pd.DataFrame) -> pd.DataFrame:
-        pass
 
     def transform(self, array: np.array) -> np.array:
         f = array

@@ -1,7 +1,7 @@
 import pandas as pd
 
 from fintorch.transform.feature.transform import FeatureTransform
-from fintorch.transform.signal.dfft import DfftTransform
+from fintorch.utils.signal import DFFT
 
 
 class StftTrRocFeatureTransform(FeatureTransform):
@@ -12,7 +12,7 @@ class StftTrRocFeatureTransform(FeatureTransform):
             features=["tr", "roc", "clean-tr", "clean-roc"],
             look_back=None
         )
-        self.dfft: DfftTransform = DfftTransform(muting_percentage=muting_percentage)
+        self.dfft = DFFT(muting_percentage=muting_percentage)
 
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         df["tr"] = df.high / df.low - 1
