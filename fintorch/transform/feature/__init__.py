@@ -1,2 +1,3 @@
 from fintorch.transform.feature.rmstd_tr_roc import RollingMeanStdTrRocFeatureTransform
 from fintorch.transform.feature.stft_tr_roc import StftTrRocFeatureTransform
+from fintorch.transform.feature.transform import FeatureTransform

@@ -72,7 +72,7 @@ class Transform(Component):
     def _set_private_properties(self, data: Data):
         self.__symbols = data.symbols
         self.__time_frames = data.time_frames
-        self.__root_directory = os.path.join(TRANSFORM_DIR, self.name, str(self.__hash__()))
+        self.__root_directory = os.path.join(TRANSFORM_DIR, self.short_name, str(self.__hash__()))
         self.__stv_directory = os.path.join(self.__root_directory, "symbol-timeframe-value")
         self.__v_directory = os.path.join(self.__root_directory, "value")
         create_directory(self.__stv_directory)

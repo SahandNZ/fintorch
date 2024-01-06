@@ -4,11 +4,10 @@ from rich.progress import TextColumn, BarColumn, TaskProgressColumn, TimeRemaini
     SpinnerColumn, MofNCompleteColumn
 
 # directories
-DATA_DIR = os.environ.get("DATA_DIR", "./data")
+HOME_DIR = os.path.expanduser("~")
+DATA_DIR = os.environ.get("DATA_DIR", os.path.join(HOME_DIR, "Data"))
 TRANSFORM_DIR = os.path.join(DATA_DIR, "transform")
 DATASET_DIR = os.path.join(DATA_DIR, "dataset")
-
-Label_TRANSFORM_DIR = os.path.join(DATA_DIR, "transform/label")
 
 # rich progress bar
 RICH_PROGRESS_COLUMNS = [
