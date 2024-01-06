@@ -141,7 +141,7 @@ class Dataset:
                 for time_frame in self.time_frames:
                     sf_start_time = time.time()
                     sf = feature_transform.transform(timestamp, symbol, time_frame, self.sequence_length)
-                    print("creating sf takes: {:.f}".format(time.time() - sf_start_time))
+                    print("creating sf takes: {:.3f}".format(time.time() - sf_start_time))
                     if sf is None:
                         return None
 
