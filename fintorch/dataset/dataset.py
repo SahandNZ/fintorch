@@ -156,7 +156,7 @@ class Dataset:
             matsf.append(atsf)
 
         print("creating matsf takes: {:.3f}".format(time.time() - matsf_start_time))
-
+        print("=" * 64)
         return np.array(matsf)
 
     def _create_label(self, timestamp: int) -> Union[np.array, None]:
