@@ -127,19 +127,35 @@ class Dataset:
         return sample
 
     def _create_feature(self, timestamp: int) -> Union[np.array, None]:
+        matsf_start_time = time.time()
+
         matsf = []  # dimensions (feature transform method, asset, time frame, sequence, feature)
         for feature_transform in self.feature_transforms:
+
+            atsf_start_time = time.time()
             atsf = []  # dimensions (asset, time frame, sequence, feature)
             for symbol in self.symbols:
+                tsf_start_time = time.time()
+
                 tsf = []  # dimensions (time frame, sequence, feature)
                 for time_frame in self.time_frames:
+                    sf_start_time = time.time()
                     sf = feature_transform.transform(timestamp, symbol, time_frame, self.sequence_length)
+                    print("creating sf takes: {:.f}".format(time.time() - sf_start_time))
                     if sf is None:
                         return None
 
                     tsf.append(sf)
+
+                print("creating tsf takes: {:.3f}".format(time.time() - tsf_start_time))
+
                 atsf.append(tsf)
+
+            print("creating atsf takes: {:.3f}".format(time.time() - atsf_start_time))
+
             matsf.append(atsf)
+
+        print("creating matsf takes: {:.3f}".format(time.time() - matsf_start_time))
 
         return np.array(matsf)
 
