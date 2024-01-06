@@ -1,7 +1,8 @@
 import math
 import os
 import pickle
-from concurrent.futures import ProcessPoolExecutor
+import time
+from datetime import datetime
 from typing import List, Union
 
 import numpy as np
@@ -59,15 +60,19 @@ class Dataset:
     def directory(self) -> str:
         return self.__directory
 
-    def prepare(self, data: Data, max_workers: int = 24, progress: Progress = None) -> None:
+    def prepare(self, data: Data, start_date: str, progress: Progress = None) -> None:
+        if isinstance(start_date, str):
+            start_date = datetime.strptime(start_date, "%Y-%m-%d")
+
         self._fit_data(data=data, progress=progress)
 
         start_timestamp = max(max(df.index.min() for df in ft.data.dataframes) for ft in self.feature_transforms)
         stop_timestamp = min(min(df.index.max() for df in lt.data.dataframes) for lt in self.label_transforms)
 
-        start_timestamp = start_timestamp + self.sequence_length * max(self.time_frames)
+        start_timestamp = max(start_date.timestamp(), start_timestamp + self.sequence_length * max(self.time_frames))
         start_timestamp = math.ceil(start_timestamp / self.sampling_time_frame) * self.sampling_time_frame
         stop_timestamp = math.floor(stop_timestamp / self.sampling_time_frame) * self.sampling_time_frame
+
         timestamps = range(start_timestamp, stop_timestamp + 1, self.sampling_time_frame)
 
         # create new task in rich progress bar for creating samples
@@ -75,14 +80,10 @@ class Dataset:
             desc = "[green]Creating Dataset samples"
             task = progress.add_task(description=desc, total=len(timestamps))
 
-        # iterate over timestamps to create and save missing samples
-        with ProcessPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(self._create_sample, timestamp) for timestamp in timestamps]
-
-            for future in futures:
-                future.result()
-                if progress is not None:
-                    progress.update(task, advance=1)
+        for timestamp in timestamps:
+            self._create_sample(timestamp)
+            if progress is not None:
+                progress.update(task, advance=1)
 
     def preprocess(self, data: Data, timestamp: int) -> Sample:
         self._fit_data(data=data, progress=None)
@@ -107,8 +108,12 @@ class Dataset:
             return sample
 
         # create feature and label arrays
+        start_time = time.time()
         feature_array = self._create_feature(timestamp=timestamp)
+        print("creating feature takes: {:.3}".format(time.time() - start_time))
+        start_time = time.time()
         label_array = self._create_label(timestamp=timestamp)
+        print("creating label takes: {:.3}".format(time.time() - start_time))
 
         # convert to tensor
         feature_tensor = torch.from_numpy(feature_array).float() if feature_array is not None else None
