@@ -1,3 +1,4 @@
+import math
 from abc import ABC, abstractmethod
 from typing import List, Union
 
@@ -8,9 +9,10 @@ from fintorch.transform.transform import Transform
 
 
 class FeatureTransform(Transform, ABC):
-    def __init__(self, name: str, short_name: str, look_back: int, features: List[str]):
-        super().__init__(name=name, short_name=short_name, description="")
+    def __init__(self, name: str, short_name: str, look_back: int, sequence_length: int, features: List[str]):
+        super().__init__(name=name, short_name=short_name, description="", sequence_length=sequence_length)
         self.__look_back: int = look_back
+        self.__sequence_length: int = sequence_length
         self.__features: List[str] = features
 
     @property
@@ -25,16 +27,17 @@ class FeatureTransform(Transform, ABC):
     def _fit(self, df: pd.DataFrame):
         raise NotImplementedError()
 
-    def transform(self, timestamp: int, symbol: str, time_frame: int, sequence_length: int) -> Union[np.array, None]:
+    def _shift_timestamp(self, timestamp: int, time_frame: int) -> int:
+        return math.floor(timestamp / time_frame) * time_frame
+
+    def _transform(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
         fdf = self.data[symbol, time_frame]
-        fdf = fdf[fdf.index < timestamp]
-        fdf = fdf.iloc[-sequence_length:]
+        fdf = fdf[fdf.index <= timestamp]
+        fdf = fdf.iloc[-self.sequence_length:]
         fdf = fdf[self.features]
 
-        if sequence_length != len(fdf):
+        if self.sequence_length != len(fdf):
             return None
 
         ndf = fdf / fdf.std()
-        sf = ndf.to_numpy()
-
-        return sf
+        return ndf.to_numpy()

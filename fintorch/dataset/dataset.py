@@ -1,7 +1,6 @@
 import math
 import os
 import pickle
-import time
 from datetime import datetime
 from typing import List, Union
 
@@ -108,12 +107,8 @@ class Dataset:
             return sample
 
         # create feature and label arrays
-        start_time = time.time()
         feature_array = self._create_feature(timestamp=timestamp)
-        print("creating feature takes: {:.3}".format(time.time() - start_time))
-        start_time = time.time()
         label_array = self._create_label(timestamp=timestamp)
-        print("creating label takes: {:.3}".format(time.time() - start_time))
 
         # convert to tensor
         feature_tensor = torch.from_numpy(feature_array).float() if feature_array is not None else None
@@ -127,51 +122,20 @@ class Dataset:
         return sample
 
     def _create_feature(self, timestamp: int) -> Union[np.array, None]:
-        matsf_start_time = time.time()
-
         matsf = []  # dimensions (feature transform method, asset, time frame, sequence, feature)
         for feature_transform in self.feature_transforms:
-
-            atsf_start_time = time.time()
-            atsf = []  # dimensions (asset, time frame, sequence, feature)
-            for symbol in self.symbols:
-                tsf_start_time = time.time()
-
-                tsf = []  # dimensions (time frame, sequence, feature)
-                for time_frame in self.time_frames:
-                    sf_start_time = time.time()
-                    sf = feature_transform.transform(timestamp, symbol, time_frame, self.sequence_length)
-                    print("creating sf takes: {:.3f}".format(time.time() - sf_start_time))
-                    if sf is None:
-                        return None
-
-                    tsf.append(sf)
-
-                print("creating tsf takes: {:.3f}".format(time.time() - tsf_start_time))
-
-                atsf.append(tsf)
-
-            print("creating atsf takes: {:.3f}".format(time.time() - atsf_start_time))
-
+            atsf = feature_transform.transform(timestamp=timestamp)
+            if atsf is None:
+                return None
             matsf.append(atsf)
-
-        print("creating matsf takes: {:.3f}".format(time.time() - matsf_start_time))
-        print("=" * 64)
         return np.array(matsf)
 
     def _create_label(self, timestamp: int) -> Union[np.array, None]:
         matl = []  # dimensions (label transform method, asset, time frame, one hot encoded label)
         for label_transform in self.label_transforms:
-            atl = []  # dimensions (asset, time frame, one hot encoded label)
-            for symbol in self.symbols:
-                tl = []  # dimensions (time frame, one hot encoded label)
-                for time_frame in self.time_frames:
-                    label = label_transform.transform(timestamp=timestamp, symbol=symbol, time_frame=time_frame)
-                    if label is None:
-                        return None
-
-                    tl.append(label)
-                atl.append(tl)
+            atl = label_transform.transform(timestamp=timestamp)
+            if atl is None:
+                return None
             matl.append(atl)
 
         return np.array(matl)

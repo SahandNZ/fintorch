@@ -5,10 +5,11 @@ from fintorch.utils.signal import DFFT
 
 
 class StftTrRocFeatureTransform(FeatureTransform):
-    def __init__(self, muting_percentage: int = 95):
+    def __init__(self, sequence_length: int, muting_percentage: int = 95):
         super().__init__(
             name="Short Term Fourier Transform of True Range and Rate of Change",
             short_name="STFT",
+            sequence_length=sequence_length,
             features=["tr", "roc", "clean-tr", "clean-roc"],
             look_back=None
         )

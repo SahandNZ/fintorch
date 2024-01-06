@@ -5,6 +5,7 @@ from rich.progress import TextColumn, BarColumn, TaskProgressColumn, TimeRemaini
 
 # directories
 DATA_DIR = os.environ.get("DATA_DIR", "./data")
+TRANSFORM_DIR = os.path.join(DATA_DIR, "transform")
 DATASET_DIR = os.path.join(DATA_DIR, "dataset")
 
 Label_TRANSFORM_DIR = os.path.join(DATA_DIR, "transform/label")

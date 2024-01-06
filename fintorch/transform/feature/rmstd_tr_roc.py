@@ -4,11 +4,12 @@ from fintorch.transform.feature.transform import FeatureTransform
 
 
 class RollingMeanStdTrRocFeatureTransform(FeatureTransform):
-    def __init__(self, look_back: int = 4):
+    def __init__(self, sequence_length: int, look_back: int = 4):
         super().__init__(
             name="Rolling Mean and Standard deviation of True Range and Rate Of Change",
             short_name="RMSTD",
             look_back=look_back,
+            sequence_length=sequence_length,
             features=["mean-tr", "mean-roc", "std-tr", "std-roc"],
         )
 

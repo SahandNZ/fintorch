@@ -7,8 +7,8 @@ from rich.progress import Progress
 from fintorch.data import Data
 from fintorch.dataset.dataset import Dataset
 from fintorch.defaults import RICH_PROGRESS_COLUMNS
-from fintorch.transform.feature import FEATURE_TRANSFORMS
-from fintorch.transform.label import LABEL_TRANSFORMS
+from fintorch.transform.feature import *
+from fintorch.transform.label import *
 
 
 def main():
@@ -27,14 +27,29 @@ def main():
     symbols = config_dict["symbols"]
     time_frames = config_dict["time-frames"]
 
+    # define feature and label transforms
+    feature_transforms = [
+        RollingMeanStdTrRocFeatureTransform(sequence_length=args.sequence_length),
+        StftTrRocFeatureTransform(sequence_length=args.sequence_length)
+    ]
+
+    label_transforms = [
+        ForwardBackwardMinimumLabelTransform(),
+        ForwardIchimokuLabelTransform(),
+        ForwardMiddleSmaLabelTransform(),
+        ForwardRocLabelTransform(),
+        NextFractalLabelTransform(),
+        UpDownLabelTransform()
+    ]
+
     # create dataset
     dataset = Dataset(
         symbols=symbols,
         time_frames=time_frames,
         sequence_length=args.sequence_length,
         sampling_time_frame=args.sampling_time_frame,
-        feature_transforms=FEATURE_TRANSFORMS,
-        label_transforms=LABEL_TRANSFORMS
+        feature_transforms=feature_transforms,
+        label_transforms=label_transforms
     )
 
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
@@ -43,7 +58,7 @@ def main():
         data = Data(df_dict)
 
         # creating samples
-        dataset.prepare(data=data, start_date="2022-01-01", progress=progress)
+        dataset.prepare(data=data, start_date="2021-01-01", progress=progress)
 
 
 if __name__ == '__main__':
