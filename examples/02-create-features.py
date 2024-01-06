@@ -59,7 +59,7 @@ def work(work_index: int, data: Data, timestamps: List[int], feature_transform: 
             total_time_str = datetime.strftime(datetime.utcfromtimestamp(total_time), '%H:%M:%S')
             remaining_time_str = datetime.strftime(datetime.utcfromtimestamp(remaining_time), '%H:%M:%S')
 
-            log = "Work #{:<2} | " \
+            log = "Process #{:<2} | " \
                   "creating features of {:<5} | " \
                   "progress: {} | " \
                   "elapsed: {} | " \
