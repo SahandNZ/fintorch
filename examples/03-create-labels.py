@@ -39,7 +39,7 @@ def divide_timestamps(timestamps: List[int], divisions_count: int) -> List[List[
 
 def work(work_index: int, data: Data, timestamps: List[int], label_transform: LabelTransform):
     # define progress logs variables
-    refresh_count = 100
+    refresh_count = 1000
     refresh_rate = int(len(timestamps) / refresh_count)
     start_time = time.time()
 
