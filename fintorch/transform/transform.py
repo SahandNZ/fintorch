@@ -1,7 +1,5 @@
 import itertools
-import marshal
 import os
-import pickle
 from abc import abstractmethod
 from typing import Union, List
 
@@ -13,6 +11,7 @@ from fintorch.component import Component
 from fintorch.data import Data
 from fintorch.defaults import TRANSFORM_DIR
 from fintorch.utils.directory import create_directory
+from fintorch.utils.file_manager import FileManager
 from fintorch.utils.hash import static_list_hash
 
 
@@ -20,6 +19,7 @@ class Transform(Component):
     def __init__(self, name: str, short_name: str, description: str, sequence_length):
         super().__init__(name=name, short_name=short_name, description=description)
         self.__sequence_length: int = sequence_length
+
         self.__directory: str = os.path.join(TRANSFORM_DIR, self.short_name)
         create_directory(self.__directory)
 
@@ -74,6 +74,7 @@ class Transform(Component):
                 value = self._pre_transform(timestamp=shifted_timestamp, symbol=symbol, time_frame=time_frame)
                 if value is None:
                     return None
+
                 tv.append(value)
             stv.append(tv)
 
@@ -85,27 +86,18 @@ class Transform(Component):
 
     def _pre_transform(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
         directory = os.path.join(self.directory, symbol, str(time_frame), str(self.sequence_length))
-        pickle_file_path = os.path.join(directory, f"{timestamp}.pkl")
-        marshal_file_path = os.path.join(directory, f"{timestamp}.mar")
-        create_directory(directory)
+        file_name = str(timestamp)
 
-        # load result if exist else create it
-        if os.path.exists(pickle_file_path) and 0 < os.path.getsize(pickle_file_path):
-            with open(pickle_file_path, "rb") as file:
-                result = pickle.load(file)
-            os.remove(pickle_file_path)
-        elif os.path.exists(marshal_file_path) and 0 < os.path.getsize(marshal_file_path):
-            with open(marshal_file_path, "rb") as file:
-                result = marshal.load(file)
-        else:
-            result = self._transform(timestamp=timestamp, symbol=symbol, time_frame=time_frame)
+        with FileManager(directory=directory) as file_manager:
+            # load array if exists
+            if file_manager.exist(file_name=file_name):
+                value = file_manager.load(file_name=file_name)
+            # create if doesn't exist or it's None
+            else:
+                value = self._transform(timestamp=timestamp, symbol=symbol, time_frame=time_frame)
+                file_manager.dump(obj=value, file_name=file_name)
 
-        # store result on storage
-        if os.path.exists(marshal_file_path):
-            with open(marshal_file_path, "wb+") as file:
-                marshal.dump(result, file)
-
-        return result
+        return value
 
     @abstractmethod
     def _transform(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:

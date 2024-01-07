@@ -5,6 +5,7 @@ from typing import List, Union
 import numpy as np
 import pandas as pd
 
+from fintorch.defaults import NUMPY_FEATURE_DTYPE
 from fintorch.transform.transform import Transform
 
 
@@ -40,4 +41,6 @@ class FeatureTransform(Transform, ABC):
             return None
 
         ndf = fdf / fdf.std()
-        return ndf.to_numpy()
+        sf = ndf.to_numpy().astype(dtype=NUMPY_FEATURE_DTYPE)
+
+        return sf

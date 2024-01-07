@@ -5,6 +5,7 @@ from typing import Union, List
 import numpy as np
 import pandas as pd
 
+from fintorch.defaults import NUMPY_LABEL_DTYPE
 from fintorch.transform.transform import Transform
 
 
@@ -42,5 +43,7 @@ class LabelTransform(Transform, ABC):
         label = ldf.label.loc[timestamp]
         one_hot = np.zeros(self.num_classes)
         one_hot[label] = 1
+
+        one_hot = one_hot.astype(dtype=NUMPY_LABEL_DTYPE)
 
         return one_hot
