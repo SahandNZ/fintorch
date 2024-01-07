@@ -54,7 +54,7 @@ def main():
 
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
         # load candlestick data
-        df_dict = load_dataframes_dict(args.exchange, symbols, time_frames, update=False, progress=progress)
+        df_dict = load_dataframes_dict(args.exchange, symbols, time_frames, progress=progress)
         data = Data(df_dict)
 
         # creating samples

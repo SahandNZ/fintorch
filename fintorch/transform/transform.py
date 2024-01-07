@@ -1,4 +1,5 @@
 import itertools
+import marshal
 import os
 import pickle
 from abc import abstractmethod
@@ -84,16 +85,25 @@ class Transform(Component):
 
     def _pre_transform(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
         directory = os.path.join(self.directory, symbol, str(time_frame), str(self.sequence_length))
-        file_path = os.path.join(directory, f"{timestamp}.pkl")
+        pickle_file_path = os.path.join(directory, f"{timestamp}.pkl")
+        marshal_file_path = os.path.join(directory, f"{timestamp}.mar")
         create_directory(directory)
 
-        if os.path.exists(file_path) and 0 < os.path.getsize(file_path):
-            with open(file_path, "rb") as file:
+        # load result if exist else create it
+        if os.path.exists(pickle_file_path) and 0 < os.path.getsize(pickle_file_path):
+            with open(pickle_file_path, "rb") as file:
                 result = pickle.load(file)
+            os.remove(pickle_file_path)
+        elif os.path.exists(marshal_file_path) and 0 < os.path.getsize(marshal_file_path):
+            with open(marshal_file_path, "rb") as file:
+                result = marshal.load(file)
         else:
             result = self._transform(timestamp=timestamp, symbol=symbol, time_frame=time_frame)
-            with open(file_path, "wb+") as file:
-                pickle.dump(result, file)
+
+        # store result on storage
+        if os.path.exists(marshal_file_path):
+            with open(marshal_file_path, "wb+") as file:
+                marshal.dump(result, file)
 
         return result
 
