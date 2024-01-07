@@ -7,8 +7,10 @@ from datetime import datetime
 from typing import List
 
 from pyccx.data import load_dataframes_dict
+from rich.progress import Progress
 
 from fintorch.data import Data
+from fintorch.defaults import RICH_PROGRESS_COLUMNS
 from fintorch.transform.feature import *
 from fintorch.utils.console import *
 
@@ -36,7 +38,7 @@ def divide_timestamps(timestamps: List[int], divisions_count: int) -> List[List[
 
 def work(work_index: int, data: Data, timestamps: List[int], feature_transform: FeatureTransform):
     # define progress logs variables
-    refresh_count = 100
+    refresh_count = 1000
     refresh_rate = int(len(timestamps) / refresh_count)
     start_time = time.time()
 
@@ -51,23 +53,28 @@ def work(work_index: int, data: Data, timestamps: List[int], feature_transform: 
         if 0 == (index + 1) % refresh_rate or (index + 1) == len(timestamps):
             progress = (index + 1) / len(timestamps) * 100
             elapsed_time = time.time() - start_time
+            speed = elapsed_time / (index + 1) if (index + 1) < elapsed_time else (index + 1) / elapsed_time
+            speed_unit = "sec/iter" if (index + 1) < elapsed_time else "iter/sec"
             total_time = elapsed_time * 100 / progress
             remaining_time = total_time - elapsed_time
 
-            progress_str = "{:<4.2f}%".format(progress)
+            progress_str = "{:<6.2f}%".format(progress)
+            speed_str = "{:<6.1f} {}".format(speed, speed_unit)
             elapsed_time_str = datetime.strftime(datetime.utcfromtimestamp(elapsed_time), '%H:%M:%S')
             total_time_str = datetime.strftime(datetime.utcfromtimestamp(total_time), '%H:%M:%S')
             remaining_time_str = datetime.strftime(datetime.utcfromtimestamp(remaining_time), '%H:%M:%S')
 
-            log = "Process #{:<2} | " \
+            log = "Process #{:<3} | " \
                   "creating features of {:<5} | " \
                   "progress: {} | " \
+                  "speed: {} | " \
                   "elapsed: {} | " \
                   "remaining: {} | " \
                   "total: {}" \
                 .format(work_index,
                         feature_transform.short_name,
                         progress_str,
+                        speed_str,
                         elapsed_time_str,
                         remaining_time_str,
                         total_time_str)
@@ -83,8 +90,9 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int]):
     ]
 
     # load candlestick data
-    df_dict = load_dataframes_dict(exchange=args.exchange, symbols=symbols, time_frames=time_frames)
-    data = Data(df_dict)
+    with Progress(*RICH_PROGRESS_COLUMNS) as progress:
+        df_dict = load_dataframes_dict(args.exchange, symbols, time_frames, progress=progress)
+        data = Data(df_dict)
 
     # divide timestamps to create more sub processes
     divisions_count = int(args.works / len(feature_transforms))
@@ -108,7 +116,7 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int]):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--works", action="store", type=int, required=False, default=24)
-    parser.add_argument("--workers", action="store", type=int, required=False, default=2)
+    parser.add_argument("--workers", action="store", type=int, required=False, default=24)
     parser.add_argument("--time-frame", action="store", type=int, required=False, default=900)
     parser.add_argument("--exchange", action="store", type=str, required=False, default="binance")
     parser.add_argument("--sequence-length", action="store", type=int, required=False, default=2 ** 8)

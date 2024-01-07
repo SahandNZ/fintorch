@@ -19,12 +19,8 @@ class Transform(Component):
     def __init__(self, name: str, short_name: str, description: str, sequence_length):
         super().__init__(name=name, short_name=short_name, description=description)
         self.__sequence_length: int = sequence_length
-
-        self.__symbols: List[str] = None
-        self.__time_frames: List[int] = None
-        self.__root_directory: str = None
-        self.__stv_directory: str = None
-        self.__v_directory: str = None
+        self.__directory: str = os.path.join(TRANSFORM_DIR, self.short_name)
+        create_directory(self.__directory)
 
         self.__data: Data = None
 
@@ -38,22 +34,17 @@ class Transform(Component):
 
     @property
     def symbols(self) -> List[str]:
-        return self.__symbols
+        return self.__data.symbols
 
     @property
     def time_frames(self) -> List[int]:
-        return self.__time_frames
+        return self.__data.time_frames
 
     @property
-    def stv_directory(self) -> str:
-        return self.__stv_directory
-
-    @property
-    def v_directory(self) -> str:
-        return self.__v_directory
+    def directory(self) -> str:
+        return self.__directory
 
     def fit(self, data: Data, progress: Progress = None) -> None:
-        self._set_private_properties(data=data)
         items = list(itertools.product(data.symbols, data.time_frames))
 
         if progress is not None:
@@ -69,33 +60,11 @@ class Transform(Component):
             if progress is not None:
                 progress.update(task, advance=1)
 
-    def _set_private_properties(self, data: Data):
-        self.__symbols = data.symbols
-        self.__time_frames = data.time_frames
-        self.__root_directory = os.path.join(TRANSFORM_DIR, self.short_name, str(self.__hash__()))
-        self.__stv_directory = os.path.join(self.__root_directory, "symbol-timeframe-value")
-        self.__v_directory = os.path.join(self.__root_directory, "value")
-        create_directory(self.__stv_directory)
-        create_directory(self.__v_directory)
-
     @abstractmethod
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         NotImplemented()
 
     def transform(self, timestamp: int) -> Union[np.array, None]:
-        file_path = os.path.join(self.stv_directory, f"{timestamp}.pkl")
-        if os.path.exists(file_path) and 0 < os.path.getsize(file_path):
-            with open(file_path, "rb") as file:
-                result = pickle.load(file)
-
-        else:
-            result = self._iterate_transforms(timestamp=timestamp)
-            with open(file_path, "wb+") as file:
-                pickle.dump(result, file)
-
-        return result
-
-    def _iterate_transforms(self, timestamp: int) -> Union[np.array, None]:
         stv = []  # dimensions (symbol, time frame, value [sequence, feature / label])
         for symbol in self.symbols:
             tv = []
@@ -114,11 +83,13 @@ class Transform(Component):
         NotImplemented()
 
     def _pre_transform(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
-        file_path = os.path.join(self.v_directory, f"{timestamp}.pkl")
+        directory = os.path.join(self.directory, symbol, str(time_frame), str(self.sequence_length))
+        file_path = os.path.join(directory, f"{timestamp}.pkl")
+        create_directory(directory)
+
         if os.path.exists(file_path) and 0 < os.path.getsize(file_path):
             with open(file_path, "rb") as file:
                 result = pickle.load(file)
-
         else:
             result = self._transform(timestamp=timestamp, symbol=symbol, time_frame=time_frame)
             with open(file_path, "wb+") as file:
@@ -134,6 +105,11 @@ class Transform(Component):
         return self.name
 
     def __hash__(self):
-        hash_values = [static_list_hash(self.symbols), static_list_hash(self.time_frames), self.sequence_length]
-        total_hash = static_list_hash(hash_values)
-        return total_hash
+        hash_values = [
+            self.name,
+            static_list_hash(self.symbols),
+            static_list_hash(self.time_frames),
+            self.sequence_length
+        ]
+
+        return static_list_hash(hash_values)
