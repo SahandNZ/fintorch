@@ -1,5 +1,6 @@
 import itertools
 import os
+import pickle
 from abc import abstractmethod
 from typing import Union, List
 
@@ -11,7 +12,6 @@ from fintorch.component import Component
 from fintorch.data import Data
 from fintorch.defaults import TRANSFORM_DIR
 from fintorch.utils.directory import create_directory
-from fintorch.utils.file_manager import FileManager
 from fintorch.utils.hash import static_list_hash
 
 
@@ -85,17 +85,26 @@ class Transform(Component):
         NotImplemented()
 
     def _pre_transform(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
-        directory = os.path.join(self.directory, symbol, str(time_frame), str(self.sequence_length))
-        file_name = str(timestamp)
+        directory = os.path.join(self.directory, symbol, str(time_frame))
+        file_path = os.path.join(directory, f"{self.sequence_length}.pkl")
+        create_directory(directory)
 
-        with FileManager(directory=directory) as file_manager:
-            # load array if exists
-            if file_manager.exist(file_name=file_name):
-                value = file_manager.load(file_name=file_name)
-            # create if doesn't exist or it's None
-            else:
-                value = self._transform(timestamp=timestamp, symbol=symbol, time_frame=time_frame)
-                file_manager.dump(obj=value, file_name=file_name)
+        # load timestamp to value dict
+        if os.path.exists(file_path) and 0 < os.path.getsize(file_path):
+            with open(file_path, "rb") as file:
+                timestamp_to_value = pickle.load(file)
+        else:
+            timestamp_to_value = {}
+
+        # if timestamp is in timestamp to value then return it else calculate and store it
+        if timestamp in timestamp_to_value:
+            value = timestamp_to_value[timestamp]
+        else:
+            value = self._transform(timestamp=timestamp, symbol=symbol, time_frame=time_frame)
+            if value is not None:
+                timestamp_to_value[timestamp] = value
+                with open(file_path, "wb+") as file:
+                    pickle.dump(timestamp_to_value, file)
 
         return value
 
