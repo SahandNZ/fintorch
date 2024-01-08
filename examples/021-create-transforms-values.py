@@ -124,7 +124,7 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int]):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--feature", action="store_ture")
+    parser.add_argument("--feature", action="store_true")
     parser.add_argument("--workers", action="store", type=int, required=False, default=24)
     parser.add_argument("--time-frame", action="store", type=int, required=False, default=900)
     parser.add_argument("--exchange", action="store", type=str, required=False, default="binance")
