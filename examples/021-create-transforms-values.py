@@ -1,6 +1,8 @@
 import argparse
+import concurrent
 import json
 import math
+import signal
 import time
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
@@ -10,8 +12,15 @@ from pyccx.data import load_dataframes_dict
 
 from fintorch.data import Data
 from fintorch.transform.feature import *
+from fintorch.transform.label import *
 from fintorch.transform.transform import Transform
 from fintorch.utils.console import *
+
+
+def handle_keyboard_interrupt(signum, frame):
+    print("KeyboardInterrupt: Terminating processes...")
+    concurrent.futures.process.TerminatedError = KeyboardInterrupt
+    raise KeyboardInterrupt
 
 
 def create_timestamps(start_date: str, stop_date: str, time_frame: int) -> List[int]:
@@ -72,10 +81,22 @@ def work(work_index: int, data: Data, timestamps: List[int], transform_: Transfo
 
 def run_multi_process(args, symbols: List[str], time_frames: List[int]):
     # define feature transforms
-    transforms = [
+    feature_transforms = [
         RollingMeanStdTrRocFeatureTransform(sequence_length=args.sequence_length),
         StftTrRocFeatureTransform(sequence_length=args.sequence_length)
     ]
+
+    # define feature transforms
+    label_transforms = [
+        ForwardBackwardMinimumLabelTransform(),
+        ForwardIchimokuLabelTransform(),
+        ForwardMiddleSmaLabelTransform(),
+        ForwardRocLabelTransform(),
+        NextFractalLabelTransform(),
+        UpDownLabelTransform()
+    ]
+
+    transforms = feature_transforms if args.feature else label_transforms
 
     # create timestamps
     timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, time_frame=args.time_frame)
@@ -85,6 +106,8 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int]):
 
     # create sub processes
     with ProcessPoolExecutor(max_workers=args.workers) as executor:
+        signal.signal(signal.SIGINT, handle_keyboard_interrupt)
+
         futures = []
         for transform_ in transforms:
             for symbol in symbols:
@@ -101,6 +124,7 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int]):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--feature", action="store_ture")
     parser.add_argument("--workers", action="store", type=int, required=False, default=24)
     parser.add_argument("--time-frame", action="store", type=int, required=False, default=900)
     parser.add_argument("--exchange", action="store", type=str, required=False, default="binance")
