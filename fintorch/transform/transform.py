@@ -45,6 +45,11 @@ class Transform(Component):
     def directory(self) -> str:
         return self.__directory
 
+    @property
+    @abstractmethod
+    def _save_none(self) -> bool:
+        raise NotImplementedError()
+
     def fit(self, data: Data, progress: Progress = None) -> None:
         items = list(itertools.product(data.symbols, data.time_frames))
 
@@ -101,7 +106,7 @@ class Transform(Component):
             value = timestamp_to_value[timestamp]
         else:
             value = self._transform(timestamp=timestamp, symbol=symbol, time_frame=time_frame)
-            if value is not None:
+            if self._save_none or value is not None:
                 timestamp_to_value[timestamp] = value
                 with open(file_path, "wb+") as file:
                     pickle.dump(timestamp_to_value, file)

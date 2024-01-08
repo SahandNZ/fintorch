@@ -47,13 +47,13 @@ def work(work_index: int, data: Data, timestamps: List[int], transform_: Transfo
             remaining_time = total_time - elapsed_time
 
             progress_str = "{:<6.2f}%".format(progress)
-            speed_str = "{:<6.1f} {}".format(speed, speed_unit)
+            speed_str = "{:<7.1f} {}".format(speed, speed_unit)
             elapsed_time_str = datetime.strftime(datetime.utcfromtimestamp(elapsed_time), '%H:%M:%S')
             total_time_str = datetime.strftime(datetime.utcfromtimestamp(total_time), '%H:%M:%S')
             remaining_time_str = datetime.strftime(datetime.utcfromtimestamp(remaining_time), '%H:%M:%S')
 
             log = "Process #{:<3} | " \
-                  "creating values of {:<5} {:<10} {:<6} | " \
+                  "creating values of {:<5} {:<10} {:<5} | " \
                   "progress: {} | " \
                   "speed: {} | " \
                   "elapsed: {} | " \

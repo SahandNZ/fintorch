@@ -24,6 +24,10 @@ class FeatureTransform(Transform, ABC):
     def features(self) -> List[str]:
         return self.__features
 
+    @property
+    def _save_none(self) -> bool:
+        return True
+
     @abstractmethod
     def _fit(self, df: pd.DataFrame):
         raise NotImplementedError()
@@ -33,7 +37,7 @@ class FeatureTransform(Transform, ABC):
 
     def _transform(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
         fdf = self.data[symbol, time_frame]
-        fdf = fdf[fdf.index <= timestamp]
+        fdf = fdf[fdf.index < timestamp]
         fdf = fdf.iloc[-self.sequence_length:]
         fdf = fdf[self.features]
 

@@ -27,6 +27,10 @@ class LabelTransform(Transform, ABC):
     def num_classes(self) -> int:
         return len(self.classes)
 
+    @property
+    def _save_none(self) -> bool:
+        return False
+
     @abstractmethod
     def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError()
