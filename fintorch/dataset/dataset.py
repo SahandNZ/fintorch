@@ -117,8 +117,8 @@ class Dataset:
             label_tensor = torch.from_numpy(label_array).float() if label_array is not None else None
             sample = Sample(timestamp=timestamp, feature=feature_tensor, label=label_tensor)
 
-            # save sample if it's feature and label aren't none
-            if sample.feature is not None and sample.label is not None:
+            # save sample if it's label isn't none
+            if sample.label is not None:
                 with open(file_path, "wb+") as file:
                     pickle.dump(sample, file)
 
