@@ -10,7 +10,7 @@ from rich.progress import Progress
 
 from fintorch.data import Data
 from fintorch.dataset.sample import Sample
-from fintorch.defaults import DATA_DIR, FILE_COMPRESS_FACTOR
+from fintorch.defaults import DATA_DIR
 from fintorch.transform.feature.transform import FeatureTransform
 from fintorch.transform.label.transform import LabelTransform
 from fintorch.utils.directory import create_directory
@@ -97,38 +97,30 @@ class Dataset:
             label_transform.fit(data=data, progress=progress)
 
     def create_sample(self, timestamp: int) -> Sample:
-        file_compress_factor = FILE_COMPRESS_FACTOR * self.sampling_time_frame
-        file_name = math.floor(timestamp / file_compress_factor) * file_compress_factor
-        file_path = os.path.join(self.directory, f"{file_name}.pkl")
-
-        if not os.path.exists(file_path):
-            with open(file_path, "wb+") as file:
-                pass
+        file_path = os.path.join(self.directory, f"{timestamp}.pkl")
 
         # safe load timestamp_to_sample and if exists
-        with open(file_path, "rb+") as file:
-            try:
-                timestamp_to_sample = pickle.load(file)
-            except EOFError:
-                timestamp_to_sample = {}
+        sample = None
+        if os.path.exists(file_path):
+            with open(file_path, "rb+") as file:
+                try:
+                    sample = pickle.load(file)
+                except EOFError:
+                    pass
+        if sample is None or sample.feature is None or sample.label is None:
+            # create feature and label numpy arrays
+            feature_array = self._create_feature(timestamp=timestamp)
+            label_array = self._create_label(timestamp=timestamp)
 
-            # load sample from timestamp_to_sample or create sample and store it if it's properties not none
-            if timestamp in timestamp_to_sample:
-                sample = timestamp_to_sample[timestamp]
-            else:
-                # create feature and label numpy arrays
-                feature_array = self._create_feature(timestamp=timestamp)
-                label_array = self._create_label(timestamp=timestamp)
+            # convert to tensor
+            feature_tensor = torch.from_numpy(feature_array).float() if feature_array is not None else None
+            label_tensor = torch.from_numpy(label_array).float() if label_array is not None else None
+            sample = Sample(timestamp=timestamp, feature=feature_tensor, label=label_tensor)
 
-                # convert to tensor
-                feature_tensor = torch.from_numpy(feature_array).float() if feature_array is not None else None
-                label_tensor = torch.from_numpy(label_array).float() if label_array is not None else None
-                sample = Sample(timestamp=timestamp, feature=feature_tensor, label=label_tensor)
-
-                # save sample if it's feature and label aren't none
-                if sample.feature is not None and sample.label is not None:
-                    timestamp_to_sample[timestamp] = sample
-                    pickle.dump(timestamp_to_sample, file)
+            # save sample if it's feature and label aren't none
+            if sample.feature is not None and sample.label is not None:
+                with open(file_path, "wb+") as file:
+                    pickle.dump(sample, file)
 
         return sample
 
