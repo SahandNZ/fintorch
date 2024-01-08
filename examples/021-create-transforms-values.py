@@ -145,7 +145,7 @@ def main():
     transforms = [
         # define feature transforms
         RollingMeanStdTrRocFeatureTransform(sequence_length=args.sequence_length),
-        StftTrRocFeatureTransform(sequence_length=args.sequence_length)
+        StftTrRocFeatureTransform(sequence_length=args.sequence_length),
 
         # define feature transforms
         ForwardBackwardMinimumLabelTransform(),
