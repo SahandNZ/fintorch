@@ -45,10 +45,7 @@ def create_timestamps_divisions(args) -> List[int]:
     return divisions
 
 
-def task(p_index: int, console_row: int, data: Data, dataset: Dataset, timestamps: List[int]):
-    # fit data to dataset
-    dataset.fit(data=data)
-
+def task(p_index: int, console_row: int, dataset: Dataset, timestamps: List[int]):
     # define progress logs variables
     refresh_count = 100
     refresh_rate = math.ceil(len(timestamps) / refresh_count)
@@ -90,7 +87,7 @@ def task(p_index: int, console_row: int, data: Data, dataset: Dataset, timestamp
             print_console(x=console_row, y=0, text=log)
 
 
-def run_multi_process(args, data: Data, dataset: Dataset):
+def run_multi_process(args, dataset: Dataset):
     # create and divide timestamps
     timestamps_divisions = create_timestamps_divisions(args=args)
 
@@ -116,7 +113,7 @@ def run_multi_process(args, data: Data, dataset: Dataset):
 
         # create child process and start it
         console_row = min(free_console_rows)
-        child_process_args = (process_index + 1, console_row, data, dataset, timestamps_division)
+        child_process_args = (process_index + 1, console_row, dataset, timestamps_division)
         child_process = Process(target=task, args=child_process_args)
         child_process.start()
 
@@ -180,7 +177,10 @@ def main():
         df_dict = load_dataframes_dict(EXCHANGE, symbols, time_frames, progress=progress)
         data = Data(df_dict)
 
-    run_multi_process(args=args, data=data, dataset=dataset)
+        # fit data to dataset
+        dataset.fit(data=data, progress=progress)
+
+    run_multi_process(args=args, dataset=dataset)
 
 
 if __name__ == '__main__':

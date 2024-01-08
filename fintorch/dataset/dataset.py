@@ -10,7 +10,7 @@ from rich.progress import Progress
 
 from fintorch.data import Data
 from fintorch.dataset.sample import Sample
-from fintorch.defaults import DATA_DIR
+from fintorch.defaults import DATASET_DIR
 from fintorch.transform.feature.transform import FeatureTransform
 from fintorch.transform.label.transform import LabelTransform
 from fintorch.utils.directory import create_directory
@@ -28,7 +28,7 @@ class Dataset:
         self.__feature_transforms: List[FeatureTransform] = feature_transforms
         self.__label_transforms: List[LabelTransform] = label_transforms
 
-        self.__directory: str = os.path.join(DATA_DIR, "dataset", str(self.__hash__()))
+        self.__directory: str = os.path.join(DATASET_DIR, str(self.__hash__()))
         create_directory(self.__directory)
 
     @property
