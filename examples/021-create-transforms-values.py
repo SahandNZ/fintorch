@@ -130,7 +130,6 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int], transfor
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--feature", action="store_true")
     parser.add_argument("--processes", action="store", type=int, required=False, default=24)
     parser.add_argument("--time-frame", action="store", type=int, required=False, default=900)
     parser.add_argument("--sequence-length", action="store", type=int, required=False, default=2 ** 8)
@@ -143,14 +142,12 @@ def main():
     with open(args.config_path, "r") as file:
         config_dict = json.load(file)
 
-    # define feature transforms
-    feature_transforms = [
+    transforms = [
+        # define feature transforms
         RollingMeanStdTrRocFeatureTransform(sequence_length=args.sequence_length),
         StftTrRocFeatureTransform(sequence_length=args.sequence_length)
-    ]
 
-    # define feature transforms
-    label_transforms = [
+        # define feature transforms
         ForwardBackwardMinimumLabelTransform(),
         ForwardIchimokuLabelTransform(),
         ForwardMiddleSmaLabelTransform(),
@@ -161,8 +158,6 @@ def main():
 
     symbols = config_dict["symbols"]
     time_frames = config_dict["time-frames"]
-    transforms = feature_transforms if args.feature else label_transforms
-
     run_multi_process(args=args, symbols=symbols, time_frames=time_frames, transforms=transforms)
 
 
