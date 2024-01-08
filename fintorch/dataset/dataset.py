@@ -10,7 +10,7 @@ from rich.progress import Progress
 
 from fintorch.data import Data
 from fintorch.dataset.sample import Sample
-from fintorch.defaults import DATA_DIR
+from fintorch.defaults import DATA_DIR, FILE_COMPRESS_FACTOR
 from fintorch.transform.feature.transform import FeatureTransform
 from fintorch.transform.label.transform import LabelTransform
 from fintorch.utils.directory import create_directory
@@ -59,36 +59,35 @@ class Dataset:
     def directory(self) -> str:
         return self.__directory
 
-    def prepare(self, data: Data, start_date: str, progress: Progress = None) -> None:
+    def prepare(self, data: Data, start_date: str, stop_date: str, progress: Progress = None) -> None:
         if isinstance(start_date, str):
             start_date = datetime.strptime(start_date, "%Y-%m-%d")
+        if isinstance(start_date, str):
+            stop_date = datetime.strptime(stop_date, "%Y-%m-%d")
 
-        self._fit_data(data=data, progress=progress)
-
-        start_timestamp = max(max(df.index.min() for df in ft.data.dataframes) for ft in self.feature_transforms)
-        stop_timestamp = min(min(df.index.max() for df in lt.data.dataframes) for lt in self.label_transforms)
-
-        start_timestamp = max(start_date.timestamp(), start_timestamp + self.sequence_length * max(self.time_frames))
-        start_timestamp = math.ceil(start_timestamp / self.sampling_time_frame) * self.sampling_time_frame
-        stop_timestamp = math.floor(stop_timestamp / self.sampling_time_frame) * self.sampling_time_frame
-
-        timestamps = range(start_timestamp, stop_timestamp + 1, self.sampling_time_frame)
+        # create timestamps
+        start_timestamp = math.ceil(start_date.timestamp() / self.sampling_time_frame) * self.sampling_time_frame
+        stop_timestamp = math.floor(stop_date.timestamp() / self.sampling_time_frame) * self.sampling_time_frame
+        timestamps = range(start_timestamp, stop_timestamp, self.sampling_time_frame)
 
         # create new task in rich progress bar for creating samples
         if progress is not None:
             desc = "[green]Creating Dataset samples"
             task = progress.add_task(description=desc, total=len(timestamps))
 
+        # fit data to feature and label transforms
+        self.fit(data=data, progress=progress)
+
         for timestamp in timestamps:
-            self._create_sample(timestamp)
+            self.create_sample(timestamp)
             if progress is not None:
                 progress.update(task, advance=1)
 
     def preprocess(self, data: Data, timestamp: int) -> Sample:
-        self._fit_data(data=data, progress=None)
-        return self._create_sample(timestamp=timestamp)
+        self.fit(data=data, progress=None)
+        return self.create_sample(timestamp=timestamp)
 
-    def _fit_data(self, data: Data, progress: Progress):
+    def fit(self, data: Data, progress: Progress = None):
         # fitting data to feature transforms
         for feature_transform in self.feature_transforms:
             feature_transform.fit(data=data, progress=progress)
@@ -97,27 +96,39 @@ class Dataset:
         for label_transform in self.label_transforms:
             label_transform.fit(data=data, progress=progress)
 
-    def _create_sample(self, timestamp: int) -> Sample:
-        file_path = os.path.join(self.directory, str(timestamp) + ".pkl")
+    def create_sample(self, timestamp: int) -> Sample:
+        file_compress_factor = FILE_COMPRESS_FACTOR * self.sampling_time_frame
+        file_name = math.floor(timestamp / file_compress_factor) * file_compress_factor
+        file_path = os.path.join(self.directory, f"{file_name}.pkl")
 
-        # load sample and return it if exists
-        if os.path.exists(file_path) and 0 < os.path.getsize(file_path):
-            with open(file_path, "rb") as file:
-                sample = pickle.load(file)
-            return sample
+        if not os.path.exists(file_path):
+            with open(file_path, "wb+") as file:
+                pass
 
-        # create feature and label arrays
-        feature_array = self._create_feature(timestamp=timestamp)
-        label_array = self._create_label(timestamp=timestamp)
+        # safe load timestamp_to_sample and if exists
+        with open(file_path, "rb+") as file:
+            try:
+                timestamp_to_sample = pickle.load(file)
+            except EOFError:
+                timestamp_to_sample = {}
 
-        # convert to tensor
-        feature_tensor = torch.from_numpy(feature_array).float() if feature_array is not None else None
-        label_tensor = torch.from_numpy(label_array).float() if label_array is not None else None
-        sample = Sample(timestamp=timestamp, feature=feature_tensor, label=label_tensor)
+            # load sample from timestamp_to_sample or create sample and store it if it's properties not none
+            if timestamp in timestamp_to_sample:
+                sample = timestamp_to_sample[timestamp]
+            else:
+                # create feature and label numpy arrays
+                feature_array = self._create_feature(timestamp=timestamp)
+                label_array = self._create_label(timestamp=timestamp)
 
-        # store and return sample
-        with open(file_path, "wb+") as file:
-            pickle.dump(sample, file)
+                # convert to tensor
+                feature_tensor = torch.from_numpy(feature_array).float() if feature_array is not None else None
+                label_tensor = torch.from_numpy(label_array).float() if label_array is not None else None
+                sample = Sample(timestamp=timestamp, feature=feature_tensor, label=label_tensor)
+
+                # save sample if it's feature and label aren't none
+                if sample.feature is not None and sample.label is not None:
+                    timestamp_to_sample[timestamp] = sample
+                    pickle.dump(timestamp_to_sample, file)
 
         return sample
 

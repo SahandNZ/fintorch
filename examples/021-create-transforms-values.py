@@ -31,16 +31,17 @@ def create_timestamps(start_date: str, stop_date: str, time_frame: int) -> List[
     start_timestamp = math.ceil(start_date.timestamp() / time_frame) * time_frame
     stop_timestamp = math.floor(stop_date.timestamp() / time_frame) * time_frame
 
-    return list(range(start_timestamp, stop_timestamp + 1, time_frame))
+    return list(range(start_timestamp, stop_timestamp, time_frame))
 
 
 def task(p_index: int, console_row: int, symbol: str, time_frame: int, transform_: Transform, timestamps: List[int]):
+    # load candlestick data
     df_dict = load_dataframes_dict(exchange=EXCHANGE, symbols=[symbol], time_frames=[time_frame])
     data = Data(df_dict)
 
     # define progress logs variables
     refresh_count = 1000
-    refresh_rate = int(len(timestamps) / refresh_count)
+    refresh_rate = math.ceil(len(timestamps) / refresh_count)
     start_time = time.time()
 
     # fit data to feature transform
