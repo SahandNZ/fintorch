@@ -13,6 +13,7 @@ DATASET_DIR = os.path.join(DATA_DIR, "dataset")
 # Default properties
 NUMPY_FEATURE_DTYPE = np.float16
 NUMPY_LABEL_DTYPE = np.int8
+FILE_COMPRESS_FACTOR = 128
 
 # Rich progress bar
 RICH_PROGRESS_COLUMNS = [

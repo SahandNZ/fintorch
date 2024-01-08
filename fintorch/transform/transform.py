@@ -1,4 +1,5 @@
 import itertools
+import math
 import os
 import pickle
 from abc import abstractmethod
@@ -10,7 +11,7 @@ from rich.progress import Progress
 
 from fintorch.component import Component
 from fintorch.data import Data
-from fintorch.defaults import TRANSFORM_DIR
+from fintorch.defaults import TRANSFORM_DIR, FILE_COMPRESS_FACTOR
 from fintorch.utils.directory import create_directory
 from fintorch.utils.hash import static_list_hash
 
@@ -90,14 +91,19 @@ class Transform(Component):
         NotImplemented()
 
     def _pre_transform(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
-        directory = os.path.join(self.directory, symbol, str(time_frame))
-        file_path = os.path.join(directory, f"{self.sequence_length}.pkl")
+        directory = os.path.join(self.directory, symbol, str(time_frame), str(self.sequence_length))
+        file_compress_factor = FILE_COMPRESS_FACTOR * time_frame
+        file_name = math.floor(timestamp / file_compress_factor) * file_compress_factor
+        file_path = os.path.join(directory, f"{file_name}.pkl")
         create_directory(directory)
 
-        # load timestamp to value dict
-        if os.path.exists(file_path) and 0 < os.path.getsize(file_path):
-            with open(file_path, "rb") as file:
-                timestamp_to_value = pickle.load(file)
+        # load file if exist and safe
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, "rb") as file:
+                    timestamp_to_value = pickle.load(file)
+            except EOFError:
+                timestamp_to_value = {}
         else:
             timestamp_to_value = {}
 

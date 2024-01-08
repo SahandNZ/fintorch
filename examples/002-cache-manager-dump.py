@@ -1,6 +1,6 @@
 import numpy as np
 
-from fintorch.utils.file_manager import FileManager
+from fintorch.utils.cache_manager import CacheManager
 
 
 def main():
@@ -10,7 +10,7 @@ def main():
 
     print(file_names)
 
-    with FileManager(directory="./tmp") as fs:
+    with CacheManager(directory="./tmp") as fs:
         for array, file_name in zip(arrays, file_names):
             fs.dump(obj=array, file_name=file_name)
 

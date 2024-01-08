@@ -1,12 +1,12 @@
 import argparse
-import concurrent
+import atexit
+import itertools
 import json
 import math
-import signal
 import time
-from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
-from typing import List
+from multiprocessing import Process
+from typing import List, Dict
 
 from pyccx.data import load_dataframes_dict
 
@@ -16,11 +16,12 @@ from fintorch.transform.label import *
 from fintorch.transform.transform import Transform
 from fintorch.utils.console import *
 
+EXCHANGE: str = "binance"
 
-def handle_keyboard_interrupt(signum, frame):
-    print("KeyboardInterrupt: Terminating processes...")
-    concurrent.futures.process.TerminatedError = KeyboardInterrupt
-    raise KeyboardInterrupt
+
+def terminate_child_processes(child_processes: List[Process]):
+    for child_process in child_processes:
+        child_process.terminate()
 
 
 def create_timestamps(start_date: str, stop_date: str, time_frame: int) -> List[int]:
@@ -33,7 +34,10 @@ def create_timestamps(start_date: str, stop_date: str, time_frame: int) -> List[
     return list(range(start_timestamp, stop_timestamp + 1, time_frame))
 
 
-def work(work_index: int, data: Data, timestamps: List[int], transform_: Transform):
+def task(p_index: int, console_row: int, symbol: str, time_frame: int, transform_: Transform, timestamps: List[int]):
+    df_dict = load_dataframes_dict(exchange=EXCHANGE, symbols=[symbol], time_frames=[time_frame])
+    data = Data(df_dict)
+
     # define progress logs variables
     refresh_count = 1000
     refresh_rate = int(len(timestamps) / refresh_count)
@@ -61,25 +65,84 @@ def work(work_index: int, data: Data, timestamps: List[int], transform_: Transfo
             total_time_str = datetime.strftime(datetime.utcfromtimestamp(total_time), '%H:%M:%S')
             remaining_time_str = datetime.strftime(datetime.utcfromtimestamp(remaining_time), '%H:%M:%S')
 
-            log = "Process #{:<3} | " \
-                  "creating values of {:<5} {:<10} {:<5} | " \
-                  "progress: {} | " \
+            log = "Process #{:<6} | " \
+                  "creating values of {:<12} {:<10} {:<5} | " \
+                  "progress: ({:<8}/{:<8}) {} | " \
                   "speed: {} | " \
                   "elapsed: {} | " \
                   "remaining: {} | " \
                   "total: {}" \
-                .format(work_index,
+                .format(p_index,
                         transform_.short_name, data.symbols[0], str(data.time_frames[0]),
-                        progress_str,
+                        index, len(timestamps), progress_str,
                         speed_str,
                         elapsed_time_str,
                         remaining_time_str,
                         total_time_str)
 
-            print_console(x=work_index, y=0, text=log)
+            print_console(x=console_row, y=0, text=log)
 
 
-def run_multi_process(args, symbols: List[str], time_frames: List[int]):
+def run_multi_process(args, symbols: List[str], time_frames: List[int], transforms: List[Transform]):
+    # create timestamps
+    timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, time_frame=args.time_frame)
+
+    # clear console
+    clear_console()
+
+    # define items as args for child processes
+    items = list(itertools.product(symbols, time_frames, transforms))
+
+    # create customized processes pool
+    child_processes = []
+    child_process_to_console_row: Dict = {}
+    free_console_rows = set(i for i in range(1, 65))
+
+    # set at exit callback to terminal all child processes
+    atexit.register(terminate_child_processes, child_processes)
+
+    for process_index, (symbol, time_frame, transform_) in enumerate(items):
+        # update free console rows
+        for child_process in child_processes:
+            console_row = child_process_to_console_row[child_process]
+            if child_process.is_alive() and console_row in free_console_rows:
+                free_console_rows.remove(console_row)
+            elif not child_process.is_alive() and console_row not in free_console_rows:
+                free_console_rows.add(console_row)
+
+        # create child process and start it
+        console_row = min(free_console_rows)
+        child_process_args = (process_index + 1, console_row, symbol, time_frame, transform_, timestamps)
+        child_process = Process(target=task, args=child_process_args)
+        child_process.start()
+
+        # store child process info
+        child_processes.append(child_process)
+        child_process_to_console_row[child_process] = console_row
+
+        # wait if maximum number of child processes reached
+        while True:
+            time.sleep(1)
+            alive_process_count = sum(p.is_alive() for p in child_processes)
+            if alive_process_count < args.processes:
+                break
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--feature", action="store_true")
+    parser.add_argument("--processes", action="store", type=int, required=False, default=24)
+    parser.add_argument("--time-frame", action="store", type=int, required=False, default=900)
+    parser.add_argument("--sequence-length", action="store", type=int, required=False, default=2 ** 8)
+    parser.add_argument("--stop-date", action="store", type=str, required=False, default="2024-01-01")
+    parser.add_argument("--start-date", action="store", type=str, required=False, default="2021-01-01")
+    parser.add_argument("--config-path", action="store", type=str, required=False, default="config/config.json")
+    args = parser.parse_args()
+
+    # load config
+    with open(args.config_path, "r") as file:
+        config_dict = json.load(file)
+
     # define feature transforms
     feature_transforms = [
         RollingMeanStdTrRocFeatureTransform(sequence_length=args.sequence_length),
@@ -96,49 +159,11 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int]):
         UpDownLabelTransform()
     ]
 
+    symbols = config_dict["symbols"]
+    time_frames = config_dict["time-frames"]
     transforms = feature_transforms if args.feature else label_transforms
 
-    # create timestamps
-    timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, time_frame=args.time_frame)
-
-    # clear console
-    clear_console()
-
-    # create sub processes
-    with ProcessPoolExecutor(max_workers=args.workers) as executor:
-        signal.signal(signal.SIGINT, handle_keyboard_interrupt)
-
-        futures = []
-        for transform_ in transforms:
-            for symbol in symbols:
-                for time_frame in time_frames:
-                    df_dict = load_dataframes_dict(exchange=args.exchange, symbols=[symbol], time_frames=[time_frame])
-                    data = Data(df_dict)
-
-                    future = executor.submit(work, len(futures) + 1, data, timestamps, transform_)
-                    futures.append(future)
-
-        for future in futures:
-            future.result()
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--feature", action="store_true")
-    parser.add_argument("--workers", action="store", type=int, required=False, default=24)
-    parser.add_argument("--time-frame", action="store", type=int, required=False, default=900)
-    parser.add_argument("--exchange", action="store", type=str, required=False, default="binance")
-    parser.add_argument("--sequence-length", action="store", type=int, required=False, default=2 ** 8)
-    parser.add_argument("--stop-date", action="store", type=str, required=False, default="2024-01-01")
-    parser.add_argument("--start-date", action="store", type=str, required=False, default="2021-01-01")
-    parser.add_argument("--config-path", action="store", type=str, required=False, default="config/config.json")
-    args = parser.parse_args()
-
-    # load config
-    with open(args.config_path, "r") as file:
-        config_dict = json.load(file)
-
-    run_multi_process(args=args, symbols=config_dict["symbols"], time_frames=config_dict["time-frames"])
+    run_multi_process(args=args, symbols=symbols, time_frames=time_frames, transforms=transforms)
 
 
 if __name__ == '__main__':
