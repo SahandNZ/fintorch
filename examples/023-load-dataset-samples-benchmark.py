@@ -13,9 +13,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--samples-count", action="store", type=int, required=False, default=10000)
     parser.add_argument("--sequence-length", action="store", type=int, required=False, default=2 ** 8)
-    parser.add_argument("--sequence-length", action="store", type=int, required=False, default=2 ** 8)
     parser.add_argument("--sampling-time-frame", action="store", type=int, required=False, default=900)
-    parser.add_argument("--start-date", action="store", type=str, required=False, default="2021-01-01")
+    parser.add_argument("--start-date", action="store", type=str, required=False, default="2022-01-01")
     parser.add_argument("--config-path", action="store", type=str, required=False, default="config/config.json")
     args = parser.parse_args()
 
@@ -54,7 +53,7 @@ def main():
     start_date = datetime.strptime(args.start_date, "%Y-%m-%d")
     start_timestamp = math.ceil(start_date.timestamp() / args.sampling_time_frame) * args.sampling_time_frame
     stop_timestamp = start_timestamp + args.samples_count * args.sampling_time_frame
-    timestamps = range(start_timestamp, stop_timestamp, args.sampling_time_frame)
+    timestamps = list(range(start_timestamp, stop_timestamp, args.sampling_time_frame))
 
     start_time = time.time()
     samples = dataset[timestamps]
