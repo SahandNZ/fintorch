@@ -145,14 +145,14 @@ class Dataset:
 
     def __getitem__(self, item: Union[int, List[int]]) -> List[Sample]:
         if isinstance(item, int):
+            sample = self.create_sample(timestamp=item)
+            return sample
+        elif isinstance(item, list):
             samples = []
             for timestamp in item:
                 sample = self.create_sample(timestamp=timestamp)
                 samples.append(sample)
             return samples
-        elif isinstance(item, list):
-            sample = self.create_sample(timestamp=item)
-            return sample
         else:
             raise ValueError("item parameter must be int (single timestamp) or list of ints (multiple timestamps).")
 

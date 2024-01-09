@@ -55,10 +55,11 @@ def main():
     stop_timestamp = start_timestamp + args.samples_count * args.sampling_time_frame
     timestamps = list(range(start_timestamp, stop_timestamp, args.sampling_time_frame))
 
-    start_time = time.time()
+    start_time = time.perf_counter_ns()
     samples = dataset[timestamps]
-    elapsed_time = (time.time() - start_time) * 1000
-    print("Loading samples takes: {:.3f}ms".format(elapsed_time))
+    elapsed_time_ms = (time.perf_counter_ns() - start_time) / 1000
+    print("Loading samples takes: {:.3f}ms".format(elapsed_time_ms))
+    print("Loading each sample on average takes: {:.3f}ms".format(elapsed_time_ms / len(timestamps)))
 
 
 if __name__ == '__main__':
