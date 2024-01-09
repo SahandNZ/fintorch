@@ -143,21 +143,16 @@ class Dataset:
 
         return np.array(matl)
 
-    def _load_samples(self, timestamps: List[int]) -> List[Sample]:
-        samples = []
-        for timestamp in timestamps:
-            file_path = os.path.join(self.directory, str(timestamp) + ".pkl")
-            with open(file_path, "rb") as file:
-                sample = pickle.load(file)
-            samples.append(sample)
-
-        return samples
-
     def __getitem__(self, item: Union[int, List[int]]) -> List[Sample]:
         if isinstance(item, int):
-            return self._load_samples(timestamps=[item])
+            samples = []
+            for timestamp in item:
+                sample = self.create_sample(timestamp=timestamp)
+                samples.append(sample)
+            return samples
         elif isinstance(item, list):
-            return self._load_samples(timestamps=item)
+            sample = self.create_sample(timestamp=item)
+            return sample
         else:
             raise ValueError("item parameter must be int (single timestamp) or list of ints (multiple timestamps).")
 
