@@ -1,10 +1,12 @@
 import argparse
 import json
 import math
-import time
 from datetime import datetime
 
+from rich.progress import Progress
+
 from fintorch.dataset.dataset import Dataset
+from fintorch.defaults import RICH_PROGRESS_COLUMNS
 from fintorch.transform.feature import *
 from fintorch.transform.label import *
 
@@ -55,11 +57,11 @@ def main():
     stop_timestamp = start_timestamp + args.samples_count * args.sampling_time_frame
     timestamps = list(range(start_timestamp, stop_timestamp, args.sampling_time_frame))
 
-    start_time = time.perf_counter()
-    samples = dataset[timestamps]
-    elapsed_time_ms = (time.perf_counter() - start_time) * 1000
-    print("Loading samples takes:     {:.3f}ms".format(elapsed_time_ms))
-    print("Loading each sample takes: {:.3f}ms".format(elapsed_time_ms / len(timestamps)))
+    with Progress(*RICH_PROGRESS_COLUMNS) as progress:
+        task = progress.add_task(description="Loading dataset samples", total=len(timestamps))
+        for timestamp in timestamps:
+            sample = dataset[timestamp]
+            progress.update(task, advance=1)
 
 
 if __name__ == '__main__':

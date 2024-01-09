@@ -123,7 +123,7 @@ def run_multi_process(args, dataset: Dataset):
 
         # wait if maximum number of child processes reached
         while True:
-            time.sleep(1)
+            time.sleep(0.1)
             alive_process_count = sum(p.is_alive() for p in child_processes)
             if alive_process_count < args.processes:
                 break
