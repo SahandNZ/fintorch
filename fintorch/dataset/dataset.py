@@ -100,27 +100,34 @@ class Dataset:
         file_path = os.path.join(self.directory, f"{timestamp}.pkl")
 
         # safe load timestamp_to_sample and if exists
-        sample = None
         if os.path.exists(file_path):
             with open(file_path, "rb+") as file:
                 try:
                     sample = pickle.load(file)
                 except EOFError:
-                    pass
-        if sample is None or sample.feature is None or sample.label is None:
-            # create feature and label numpy arrays
+                    sample = None
+        else:
+            sample = None
+
+        # create feature if sample is none (if sample exist and its feature is none so it's going to be none again)
+        if sample is None:
             feature_array = self._create_feature(timestamp=timestamp)
-            label_array = self._create_label(timestamp=timestamp)
-
-            # convert to tensor
             feature_tensor = torch.from_numpy(feature_array).float() if feature_array is not None else None
-            label_tensor = torch.from_numpy(label_array).float() if label_array is not None else None
-            sample = Sample(timestamp=timestamp, feature=feature_tensor, label=label_tensor)
+        else:
+            feature_tensor = sample.feature
 
-            # save sample if it's label isn't none
-            if sample.label is not None:
-                with open(file_path, "wb+") as file:
-                    pickle.dump(sample, file)
+        # create label if sample or sample.label is None
+        if sample is None or sample.label is None:
+            label_array = self._create_label(timestamp=timestamp)
+            label_tensor = torch.from_numpy(label_array).float() if label_array is not None else None
+        else:
+            label_tensor = sample.label
+
+        # update sample on storage if it's none or its label was none
+        if sample is None or sample.label is None:
+            sample = Sample(timestamp=timestamp, feature=feature_tensor, label=label_tensor)
+            with open(file_path, "wb+") as file:
+                pickle.dump(sample, file)
 
         return sample
 
