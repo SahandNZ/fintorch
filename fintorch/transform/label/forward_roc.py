@@ -11,6 +11,7 @@ class ForwardRocLabelTransform(LabelTransform):
             description="This labeling method works by calculating the sum of the rate of change values. "
                         'If the sum value is positive, it assigns an "up trend" label to the data. Conversely, '
                         'if the sum value is negative, it assigns a "down trend" label to the data.',
+            sequence_length=1,
             look_ahead=look_ahead,
             classes=["UP", "DOWN"]
         )

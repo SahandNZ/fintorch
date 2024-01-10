@@ -10,8 +10,9 @@ from fintorch.transform.transform import Transform
 
 
 class LabelTransform(Transform, ABC):
-    def __init__(self, name: str, short_name: str, description: str, look_ahead: int, classes: List[str]):
-        super().__init__(name=name, short_name=short_name, description=description, sequence_length=1)
+    def __init__(self, name: str, short_name: str, description: str, look_ahead: int, sequence_length: int,
+                 classes: List[str]):
+        super().__init__(name=name, short_name=short_name, description=description, sequence_length=sequence_length)
         self.__look_ahead: int = look_ahead
         self.__classes: int = classes
 
@@ -40,13 +41,18 @@ class LabelTransform(Transform, ABC):
 
     def _transform(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
         ldf = self.data[symbol, time_frame]
-        if timestamp not in ldf.index:
+
+        # forward cropping label dataframe with timestamp and sequence length
+        ldf = ldf[timestamp <= ldf.index]
+        ldf = ldf.iloc[:self.sequence_length]
+
+        if self.sequence_length != len(ldf):
             return None
 
         # one hot encoding
-        label = ldf.label.loc[timestamp]
+        labels = ldf.label.to_numpy()
         one_hot = np.zeros(self.num_classes)
-        one_hot[label] = 1
+        one_hot[labels] = 1
 
         one_hot = one_hot.astype(dtype=NUMPY_LABEL_DTYPE)
 

@@ -11,6 +11,7 @@ class ForwardMiddleSmaLabelTransform(LabelTransform):
             description="This labeling method works by smoothing the close price using a lookahead and "
                         "the Simple Moving Average (SMA) method. It then compares the current smoothed close price "
                         "with the forward values to assign trend labels to the data.",
+            sequence_length=1,
             look_ahead=look_ahead,
             classes=["UP", "DOWN"]
         )

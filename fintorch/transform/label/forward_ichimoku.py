@@ -11,6 +11,7 @@ class ForwardIchimokuLabelTransform(LabelTransform):
             description="This labeling method works by comparing the base line with the conversion line of "
                         "the Ichimoku indicator, and then shifting back the comparison values to assign trend "
                         "labels to the data.",
+            sequence_length=1,
             look_ahead=look_ahead,
             classes=["UP", "DOWN"]
         )

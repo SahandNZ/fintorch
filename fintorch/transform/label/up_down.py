@@ -10,6 +10,7 @@ class UpDownLabelTransform(LabelTransform):
             short_name="Up-Down",
             description="This labeling method compares the current close price with the current open price "
                         "to assign trend labels to the data.",
+            sequence_length=1,
             look_ahead=1,
             classes=["UP", "DOWN"]
         )

@@ -10,6 +10,7 @@ class ForwardBackwardMinimumLabelTransform(LabelTransform):
             short_name="F.B-Min",
             description="This labeling method works by comparing the Backward Min series with "
                         "the Forward Min series to assign trend labels to the data.",
+            sequence_length=1,
             look_ahead=look_ahead,
             classes=["UP", "DOWN"]
         )

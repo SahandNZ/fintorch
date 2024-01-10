@@ -11,6 +11,7 @@ class NextFractalLabelTransform(LabelTransform):
             short_name="N-Fractal",
             description="This labeling method works by comparing the next fractal with the current close price "
                         "to assign trend labels to the data.",
+            sequence_length=1,
             look_ahead=look_ahead,
             classes=["UP", "DOWN"]
         )
