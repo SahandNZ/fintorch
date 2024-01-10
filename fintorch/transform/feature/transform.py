@@ -37,6 +37,8 @@ class FeatureTransform(Transform, ABC):
 
     def _transform(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
         fdf = self.data[symbol, time_frame]
+
+        # backward cropping feature dataframe with timestamp and sequence length
         fdf = fdf[fdf.index < timestamp]
         fdf = fdf.iloc[-self.sequence_length:]
         fdf = fdf[self.features]
