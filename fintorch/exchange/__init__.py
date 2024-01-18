@@ -5,7 +5,6 @@ from ._exchange import Spot
 from ._exchange import Trade
 from ._exchange import Wallet
 
-from ..setting import EXCHANGE_NAME
+from ..setting import EXCHANGE_NAME, PROXIES
 
-EXCHANGE = Exchange.from_name(name=EXCHANGE_NAME)
-del EXCHANGE_NAME
+EXCHANGE = Exchange.from_name(name=EXCHANGE_NAME, proxies=PROXIES)

@@ -14,8 +14,8 @@ class Exchange:
         self.__future: Future = future
 
     @staticmethod
-    def from_name(name: str):
-        dct = {"name": name}
+    def from_name(name: str, proxies: Dict[str, str] = None):
+        dct = {"name": name, "proxies": proxies}
         exchange = Exchange.from_dict(dct=dct)
 
         return exchange

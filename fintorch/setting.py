@@ -18,9 +18,9 @@ NUMPY_LABEL_DTYPE = np.dtype(f'f{LABEL_BYTES}')
 FILE_COMPRESS_FACTOR = 128
 
 # proxies
-HTTP_PROXY = os.environ.get("FINTORCH_HTTPS_PROXY", None)
-HTTPS_PROXY = os.environ.get("FINTORCH_HTTPS_PROXY", None)
-SOCKS5_PROXY = os.environ.get("FINTORCH_SOCKS5_PROXY", None)
+HTTP_PROXY = os.environ.get("FINTORCH_HTTP_PROXY", "http://tracker:nlOv5rC7cL3q3bYR@95.216.41.71:3128")
+HTTPS_PROXY = os.environ.get("FINTORCH_HTTPS_PROXY", "http://tracker:nlOv5rC7cL3q3bYR@95.216.41.71:3128")
+SOCKS5_PROXY = os.environ.get("FINTORCH_SOCKS5_PROXY", "dante-user:IiS8v39yGHyEMHeuuhQPOA43jryzeuT0@95.216.41.71:1080")
 PROXIES = {"http": HTTP_PROXY, "https": HTTPS_PROXY, "socks5": SOCKS5_PROXY}
 
 # Exchange
