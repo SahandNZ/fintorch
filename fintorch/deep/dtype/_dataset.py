@@ -99,49 +99,37 @@ class Dataset:
         self.label_transform.fit(data=data, progress=progress)
 
     def load_sample(self, timestamp: int, create_missing: bool = True) -> Sample:
-        file_compress_factor = FILE_COMPRESS_FACTOR * self.sampling_time_frame
-        file_name = math.floor(timestamp / file_compress_factor) * file_compress_factor
-        file_path = os.path.join(self.directory, f"{file_name}.pkl")
+        file_path = os.path.join(self.directory, f"{timestamp}.pkl")
 
         # safe load sample if exists
         if os.path.exists(file_path):
             with open(file_path, "rb+") as file:
                 try:
-                    timestamp_to_sample = pickle.load(file)
+                    sample = pickle.load(file)
                 except EOFError:
-                    timestamp_to_sample = {}
+                    sample = None
         else:
-            timestamp_to_sample = {}
+            sample = None
 
         # create feature and labels
-        sample = timestamp_to_sample[timestamp] if timestamp in timestamp_to_sample else None
-
         if create_missing:
-            feature = self._create_feature(timestamp=timestamp) if sample is None else sample.feature
-            label = self._create_label(timestamp=timestamp) if sample is None or sample.label is None else sample.label
+            if sample is None:
+                feature = self.feature_transform.transform(timestamp=timestamp)
+            else:
+                feature = sample.feature
+
+            if sample is None or sample.label is None:
+                label = self.label_transform.transform(timestamp=timestamp)
+            else:
+                label = sample.label
 
             # update sample on storage if it's none or its label was none
             if sample is None or sample.label is None:
                 sample = Sample(timestamp=timestamp, feature=feature, label=label)
-                timestamp_to_sample[timestamp] = sample
                 with open(file_path, "wb+") as file:
-                    pickle.dump(timestamp_to_sample, file)
+                    pickle.dump(sample, file)
 
         return sample
-
-    def _create_feature(self, timestamp: int) -> Union[np.array, None]:
-        atsf = self.feature_transform.transform(timestamp=timestamp)
-        if atsf is None:
-            return None
-
-        return np.array(atsf)
-
-    def _create_label(self, timestamp: int) -> Union[np.array, None]:
-        atl = self.label_transform.transform(timestamp=timestamp)
-        if atl is None:
-            return None
-
-        return np.array(atl)
 
     def _load_samples(self, timestamps: List[int]) -> List[Sample]:
         samples = []
