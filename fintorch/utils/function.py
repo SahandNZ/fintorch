@@ -3,9 +3,9 @@ import inspect
 from typing import Dict, Callable
 
 
-def import_class(module: str):
+def import_class(module: str, contains: str = None):
     for name, cls in inspect.getmembers(importlib.import_module(module), inspect.isclass):
-        if module == cls.__module__:
+        if contains is None or contains.lower() in name.lower():
             return cls
 
 

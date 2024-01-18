@@ -3,7 +3,7 @@ import os.path
 import pickle
 from typing import Dict
 
-from fintorch.utils.directory import create_directory
+from .directory import create_directory
 
 
 class CacheManager:

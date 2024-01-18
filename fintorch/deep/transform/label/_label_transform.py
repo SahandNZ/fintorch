@@ -1,0 +1,59 @@
+import math
+from abc import ABC, abstractmethod
+from typing import Union, List
+
+import numpy as np
+import pandas as pd
+
+from .._transform import Transform
+from ....setting import NUMPY_LABEL_DTYPE
+
+
+class LabelTransform(Transform, ABC):
+    def __init__(self, name: str, short_name: str, description: str, sequence_length: int, look_ahead: int,
+                 classes: List[str]):
+        super().__init__(name=name, short_name=short_name, description=description, sequence_length=sequence_length)
+        self.__look_ahead: int = look_ahead
+        self.__classes: int = classes
+
+    @property
+    def look_ahead(self) -> int:
+        return self.__look_ahead
+
+    @property
+    def classes(self) -> List[str]:
+        return self.__classes
+
+    @property
+    def num_classes(self) -> int:
+        return len(self.classes)
+
+    @property
+    def _save_none(self) -> bool:
+        return False
+
+    @abstractmethod
+    def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
+        raise NotImplementedError()
+
+    def _shift_timestamp(self, timestamp: int, time_frame: int) -> int:
+        return math.ceil(timestamp / time_frame) * time_frame
+
+    def _transform(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
+        ldf = self.data[symbol, time_frame]
+
+        # forward cropping label dataframe with timestamp and sequence length
+        ldf = ldf[timestamp <= ldf.index]
+        ldf = ldf.iloc[:self.sequence_length]
+
+        if self.sequence_length != len(ldf):
+            return None
+
+        # one hot encoding
+        labels = ldf.label.to_numpy()
+        one_hot = np.zeros(self.num_classes)
+        one_hot[labels] = 1
+
+        one_hot = one_hot.astype(dtype=NUMPY_LABEL_DTYPE)
+
+        return one_hot

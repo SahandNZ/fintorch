@@ -6,11 +6,11 @@ build-backend = "hatchling.build"
 name = "fintorch"
 version = "0.1.36"
 authors = [
-  { name="Sahand Nazarzadeh", email="sahand.nazarzadeh@gmail.com" },
+    { name = "Sahand Nazarzadeh", email = "sahand.nazarzadeh@gmail.com" },
 ]
 description = "Finbright deep learning package"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -18,12 +18,16 @@ classifiers = [
 ]
 
 dependencies = [
-    "torch>=2.1.0",
+    "torch==2.1.0",
     "rich==13.7.0",
     "numpy==1.26.0",
     "pandas==2.1.1",
     "psutil==5.9.6",
     "tabulate==0.9.0",
+    "requests==2.31.0",
     "matplotlib==3.8.0",
+    "apscheduler==3.10.4",
+    "python-socks==2.4.3",
     "mplfinance==0.12.10b0",
+    "websocket-client==1.7.0"
 ]

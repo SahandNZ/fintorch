@@ -2,10 +2,10 @@ from abc import abstractmethod
 from typing import List
 
 import pandas as pd
-
-from fintorch.component import Component
 from fintorch.cross_validation.fold import Fold
 from fintorch.position import Position
+
+from fintorch.component import Component
 
 
 class Strategy(Component):

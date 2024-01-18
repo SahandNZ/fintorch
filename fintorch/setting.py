@@ -1,0 +1,42 @@
+import os
+
+import numpy as np
+from rich.progress import *
+
+# Directories
+HOME_DIR = os.path.expanduser("~")
+DATA_DIR = os.environ.get("FINTORCH_DATA_DIR", os.path.join(HOME_DIR, "Data"))
+CANDLE_DIR = os.path.join(DATA_DIR, "candle")
+TRANSFORM_DIR = os.path.join(DATA_DIR, "transform")
+DATASET_DIR = os.path.join(DATA_DIR, "dataset")
+
+# Storage
+FEATURE_BYTES = os.environ.get("FINTORCH_FEATURE_BYTES", 4)
+LABEL_BYTES = os.environ.get("FINTORCH_LABEL_PRECISION", 2)
+NUMPY_FEATURE_DTYPE = np.dtype(f'f{FEATURE_BYTES}')
+NUMPY_LABEL_DTYPE = np.dtype(f'f{LABEL_BYTES}')
+FILE_COMPRESS_FACTOR = 128
+
+# proxies
+HTTP_PROXY = os.environ.get("FINTORCH_HTTPS_PROXY", None)
+HTTPS_PROXY = os.environ.get("FINTORCH_HTTPS_PROXY", None)
+SOCKS5_PROXY = os.environ.get("FINTORCH_SOCKS5_PROXY", None)
+PROXIES = {"http": HTTP_PROXY, "https": HTTPS_PROXY, "socks5": SOCKS5_PROXY}
+
+# Exchange
+EXCHANGE_NAME = os.environ.get("FINTORCH_EXCHANGE_NAME", "binance")
+
+# Data
+BASE_TIME_FRAME = os.environ.get("FINTORCH_BASE_TIME_FRAME", 900)
+CANDLE_COUNTS = os.environ.get("FINTORCH_CANDLE_COUNTS", None)
+
+# Rich progress columns
+RICH_PROGRESS_COLUMNS = [
+    SpinnerColumn(),
+    TextColumn("[progress.description]{task.description}"),
+    BarColumn(),
+    TaskProgressColumn(show_speed=True),
+    MofNCompleteColumn(),
+    TimeElapsedColumn(),
+    TimeRemainingColumn(),
+]

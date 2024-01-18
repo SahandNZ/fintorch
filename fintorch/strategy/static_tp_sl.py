@@ -2,10 +2,10 @@ from typing import List
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-
 from fintorch.cross_validation.fold import Fold
 from fintorch.position import Position
+from tqdm import tqdm
+
 from fintorch.strategy.strategy import Strategy
 
 
