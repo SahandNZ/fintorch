@@ -71,6 +71,8 @@ def main():
         "dim_output": 16,
     }
 
+    print("Model dims: ", model_dims)
+
     # feed forward
     model = FeedForward(**model_dims)
     output = model(x)
