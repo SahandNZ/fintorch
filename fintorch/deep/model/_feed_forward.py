@@ -26,7 +26,7 @@ class FeedForward(Model):
         input_layer = self.dim_sequence * self.dim_feature
         output_layer = self.dim_output
         powers = np.linspace(math.log2(input_layer), math.log2(output_layer), self.num_hidden_layers + 2)
-        self.__layers = [2 ** round(p) for p in powers]
+        self.__layers = [input_layer] + [2 ** round(p) for p in powers[1:-1]] + [output_layer]
 
         modules = [nn.Flatten()]
         for index in range(len(self.layers) - 2):
