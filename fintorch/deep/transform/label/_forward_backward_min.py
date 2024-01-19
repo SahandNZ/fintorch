@@ -20,7 +20,7 @@ class ForwardBackwardMinimumLabelTransform(LabelTransform):
     def look_back(self) -> int:
         return self.__look_back
 
-    def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _fit_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         df["bmin"] = df.close.rolling(self.look_back).min()
         df["fmin"] = df.close.rolling(self.look_ahead).min().shift(-self.look_ahead + 1)
         df.dropna(inplace=True)

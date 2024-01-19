@@ -21,7 +21,7 @@ class ForwardMiddleSmaLabelTransform(LabelTransform):
     def length(self) -> int:
         return self.__length
 
-    def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _fit_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         df["msma"] = df.close.rolling(self.length).mean().shift(-self.length // 2)
         df["f-msma"] = df.msma.shift(-self.look_ahead)
         df.dropna(inplace=True)

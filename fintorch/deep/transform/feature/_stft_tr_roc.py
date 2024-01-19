@@ -15,7 +15,7 @@ class StftTrRocFeatureTransform(FeatureTransform):
         )
         self.dfft = DFFT(muting_percentage=muting_percentage)
 
-    def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _fit_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         df["tr"] = df.high / df.low - 1
         df["roc"] = df.close / df.open - 1
         df["clean-tr"] = self.dfft.transform(df.tr)

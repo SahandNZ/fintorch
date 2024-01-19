@@ -25,17 +25,17 @@ class FeatureTransform(Transform, ABC):
         return self.__features
 
     @property
-    def _save_none(self) -> bool:
+    def _store_none(self) -> bool:
         return True
 
     @abstractmethod
-    def _fit(self, df: pd.DataFrame):
+    def _fit_dataframe(self, df: pd.DataFrame):
         raise NotImplementedError()
 
     def _shift_timestamp(self, timestamp: int, time_frame: int) -> int:
         return math.floor(timestamp / time_frame) * time_frame
 
-    def _transform(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
+    def _transform_sf(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
         fdf = self.data[symbol, time_frame]
 
         # backward cropping feature dataframe with timestamp and sequence length

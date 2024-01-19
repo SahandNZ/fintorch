@@ -14,7 +14,7 @@ class LabelTransform(Transform, ABC):
                  classes: List[str]):
         super().__init__(name=name, short_name=short_name, description=description, sequence_length=sequence_length)
         self.__look_ahead: int = look_ahead
-        self.__classes: int = classes
+        self.__classes: List[str] = classes
 
     @property
     def look_ahead(self) -> int:
@@ -29,17 +29,17 @@ class LabelTransform(Transform, ABC):
         return len(self.classes)
 
     @property
-    def _save_none(self) -> bool:
+    def _store_none(self) -> bool:
         return False
 
     @abstractmethod
-    def _fit(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _fit_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError()
 
     def _shift_timestamp(self, timestamp: int, time_frame: int) -> int:
         return math.ceil(timestamp / time_frame) * time_frame
 
-    def _transform(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
+    def _transform_sf(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
         ldf = self.data[symbol, time_frame]
 
         # forward cropping label dataframe with timestamp and sequence length
