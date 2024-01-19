@@ -34,7 +34,7 @@ def task(p_index: int, console_row: int, transform_: Transform, data: Data, time
 
     # create features and store them on storage
     for index, timestamp in enumerate(timestamps):
-        transform_.transform(timestamp=timestamp)
+        transform_.transform(timestamp=timestamp, symbols=data.symbols, time_frames=data.time_frames)
 
         # progress logs
         if 0 == (index + 1) % refresh_rate or (index + 1) == len(timestamps):
