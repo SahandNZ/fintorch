@@ -54,6 +54,8 @@ class LabelTransform(Transform, ABC):
         one_hot = np.zeros(self.num_classes)
         one_hot[labels] = 1
 
-        one_hot = one_hot.astype(dtype=NUMPY_LABEL_DTYPE)
+        # reshape one hot encoding
+        sf = one_hot.astype(dtype=NUMPY_LABEL_DTYPE)
+        sf = sf.reshape(self.sequence_length, 2)
 
-        return one_hot
+        return sf
