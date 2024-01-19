@@ -26,7 +26,7 @@ class ResNet1D(Model):
         input_block = self.dim_sequence * self.dim_feature
         output_block = self.dim_output
         powers = np.linspace(math.log2(input_block), math.log2(output_block), self.num_hidden_blocks + 2)
-        self.__blocks = [2 ** round(p) for p in powers]
+        self.__blocks = [input_block] + [2 ** round(p) for p in powers[1:-1]] + [output_block]
 
         modules = [nn.Flatten()]
         for index in range(len(self.blocks) - 2):
