@@ -16,12 +16,14 @@ from .criterion import Criterion
 
 class Trainer:
     def __init__(self, cross_validation: CrossValidation, data_loader: DataLoader, criterion: Criterion,
-                 optimizer: Optimizer, lr_scheduler: LRScheduler, auto_cuda: bool = True):
+                 optimizer: Optimizer, lr_scheduler: LRScheduler, gradient_clipping_threshold: float = None,
+                 auto_cuda: bool = True):
         self.__cross_validation = cross_validation
         self.__data_loader: DataLoader = data_loader
         self.__criterion: Criterion = criterion
         self.__optimizer: Optimizer = optimizer
         self.__lr_scheduler: LRScheduler = lr_scheduler
+        self.__gradient_clipping_threshold: float = gradient_clipping_threshold
 
         self.__auto_cuda: bool = auto_cuda
 
@@ -44,6 +46,10 @@ class Trainer:
     @property
     def lr_scheduler(self) -> LRScheduler:
         return self.__lr_scheduler
+
+    @property
+    def gradient_clipping_threshold(self) -> float:
+        return self.__gradient_clipping_threshold
 
     @property
     def auto_cuda(self) -> bool:
@@ -122,12 +128,16 @@ class Trainer:
                 y_hat = model(x)
                 loss = self.criterion(y_hat, y)
 
+            if self.gradient_clipping_threshold is not None:
+                torch.nn.utils.clip_grad_norm(model.parameters(), self.gradient_clipping_threshold)
+
             # backward prop
             loss.backward()
             self.optimizer.step()
+            self.lr_scheduler.step()
             self.optimizer.zero_grad()
 
-            print(loss.item())
+            print(loss.item(), self.optimizer.lr)
         else:
             model.eval()
             with torch.no_grad():
