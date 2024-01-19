@@ -14,8 +14,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--epochs", action="store", type=int, required=False, default=100)
     parser.add_argument("--batch-size", action="store", type=int, required=False, default=64)
+    parser.add_argument("--dim-latent", action="store", type=int, required=False, default=32)
     parser.add_argument("--sequence-length", action="store", type=int, required=False, default=32)
-    parser.add_argument("--window-length", action="store", type=int, required=False, default=10000)
     parser.add_argument("--sampling-time-frame", action="store", type=int, required=False, default=900)
     parser.add_argument("--start-date", action="store", type=str, required=False, default="2020-01-01")
     parser.add_argument("--stop-date", action="store", type=str, required=False, default="2024-01-01")
@@ -45,15 +45,16 @@ def main():
         label_transform=label_transform
     )
 
-    # dataset dims
+    # dataset and model dims
     dim_symbol = len(symbols)
     dim_time_frame = len(time_frames)
     dim_sequence = args.sequence_length
     dim_feature = 4
+    dim_latent = args.dim_latent
 
     # define auto encoder
     encoder_module = EncoderModule(dim_symbol=dim_symbol, dim_time_frame=dim_time_frame, dim_sequence=dim_sequence,
-                                   dim_feature=dim_feature, dim_latent=32, model=Hybrid)
+                                   dim_feature=dim_feature, dim_latent=dim_latent, model=Hybrid)
 
     encoder_module.optimize(dataset=dataset, epochs=args.epochs, batch_size=args.batch_size)
 
