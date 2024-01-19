@@ -18,7 +18,7 @@ from ...utils.hash import static_list_hash
 
 
 class Transform(Component):
-    def __init__(self, name: str, short_name: str, description: str, sequence_length):
+    def __init__(self, name: str, short_name: str, description: str, sequence_length: int):
         super().__init__(name=name, short_name=short_name, description=description)
         self.__sequence_length: int = sequence_length
 
@@ -85,7 +85,7 @@ class Transform(Component):
         create_directory(directory)
 
         # define file path
-        file_compress_factor = FILE_COMPRESS_FACTOR * min(time_frames)
+        file_compress_factor = FILE_COMPRESS_FACTOR // 8 * min(time_frames)
         file_name = math.floor(timestamp / file_compress_factor) * file_compress_factor
         file_path = os.path.join(directory, f"{file_name}.pkl")
 
