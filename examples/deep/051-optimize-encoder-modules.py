@@ -12,6 +12,7 @@ from fintorch.deep.transform.label import *
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--epochs", action="store", type=int, required=False, default=100)
     parser.add_argument("--batch-size", action="store", type=int, required=False, default=64)
     parser.add_argument("--sequence-length", action="store", type=int, required=False, default=32)
     parser.add_argument("--window-length", action="store", type=int, required=False, default=10000)
@@ -52,9 +53,9 @@ def main():
 
     # define auto encoder
     encoder_module = EncoderModule(dim_symbol=dim_symbol, dim_time_frame=dim_time_frame, dim_sequence=dim_sequence,
-                                   dim_feature=dim_feature, dim_latent=16, model=Hybrid)
+                                   dim_feature=dim_feature, dim_latent=32, model=Hybrid)
 
-    encoder_module.optimize(dataset=dataset)
+    encoder_module.optimize(dataset=dataset, epochs=args.epochs, batch_size=args.batch_size)
 
 
 if __name__ == '__main__':
