@@ -25,7 +25,7 @@ def terminate_child_processes(child_processes: List[Process]):
 
 def task(p_index: int, console_row: int, transform_: Transform, data: Data, timestamps: List[int]):
     # define progress logs variables
-    refresh_count = 1000
+    refresh_count = 10000
     refresh_rate = math.ceil(len(timestamps) / refresh_count)
     start_time = time.time()
 
