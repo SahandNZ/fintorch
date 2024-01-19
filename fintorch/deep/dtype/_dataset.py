@@ -33,9 +33,6 @@ class Dataset:
         self.__feature_transform: FeatureTransform = feature_transform
         self.__label_transform: LabelTransform = label_transform
 
-        self.__directory: str = os.path.join(DATASET_DIR, str(self.__hash__()))
-        create_directory(self.__directory)
-
     @property
     def start_date(self) -> datetime:
         return self.__start_date
@@ -71,10 +68,6 @@ class Dataset:
     @property
     def label_transform(self) -> LabelTransform:
         return self.__label_transform
-
-    @property
-    def directory(self) -> str:
-        return self.__directory
 
     def prepare(self, data: Data, progress: Progress = None) -> None:
         # create new task in rich progress bar for creating samples
@@ -124,16 +117,3 @@ class Dataset:
             return self._load_samples(timestamps=item)
         else:
             raise ValueError("item parameter must be int (single timestamp) or list of ints (multiple timestamps).")
-
-    def __hash__(self):
-        hash_values = [
-            self.sampling_time_frame,
-            static_list_hash(self.symbols),
-            static_list_hash(self.time_frames),
-            self.sequence_length,
-            self.feature_transform.name,
-            self.label_transform.name
-        ]
-
-        total_hash = static_list_hash(hash_values)
-        return total_hash
