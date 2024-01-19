@@ -19,16 +19,16 @@ from ...utils.timestamp import create_timestamps
 
 
 class Dataset:
-    def __init__(self, start_date: str, stop_date: str, sampling_time_frame: TimeFrame, symbols: List[str],
-                 time_frames: List[int], sequence_length: int, feature_transform: FeatureTransform,
-                 label_transform: LabelTransform):
+    def __init__(self, start_date: str, stop_date: str, sampling_time_frame: TimeFrame,
+                 symbols: List[str], time_frames: List[TimeFrame], sequence_length: int,
+                 feature_transform: FeatureTransform, label_transform: LabelTransform):
         self.__start_date = datetime.strptime(start_date, "%Y-%m-%d")
         self.__stop_date = datetime.strptime(stop_date, "%Y-%m-%d")
         self.__sampling_time_frame: TimeFrame = sampling_time_frame
         self.__timestamps: List[int] = create_timestamps(self.start_date, self.stop_date, self.sampling_time_frame)
 
         self.__symbols: List[str] = symbols
-        self.__time_frames: List[int] = time_frames
+        self.__time_frames: List[TimeFrame] = time_frames
         self.__sequence_length: int = sequence_length
         self.__feature_transform: FeatureTransform = feature_transform
         self.__label_transform: LabelTransform = label_transform
@@ -57,7 +57,7 @@ class Dataset:
         return self.__symbols
 
     @property
-    def time_frames(self) -> List[int]:
+    def time_frames(self) -> List[TimeFrame]:
         return self.__time_frames
 
     @property
@@ -83,63 +83,32 @@ class Dataset:
             task = progress.add_task(description=desc, total=len(self.timestamps))
 
         # fit data to feature and label transforms
-        self.fit(data=data, progress=progress)
+        self._fit(data=data, progress=progress)
 
         for timestamp in self.timestamps:
-            self.load_sample(timestamp=timestamp)
+            self._load_or_create_sample(timestamp=timestamp)
             if progress is not None:
                 progress.update(task, advance=1)
 
     def preprocess(self, data: Data, timestamp: int) -> Sample:
-        self.fit(data=data, progress=None)
-        return self.load_sample(timestamp=timestamp)
+        self._fit(data=data, progress=None)
+        return self._load_or_create_sample(timestamp=timestamp)
 
-    def fit(self, data: Data, progress: Progress = None):
+    def _fit(self, data: Data, progress: Progress = None):
         self.feature_transform.fit(data=data, progress=progress)
         self.label_transform.fit(data=data, progress=progress)
 
-    def load_sample(self, timestamp: int, create_missing: bool = True) -> Sample:
-        file_compress_factor = FILE_COMPRESS_FACTOR * self.sampling_time_frame
-        file_name = math.floor(timestamp / file_compress_factor) * file_compress_factor
-        file_path = os.path.join(self.directory, f"{file_name}.pkl")
-
-        # safe load sample if exists
-        if os.path.exists(file_path):
-            with open(file_path, "rb+") as file:
-                try:
-                    timestamp_to_sample = pickle.load(file)
-                except EOFError:
-                    timestamp_to_sample = {}
-        else:
-            timestamp_to_sample = {}
-
-        sample = timestamp_to_sample[timestamp] if timestamp in timestamp_to_sample else None
-
-        # create feature and labels
-        if create_missing:
-            if sample is None:
-                feature = self.feature_transform.transform(timestamp=timestamp)
-            else:
-                feature = sample.feature
-
-            if sample is None or sample.label is None:
-                label = self.label_transform.transform(timestamp=timestamp)
-            else:
-                label = sample.label
-
-            # update sample on storage if it's none or its label was none
-            if sample is None or sample.label is None:
-                sample = Sample(timestamp=timestamp, feature=feature, label=label)
-                timestamp_to_sample[timestamp] = sample
-                with open(file_path, "wb+") as file:
-                    pickle.dump(timestamp_to_sample, file)
+    def _load_or_create_sample(self, timestamp: int, create_missing: bool = True) -> Sample:
+        feature = self.feature_transform.transform(timestamp, self.symbols, self.time_frames, create_missing)
+        label = self.label_transform.transform(timestamp, self.symbols, self.time_frames, create_missing)
+        sample = Sample(timestamp=timestamp, feature=feature, label=label)
 
         return sample
 
     def _load_samples(self, timestamps: List[int]) -> List[Sample]:
         samples = []
         for timestamp in timestamps:
-            sample = self.load_sample(timestamp=timestamp, create_missing=False)
+            sample = self._load_or_create_sample(timestamp=timestamp, create_missing=False)
             samples.append(sample)
 
         return samples
@@ -158,10 +127,10 @@ class Dataset:
 
     def __hash__(self):
         hash_values = [
+            self.sampling_time_frame,
             static_list_hash(self.symbols),
             static_list_hash(self.time_frames),
             self.sequence_length,
-            self.sampling_time_frame,
             self.feature_transform.name,
             self.label_transform.name
         ]
