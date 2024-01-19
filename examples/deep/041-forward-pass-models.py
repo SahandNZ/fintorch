@@ -51,6 +51,14 @@ def main():
     dim_sequence = args.sequence_length
     dim_feature = 4
 
+    # model dims
+    model_dims = {
+        "dim_sequence": dim_sequence,
+        "dim_feature": dim_symbol * dim_time_frame * dim_feature,
+        "dim_output": 16,
+    }
+    print("Model dims: ", model_dims)
+
     # define cross validation and generate single fold
     cross_validation = CrossValidation(train_percentage=80, dev_percentage=10)
     fold = next(iter(cross_validation(dataset=dataset)))
@@ -65,14 +73,6 @@ def main():
     print("{:<32}: {} => {}\n".format("Batch x", batch_x.shape, x.shape))
 
     # define models
-    model_dims = {
-        "dim_sequence": dim_sequence,
-        "dim_feature": dim_symbol * dim_time_frame * dim_feature,
-        "dim_output": 16,
-    }
-
-    print("Model dims: ", model_dims)
-
     # feed forward
     model = FeedForward(**model_dims)
     output = model(x)
