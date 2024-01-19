@@ -127,7 +127,7 @@ class Trainer:
             self.optimizer.step()
             self.optimizer.zero_grad()
 
-            print(round(loss.item(), 4), torch.mean(torch.abs((y_hat - y) / y)).item())
+            print(loss.item())
         else:
             model.eval()
             with torch.no_grad():
