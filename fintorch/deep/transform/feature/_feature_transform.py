@@ -46,7 +46,9 @@ class FeatureTransform(Transform, ABC):
         if self.sequence_length != len(fdf):
             return None
 
-        ndf = fdf / fdf.std()
+        # z-score standardization and min-max normalization
+        zdf = (fdf - fdf.mean()) / fdf.std()
+        ndf = (zdf - zdf.min()) / (zdf.max() - zdf.min())
         sf = ndf.to_numpy().astype(dtype=NUMPY_FEATURE_DTYPE)
 
         return sf
