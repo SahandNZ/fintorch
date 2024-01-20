@@ -11,7 +11,7 @@ from fintorch.deep.transform.label import *
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch-norm", action="store_true")
-    parser.add_argument("--epochs", action="store", type=int, required=False, default=100)
+    parser.add_argument("--epochs", action="store", type=int, required=False, default=10)
     parser.add_argument("--batch-size", action="store", type=int, required=False, default=64)
     parser.add_argument("--dim-latent", action="store", type=int, required=False, default=128)
     parser.add_argument("--sequence-length", action="store", type=int, required=False, default=32)
