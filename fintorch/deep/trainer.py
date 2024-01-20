@@ -1,3 +1,4 @@
+import gc
 import warnings
 from typing import List
 
@@ -128,23 +129,32 @@ class Trainer:
                 y_hat = model(x)
                 loss = self.criterion(y_hat, y)
 
-            if self.gradient_clipping_threshold is not None:
-                torch.nn.utils.clip_grad_norm(model.parameters(), self.gradient_clipping_threshold)
-
             # backward prop
             loss.backward()
+
+            if self.gradient_clipping_threshold is not None:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), self.gradient_clipping_threshold)
+
             self.optimizer.step()
             self.lr_scheduler.step()
             self.optimizer.zero_grad()
 
-            print(loss.item(), self.optimizer.lr)
+            print("Loss: {:.6f}, LR: {:.6f}".format(loss.item(), self.optimizer.lr))
+            print(model.encode(x)[0][:8].detach().tolist())
+            print()
         else:
             model.eval()
             with torch.no_grad():
                 y_hat = model(x)
 
-        # move tensors to cpu
-        x.cpu()
-        y.cpu()
+        # move to cpu
+        cpu = torch.device("cpu")
+        x = x.to(cpu)
+        y = y.to(cpu)
+        y_hat = y_hat.to(cpu)
 
-        return y.cpu(), y_hat.cpu()
+        # remove cache
+        gc.collect()
+        torch.cuda.empty_cache()
+
+        return y, y_hat
