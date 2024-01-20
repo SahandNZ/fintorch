@@ -1,25 +1,46 @@
 from typing import Type
 
 import torch
+from torch import nn
 
 from fintorch.deep.model._feed_forward import FeedForward
 from fintorch.deep.model._model import Model
 
 
 class AutoEncoder(Model):
-    def __init__(self, dim_sequence: int, dim_feature: int, dim_output: int, dropout: float = 0,
-                 encoder: Type[Model] = FeedForward) -> None:
+    def __init__(self, dim_sequence: int, dim_feature: int, dim_output: int, num_hidden_layers: int = 4,
+                 batch_norm: bool = False, dropout: float = 0, encoder: Type[Model] = FeedForward) -> None:
         super().__init__(
             name="Auto Encoder",
             short_name="AE",
             dim_sequence=dim_sequence,
             dim_feature=dim_feature,
             dim_output=dim_output,
+            num_hidden_layers=num_hidden_layers,
+            batch_norm=batch_norm,
             dropout=dropout,
-            activation_fn=None
+            activation_fn=nn.Tanh()
         )
-        self.__encoder: Model = encoder(dim_sequence=dim_sequence, dim_feature=dim_feature, dim_output=dim_output)
-        self.__decoder: Model = FeedForward(dim_sequence=1, dim_feature=dim_output, dim_output=dim_sequence * dim_feature)
+
+        self.__encoder: Model = encoder(
+            dim_sequence=dim_sequence,
+            dim_feature=dim_feature,
+            dim_output=dim_output,
+            num_hidden_layers=num_hidden_layers,
+            batch_norm=batch_norm,
+            dropout=dropout,
+            activation_fn=self.activation_fn
+        )
+
+        self.__decoder: Model = FeedForward(
+            dim_sequence=1,
+            dim_feature=dim_output,
+            dim_output=dim_sequence * dim_feature,
+            num_hidden_layers=num_hidden_layers,
+            batch_norm=batch_norm,
+            dropout=dropout,
+            activation_fn=self.activation_fn
+        )
 
     @property
     def encoder(self) -> Model:
@@ -34,6 +55,7 @@ class AutoEncoder(Model):
         return encoded_x
 
     def decode(self, encoded_x: torch.Tensor) -> torch.Tensor:
+        encoded_x = encoded_x.unsqueeze(1)  # dims (Batch, Sequence (1), Latent feature)
         x_hat = self.decoder(encoded_x)
         x_hat = x_hat.view(x_hat.shape[0], self.dim_sequence, self.dim_feature)
         return x_hat
