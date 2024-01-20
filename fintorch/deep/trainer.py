@@ -18,7 +18,7 @@ from .criterion import Criterion
 class Trainer:
     def __init__(self, cross_validation: CrossValidation, data_loader: DataLoader, criterion: Criterion,
                  optimizer: Optimizer, lr_scheduler: LRScheduler, gradient_clipping_threshold: float = None,
-                 auto_cuda: bool = True, dtype: torch.dtype = torch.float16):
+                 auto_cuda: bool = True, half_precision: bool = True):
         self.__cross_validation = cross_validation
         self.__data_loader: DataLoader = data_loader
         self.__criterion: Criterion = criterion
@@ -27,6 +27,7 @@ class Trainer:
         self.__gradient_clipping_threshold: float = gradient_clipping_threshold
 
         self.__auto_cuda: bool = auto_cuda
+        self.__half_precision: bool = half_precision
 
     @property
     def cross_validation(self) -> CrossValidation:
@@ -66,6 +67,17 @@ class Trainer:
     @property
     def device(self) -> torch.device:
         return torch.device(self.device_type)
+
+    @property
+    def half_precision(self) -> bool:
+        return self.__half_precision
+
+    @property
+    def dtype(self) -> torch.dtype:
+        if self.half_precision:
+            return torch.float16 if 'cuda' == self.device_type else torch.bfloat16
+        else:
+            return torch.float32
 
     def optimize(self, dataset: Dataset, model: Model, epochs: int, batch_size: int) -> List[Fold]:
         folds = []
@@ -130,7 +142,7 @@ class Trainer:
             model.train()
 
             # forward prop
-            with torch.autocast(device_type=self.device_type, dtype=torch.float16):
+            with torch.autocast(device_type=self.device_type, dtype=self.dtype):
                 y_hat = model(x)
                 loss = self.criterion(y_hat, y)
 
