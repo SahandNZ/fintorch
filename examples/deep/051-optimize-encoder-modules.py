@@ -1,10 +1,8 @@
 import argparse
 import json
 
-from fintorch.deep.cross_validation import CrossValidation
-from fintorch.deep.data_loader import DataLoader
 from fintorch.deep.dtype import Dataset
-from fintorch.deep.model import FeedForward, Hybrid
+from fintorch.deep.model import FeedForward, LSTM
 from fintorch.deep.module import EncoderModule
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
@@ -15,7 +13,8 @@ def main():
     parser.add_argument("--epochs", action="store", type=int, required=False, default=100)
     parser.add_argument("--batch-size", action="store", type=int, required=False, default=64)
     parser.add_argument("--dim-latent", action="store", type=int, required=False, default=32)
-    parser.add_argument("--sequence-length", action="store", type=int, required=False, default=32)
+    parser.add_argument("--dim-latent", action="store", type=int, required=False, default=128)
+    parser.add_argument("--num-hidden-layers", action="store", type=int, required=False, default=2)
     parser.add_argument("--sampling-time-frame", action="store", type=int, required=False, default=900)
     parser.add_argument("--start-date", action="store", type=str, required=False, default="2021-01-01")
     parser.add_argument("--stop-date", action="store", type=str, required=False, default="2024-01-01")
@@ -53,8 +52,16 @@ def main():
     dim_latent = args.dim_latent
 
     # define auto encoder
-    encoder_module = EncoderModule(dim_symbol=dim_symbol, dim_time_frame=dim_time_frame, dim_sequence=dim_sequence,
-                                   dim_feature=dim_feature, dim_latent=dim_latent, model=Hybrid)
+    encoder_module = EncoderModule(
+        dim_symbol=dim_symbol,
+        dim_time_frame=dim_time_frame,
+        dim_sequence=dim_sequence,
+        dim_feature=dim_feature,
+        dim_latent=dim_latent,
+        num_hidden_layers=2,
+        batch_norm=True,
+        model=FeedForward
+    )
 
     encoder_module.optimize(dataset=dataset, epochs=args.epochs, batch_size=args.batch_size)
 
