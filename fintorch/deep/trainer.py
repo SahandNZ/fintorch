@@ -103,6 +103,7 @@ class Trainer:
             train_y.append(batch_y)
             train_y_hat.append(batch_y_hat)
 
+        self.lr_scheduler.step()
         train_y = torch.cat(train_y)
         train_y_hat = torch.cat(train_y_hat)
 
@@ -140,7 +141,6 @@ class Trainer:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), self.gradient_clipping_threshold)
 
             self.optimizer.step()
-            self.lr_scheduler.step()
             self.optimizer.zero_grad()
 
             print("Loss: {:.6f}, LR: {:.6f}".format(loss.item(), self.optimizer.lr))
