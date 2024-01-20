@@ -10,7 +10,7 @@ from fintorch.deep.transform.label import *
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--batch-norm", action="store_true")
+    parser.add_argument("--no-batch-norm", action="store_false")
     parser.add_argument("--epochs", action="store", type=int, required=False, default=10)
     parser.add_argument("--batch-size", action="store", type=int, required=False, default=64)
     parser.add_argument("--dim-latent", action="store", type=int, required=False, default=128)
@@ -60,7 +60,7 @@ def main():
         dim_feature=dim_feature,
         dim_latent=dim_latent,
         num_hidden_layers=args.num_hidden_layers,
-        batch_norm=args.batch_norm,
+        batch_norm=args.no_batch_norm,
         model=FeedForward
     )
 
