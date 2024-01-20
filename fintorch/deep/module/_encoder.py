@@ -9,7 +9,7 @@ from ..cross_validation import CrossValidation
 from ..data_loader import DataLoader
 from ..dtype import Dataset
 from ..lr_scheduler import StepLR
-from ..model import Model
+from ..model import FeedForward, Model
 from ..model import AutoEncoder
 from ..optimizer import Adam
 from ..trainer import Trainer
@@ -17,7 +17,7 @@ from ..trainer import Trainer
 
 class EncoderModule(Module):
     def __init__(self, dim_symbol: int, dim_time_frame: int, dim_sequence: int, dim_feature, dim_latent: int,
-                 model: Type[Model]):
+                 num_hidden_layers: int = 4, batch_norm: bool = False, model: Type[Model] = FeedForward):
         trainer = Trainer(
             cross_validation=CrossValidation(train_percentage=80, dev_percentage=10),
             data_loader=DataLoader(post_load_fn=self._post_load_fn),
@@ -35,8 +35,14 @@ class EncoderModule(Module):
         self.__dim_latent: int = dim_latent
 
         dim_flat_feature = dim_symbol * dim_time_frame * dim_feature
-        self.__auto_encoder: AutoEncoder = AutoEncoder(dim_sequence=dim_sequence, dim_feature=dim_flat_feature,
-                                                       dim_output=dim_latent, encoder=model)
+        self.__auto_encoder: AutoEncoder = AutoEncoder(
+            dim_sequence=dim_sequence,
+            dim_feature=dim_flat_feature,
+            dim_output=dim_latent,
+            num_hidden_layers=num_hidden_layers,
+            batch_norm=batch_norm,
+            encoder=model
+        )
 
     @property
     def dim_symbol(self) -> int:
