@@ -100,8 +100,7 @@ class Trainer:
         return folds
 
     def __prepare(self, model: Model):
-        model.reset()
-        model.to(self.device)
+        model.reset(device=self.device)
         self.optimizer.reset(model=model)
         self.lr_scheduler.reset(optimizer=self.optimizer)
 
