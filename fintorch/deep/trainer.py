@@ -1,6 +1,8 @@
+import copy
 import gc
+import time
 import warnings
-from typing import List
+from typing import Callable, List
 
 import torch
 from torch import nn
@@ -18,7 +20,8 @@ from .criterion import Criterion
 class Trainer:
     def __init__(self, cross_validation: CrossValidation, data_loader: DataLoader, criterion: Criterion,
                  optimizer: Optimizer, lr_scheduler: LRScheduler, gradient_clipping_threshold: float = None,
-                 auto_cuda: bool = True, half_precision: bool = True):
+                 auto_cuda: bool = True, half_precision: bool = True,
+                 progress_fn: Callable[[Fold, int, int, float], None] = None):
         self.__cross_validation = cross_validation
         self.__data_loader: DataLoader = data_loader
         self.__criterion: Criterion = criterion
@@ -28,6 +31,7 @@ class Trainer:
 
         self.__auto_cuda: bool = auto_cuda
         self.__half_precision: bool = half_precision
+        self.___progress_fn: Callable[[Fold, int, int, float], None] = progress_fn
 
     @property
     def cross_validation(self) -> CrossValidation:
@@ -82,58 +86,61 @@ class Trainer:
     def optimize(self, dataset: Dataset, model: Model, epochs: int, batch_size: int) -> List[Fold]:
         folds = []
         for fold in self.cross_validation(dataset=dataset):
-            self._prepare(model=model)
-            for epoch in range(epochs):
-                self._train(fold=fold, dataset=dataset, model=model, batch_size=batch_size)
-                self._validation(fold=fold, dataset=dataset, model=model)
-                self._test(fold=fold, dataset=dataset, model=model)
-
-                # train_metrics = Metrics(epoch=epoch, criterion=self.criterion, outputs=train_outputs)
-                # validation_metrics = Metrics(epoch=epoch, criterion=self.criterion, outputs=validation_outputs)
-                # test_metrics = Metrics(epoch=epoch, criterion=self.criterion, outputs=test_outputs)
-                #
-                # fold.train_metrics_list.append(train_metrics)
-                # fold.validation_metrics_list.append(validation_metrics)
-                # fold.test_metrics_list.append(test_metrics)
+            self.__prepare(model=model)
+            for epoch in range(1, epochs + 1):
+                start_time = time.perf_counter()
+                self.__train(dataset=dataset, model=model, batch_size=batch_size, fold=fold, epoch=epoch)
+                self.__validation(dataset=dataset, model=model, fold=fold, epoch=epoch)
+                self.__test(dataset=dataset, model=model, fold=fold, epoch=epoch)
+                epoch_time = time.perf_counter() - start_time
+                self.__progress(fold=fold, epoch=epoch, epochs=epochs, epoch_time=epoch_time)
 
             folds.append(fold)
 
         return folds
 
-    def _prepare(self, model: Model):
+    def __prepare(self, model: Model):
         model.reset()
+        model.to(self.device)
         self.optimizer.reset(model=model)
         self.lr_scheduler.reset(optimizer=self.optimizer)
 
-        model.to(self.device)
-
-    def _train(self, fold: Fold, dataset: Dataset, model: Model, batch_size: int):
-        train_y, train_y_hat = [], []
+    def __train(self, dataset: Dataset, model: Model, batch_size: int, fold: Fold, epoch: int) -> None:
+        y, y_hat = [], []
         timestamps = fold.train_timestamps
         for batch_x, batch_y in self.data_loader(dataset=dataset, timestamps=timestamps, batch_size=batch_size):
-            batch_y, batch_y_hat = self._comment_step(model=model, x=batch_x, y=batch_y, optimize=True)
-            train_y.append(batch_y)
-            train_y_hat.append(batch_y_hat)
+            batch_y, batch_y_hat = self.__comment_step(model=model, x=batch_x, y=batch_y, optimize=True)
+            y.append(batch_y)
+            y_hat.append(batch_y_hat)
 
         self.lr_scheduler.step()
-        train_y = torch.cat(train_y)
-        train_y_hat = torch.cat(train_y_hat)
 
-        return train_y, train_y_hat
+        y = torch.cat(y)
+        y_hat = torch.cat(y_hat)
+        metrics = Metrics(criterion=self.criterion, epoch=epoch, y=y, y_hat=y_hat)
+        fold.epoch_to_train_metrics[epoch] = metrics
+        fold.epoch_to_model_state_dict[epoch] = copy.deepcopy(model.state_dict())
 
-    def _validation(self, fold: Fold, dataset: Dataset, model: Model):
-        return self._validation_test_common_step(fold=fold, dataset=dataset, model=model, validation=True)
+    def __validation(self, dataset: Dataset, model: Model, fold: Fold, epoch: int) -> None:
+        self.__validation_test_common_step(fold=fold, dataset=dataset, model=model, epoch=epoch, validation=True)
 
-    def _test(self, fold: Fold, dataset: Dataset, model: Model):
-        return self._validation_test_common_step(fold=fold, dataset=dataset, model=model, validation=False)
+    def __test(self, dataset: Dataset, model: Model, fold: Fold, epoch: int) -> None:
+        self.__validation_test_common_step(fold=fold, dataset=dataset, model=model, epoch=epoch, validation=False)
 
-    def _validation_test_common_step(self, fold: Fold, dataset: Dataset, model: Model, validation: bool):
+    def __progress(self, fold: Fold, epoch: int, epochs: int, epoch_time: float) -> None:
+        if self.___progress_fn is not None:
+            self.___progress_fn(fold, epoch, epochs, epoch_time)
+
+    def __validation_test_common_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, validation: bool):
         timestamps = fold.validation_timestamps if validation else fold.test_timestamps
-        x, y = next(iter(self.data_loader(dataset=dataset, timestamps=timestamps, batch_size=len(timestamps))))
-        y, y_hat = self._comment_step(model=model, x=x, y=y, optimize=False)
-        return y, y_hat
+        epoch_to_metrics = fold.epoch_to_validation_metrics if validation else fold.epoch_to_test_metrics
 
-    def _comment_step(self, model: Model, x: torch.Tensor, y: torch.Tensor, optimize: bool):
+        x, y = next(iter(self.data_loader(dataset=dataset, timestamps=timestamps, batch_size=len(timestamps))))
+        y, y_hat = self.__comment_step(model=model, x=x, y=y, optimize=False)
+        metrics = Metrics(criterion=self.criterion, epoch=epoch, y=y, y_hat=y_hat)
+        epoch_to_metrics[epoch] = metrics
+
+    def __comment_step(self, model: Model, x: torch.Tensor, y: torch.Tensor, optimize: bool):
         # move to cuda
         x = x.to(self.device)
         y = y.to(self.device)
@@ -154,10 +161,6 @@ class Trainer:
 
             self.optimizer.step()
             self.optimizer.zero_grad()
-
-            print("Loss: {:.6f}, LR: {:.6f}".format(loss.item(), self.optimizer.lr))
-            print(model.encode(x)[0][:8].detach().tolist())
-            print()
         else:
             model.eval()
             with torch.no_grad():
