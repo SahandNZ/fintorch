@@ -118,7 +118,7 @@ class Trainer:
         y_hat = torch.cat(y_hat)
         metrics = Metrics(criterion=self.criterion, epoch=epoch, y=y, y_hat=y_hat)
         fold.epoch_to_train_metrics[epoch] = metrics
-        fold.epoch_to_model_state_dict[epoch] = copy.deepcopy(model.state_dict())
+        fold.epoch_to_model_state_dict[epoch] = {k: v.cpu() for k, v in copy.deepcopy(model.state_dict()).items()}
 
     def __validation(self, dataset: Dataset, model: Model, fold: Fold, epoch: int) -> None:
         self.__validation_test_common_step(fold=fold, dataset=dataset, model=model, epoch=epoch, validation=True)
