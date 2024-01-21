@@ -20,6 +20,8 @@ class Model(nn.Module, Component, ABC):
         self.__dropout: float = dropout
         self.__activation_fn: nn.Module = activation_fn
 
+        self.__device: torch.device = torch.device("cpu")
+
     @property
     def dim_sequence(self) -> int:
         return self.__dim_sequence
@@ -48,13 +50,22 @@ class Model(nn.Module, Component, ABC):
     def activation_fn(self) -> nn.Module:
         return self.__activation_fn
 
-    @abstractmethod
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError()
+    @property
+    def device(self) -> torch.device:
+        return next(self.parameters()).device
 
-    def reset(self, xavier: bool = True):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = x.to(self.device)
+        return self._forward(x)
+
+    def reset(self, device: torch.device = torch.device("cpu"), xavier: bool = True):
+        self.to(device=device)
         for layer in self.children():
             if xavier and (type(layer) == nn.Linear or type(layer) == nn.Conv2d):
                 nn.init.xavier_uniform_(layer.weight)
             elif hasattr(layer, 'reset_parameters'):
                 layer.reset_parameters()
+
+    @abstractmethod
+    def _forward(self, x: torch.Tensor) -> torch.Tensor:
+        raise NotImplementedError()

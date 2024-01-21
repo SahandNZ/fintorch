@@ -48,5 +48,5 @@ class FeedForward(Model):
     def layers(self) -> List[int]:
         return self.__layers
 
-    def forward(self, x: torch.tensor):
+    def _forward(self, x: torch.tensor):
         return self.net(x)

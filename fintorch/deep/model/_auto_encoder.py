@@ -60,7 +60,7 @@ class AutoEncoder(Model):
         x_hat = x_hat.view(x_hat.shape[0], self.dim_sequence, self.dim_feature)
         return x_hat
 
-    def forward(self, x: torch.tensor) -> torch.Tensor:
+    def _forward(self, x: torch.tensor) -> torch.Tensor:
         encoded_x = self.encode(x)
         x_hat = self.decode(encoded_x)
         return x_hat

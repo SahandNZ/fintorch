@@ -33,7 +33,7 @@ class Hybrid(Model):
             activation_fn=activation_fn
         )
 
-    def forward(self, x):
+    def _forward(self, x):
         q = self.q_linear(x)
         k = self.k_linear(x)
         v = self.v_linear(x)

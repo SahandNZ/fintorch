@@ -38,7 +38,7 @@ class Transformer(Model):
             activation_fn=activation_fn
         )
 
-    def forward(self, x):
+    def _forward(self, x):
         f = self.encoder(x)
         y_hat = self.ff(f)
         return y_hat

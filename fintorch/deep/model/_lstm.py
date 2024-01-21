@@ -38,7 +38,7 @@ class LSTM(Model):
             activation_fn=activation_fn
         )
 
-    def forward(self, x):
+    def _forward(self, x):
         x, _ = self.lstm(x)
         y_hat = self.ff(x)
         return y_hat
