@@ -1,4 +1,5 @@
 import copy
+import math
 import random
 from typing import Callable, Iterator, Tuple, List
 
@@ -15,6 +16,7 @@ class DataLoader:
         self.__dataset: Dataset = None
         self.__timestamps: List[int] = None
         self.__batch_size: int = None
+        self.__batch_count: int = None
         self.__shuffle: bool = None
 
         self._index: int = -1
@@ -22,6 +24,10 @@ class DataLoader:
     @property
     def batch_size(self) -> int:
         return self.__batch_size
+
+    @property
+    def batch_count(self) -> int:
+        return self.__batch_count
 
     @property
     def shuffle(self) -> bool:
@@ -47,6 +53,7 @@ class DataLoader:
         self.__dataset = dataset
         self.__timestamps = copy.deepcopy(timestamps)
         self.__batch_size = batch_size
+        self.__batch_count = math.ceil(len(timestamps) / batch_size)
         self.__shuffle = shuffle
 
         return self.__iter__()
@@ -61,7 +68,7 @@ class DataLoader:
     def __next__(self) -> Tuple[torch.Tensor, torch.Tensor]:
         self._index += 1
 
-        if self.index * self.batch_size < len(self.timestamps):
+        if self.index < self.batch_count:
             start_index = self.index * self.batch_size
             stop_index = start_index + self.batch_size
 
