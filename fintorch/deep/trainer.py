@@ -157,7 +157,7 @@ class Trainer:
             batch_x = batch_x.to(self.device)
             batch_y = batch_y.to(self.device)
 
-            batch_y, batch_y_hat = self.__comment_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
+            batch_y, batch_y_hat, batch_loss = self.__comment_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
 
             # remove batch_x
             del batch_x
@@ -180,13 +180,20 @@ class Trainer:
         y = torch.cat(y)
         y_hat = torch.cat(y_hat)
 
+        print("1")
+        print(get_memory_status())
+
         # move model to cpu
         model.to(torch.device("cpu"))
+
+        print("2")
+        print(get_memory_status())
 
         # remove cache
         gc.collect()
         torch.cuda.empty_cache()
 
+        print("3")
         print(get_memory_status())
 
         return y, y_hat
@@ -213,4 +220,4 @@ class Trainer:
             with torch.no_grad():
                 y_hat = model(x)
 
-        return y, y_hat
+        return y, y_hat, loss
