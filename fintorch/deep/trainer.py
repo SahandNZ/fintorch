@@ -159,8 +159,12 @@ class Trainer:
 
             batch_y, batch_y_hat, batch_loss = self.__comment_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
 
-            # remove batch_x
-            del batch_x
+            # update rich progress bar
+            if progress is not None:
+                progress.update(task, advance=1)
+
+            # remove batch_x, batch_loss
+            del batch_x, batch_loss
 
             # move batch_y and batch_y_hat to cpu
             cpu = torch.device("cpu")
@@ -169,9 +173,6 @@ class Trainer:
 
             y.append(batch_y)
             y_hat.append(batch_y_hat)
-
-            if progress is not None:
-                progress.update(task, advance=1)
 
         if optimize:
             self.lr_scheduler.step()
