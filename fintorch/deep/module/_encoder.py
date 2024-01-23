@@ -20,7 +20,7 @@ class EncoderModule(Module):
     def __init__(self, dim_symbol: int, dim_time_frame: int, dim_sequence: int, dim_feature, dim_latent: int,
                  num_hidden_layers: int = 4, batch_norm: bool = False, model: Type[Model] = FeedForward):
         trainer = Trainer(
-            cross_validation=CrossValidation(train_percentage=80, dev_percentage=10),
+            cross_validation=CrossValidation(train_percentage=60, dev_percentage=20),
             data_loader=DataLoader(post_load_fn=self.__post_load_fn),
             criterion=MSE(),
             optimizer=Adam(lr=1e-3, weight_decay=1e-4),
