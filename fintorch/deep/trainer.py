@@ -91,8 +91,8 @@ class Trainer:
             for epoch in range(1, epochs + 1):
                 start_time = time.perf_counter()
                 self.__train(dataset, model, batch_size, fold, epoch, progress)
-                self.__validation(dataset, model, fold, epoch)
-                self.__test(dataset, model, fold, epoch)
+                self.__validation(dataset, model, fold, epoch, progress)
+                self.__test(dataset, model, fold, epoch, progress)
                 epoch_time = time.perf_counter() - start_time
                 self.__log_fn(fold, epoch, epochs, epoch_time)
 
