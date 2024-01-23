@@ -2,10 +2,10 @@ import copy
 import gc
 import time
 import warnings
-from typing import Callable, List
+from typing import Callable, List, Tuple
 
 import torch
-from rich.progress import Progress
+from rich.progress import Progress, Task, TaskID
 
 from .cross_validation import CrossValidation
 from .data_loader import DataLoader
@@ -107,47 +107,60 @@ class Trainer:
 
     def __train(self, dataset: Dataset, model: Model, batch_size: int, fold: Fold, epoch: int,
                 progress: Progress) -> None:
-        y, y_hat = [], []
         timestamps = fold.train_timestamps
+        y, y_hat = self.__batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
+                                              batch_size=batch_size, optimize=True, progress=progress)
+
+        metrics = Metrics(criterion=self.criterion, epoch=epoch, y=y, y_hat=y_hat)
+        fold.epoch_to_train_metrics[epoch] = metrics
+        fold.epoch_to_model_state_dict[epoch] = {k: v.cpu() for k, v in copy.deepcopy(model.state_dict()).items()}
+
+    def __validation(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, progress: Progress) -> None:
+        self.__val_and_test_common_step(dataset=dataset, model=model, fold=fold, epoch=epoch, validation=True,
+                                        progress=progress)
+
+    def __test(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, progress: Progress) -> None:
+        self.__val_and_test_common_step(dataset=dataset, model=model, fold=fold, epoch=epoch, validation=False,
+                                        progress=progress)
+
+    def __log_fn(self, fold: Fold, epoch: int, epochs: int, epoch_time: float) -> None:
+        if self.___log_fn is not None:
+            self.___log_fn(fold, epoch, epochs, epoch_time)
+
+    def __val_and_test_common_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, validation: bool,
+                                   progress: Progress):
+        timestamps = fold.validation_timestamps if validation else fold.test_timestamps
+        y, y_hat = self.__batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
+                                              batch_size=1024, optimize=False, progress=progress)
+
+        epoch_to_metrics = fold.epoch_to_validation_metrics if validation else fold.epoch_to_test_metrics
+        metrics = Metrics(criterion=self.criterion, epoch=epoch, y=y, y_hat=y_hat)
+        epoch_to_metrics[epoch] = metrics
+
+    def __batched_common_step(self, dataset: Dataset, model: Model, timestamps: List[int], epoch: int, batch_size: int,
+                              optimize: bool, progress: Progress = None) -> Tuple[torch.Tensor, torch.Tensor]:
+        y, y_hat = [], []
         batch_iterator = self.data_loader(dataset=dataset, timestamps=timestamps, batch_size=batch_size)
 
         if progress is not None:
-            task = progress.add_task('Training on epoch {}'.format(epoch), total=self.data_loader.batch_count)
+            description = "Training epoch {}".format(epoch) if optimize else "Evaluating epoch {}".format(epoch)
+            task = progress.add_task(description=description, total=self.data_loader.batch_count)
 
         for batch_x, batch_y in batch_iterator:
-            batch_y, batch_y_hat = self.__comment_step(model=model, x=batch_x, y=batch_y, optimize=True)
+            batch_y, batch_y_hat = self.__comment_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
             y.append(batch_y)
             y_hat.append(batch_y_hat)
 
             if progress is not None:
                 progress.update(task, advance=1)
 
-        self.lr_scheduler.step()
+        if optimize:
+            self.lr_scheduler.step()
 
         y = torch.cat(y)
         y_hat = torch.cat(y_hat)
-        metrics = Metrics(criterion=self.criterion, epoch=epoch, y=y, y_hat=y_hat)
-        fold.epoch_to_train_metrics[epoch] = metrics
-        fold.epoch_to_model_state_dict[epoch] = {k: v.cpu() for k, v in copy.deepcopy(model.state_dict()).items()}
 
-    def __validation(self, dataset: Dataset, model: Model, fold: Fold, epoch: int) -> None:
-        self.__validation_test_common_step(fold=fold, dataset=dataset, model=model, epoch=epoch, validation=True)
-
-    def __test(self, dataset: Dataset, model: Model, fold: Fold, epoch: int) -> None:
-        self.__validation_test_common_step(fold=fold, dataset=dataset, model=model, epoch=epoch, validation=False)
-
-    def __log_fn(self, fold: Fold, epoch: int, epochs: int, epoch_time: float) -> None:
-        if self.___log_fn is not None:
-            self.___log_fn(fold, epoch, epochs, epoch_time)
-
-    def __validation_test_common_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, validation: bool):
-        timestamps = fold.validation_timestamps if validation else fold.test_timestamps
-        epoch_to_metrics = fold.epoch_to_validation_metrics if validation else fold.epoch_to_test_metrics
-
-        x, y = next(iter(self.data_loader(dataset=dataset, timestamps=timestamps, batch_size=len(timestamps))))
-        y, y_hat = self.__comment_step(model=model, x=x, y=y, optimize=False)
-        metrics = Metrics(criterion=self.criterion, epoch=epoch, y=y, y_hat=y_hat)
-        epoch_to_metrics[epoch] = metrics
+        return y, y_hat
 
     def __comment_step(self, model: Model, x: torch.Tensor, y: torch.Tensor, optimize: bool):
         # move to cuda
