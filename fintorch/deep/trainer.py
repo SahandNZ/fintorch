@@ -154,9 +154,11 @@ class Trainer:
 
             batch_y, batch_y_hat = self.__comment_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
 
-            # move to cpu
+            # remove batch_x
+            del batch_x
+
+            # move batch_y and batch_y_hat to cpu
             cpu = torch.device("cpu")
-            batch_x = batch_x.to(cpu)
             batch_y = batch_y.to(cpu)
             batch_y_hat = batch_y_hat.to(cpu)
 
