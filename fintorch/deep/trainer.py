@@ -140,16 +140,18 @@ class Trainer:
 
     def __batched_common_step(self, dataset: Dataset, model: Model, timestamps: List[int], epoch: int, batch_size: int,
                               optimize: bool, progress: Progress = None) -> Tuple[torch.Tensor, torch.Tensor]:
-        y, y_hat = [], []
         batch_iterator = self.data_loader(dataset=dataset, timestamps=timestamps, batch_size=batch_size)
 
         if progress is not None:
             description = "Training epoch {}".format(epoch) if optimize else "Evaluating epoch {}".format(epoch)
             task = progress.add_task(description=description, total=self.data_loader.batch_count)
 
+        print(get_memory_status())
+
         # move model to cuda if it's available
         model.to(self.device)
 
+        y, y_hat = [], []
         for batch_x, batch_y in batch_iterator:
             # move to cuda if it's available
             batch_x = batch_x.to(self.device)
@@ -161,8 +163,6 @@ class Trainer:
             cpu = torch.device("cpu")
             batch_y = batch_y.to(cpu)
             batch_y_hat = batch_y_hat.to(cpu)
-
-            print(get_memory_status())
 
             y.append(batch_y)
             y_hat.append(batch_y_hat)
@@ -176,9 +176,14 @@ class Trainer:
         y = torch.cat(y)
         y_hat = torch.cat(y_hat)
 
+        # move model to cpu
+        model.to(torch.device("cpu"))
+
         # remove cache
         gc.collect()
         torch.cuda.empty_cache()
+
+        print(get_memory_status())
 
         return y, y_hat
 
