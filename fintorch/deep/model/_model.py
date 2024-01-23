@@ -58,8 +58,7 @@ class Model(nn.Module, Component, ABC):
         x = x.to(self.device)
         return self._forward(x)
 
-    def reset(self, device: torch.device = torch.device("cpu"), xavier: bool = True):
-        self.to(device=device)
+    def reset(self, xavier: bool = True):
         for layer in self.children():
             if xavier and (type(layer) == nn.Linear or type(layer) == nn.Conv2d):
                 nn.init.xavier_uniform_(layer.weight)

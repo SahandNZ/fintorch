@@ -102,7 +102,7 @@ class Trainer:
         return folds
 
     def __prepare(self, model: Model):
-        model.reset(device=self.device)
+        model.reset()
         self.optimizer.reset(model=model)
         self.lr_scheduler.reset(optimizer=self.optimizer)
 
@@ -114,7 +114,7 @@ class Trainer:
 
         metrics = Metrics(criterion=self.criterion, epoch=epoch, y=y, y_hat=y_hat)
         fold.epoch_to_train_metrics[epoch] = metrics
-        fold.epoch_to_model_state_dict[epoch] = {k: v.cpu() for k, v in copy.deepcopy(model.state_dict()).items()}
+        fold.epoch_to_model_state_dict[epoch] = copy.deepcopy(model.state_dict())
 
     def __validation(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, progress: Progress) -> None:
         self.__val_and_test_common_step(dataset=dataset, model=model, fold=fold, epoch=epoch, validation=True,
@@ -147,6 +147,9 @@ class Trainer:
             description = "Training epoch {}".format(epoch) if optimize else "Evaluating epoch {}".format(epoch)
             task = progress.add_task(description=description, total=self.data_loader.batch_count)
 
+        # move model to cuda if it's available
+        model.to(self.device)
+
         for batch_x, batch_y in batch_iterator:
             # move to cuda if it's available
             batch_x = batch_x.to(self.device)
@@ -154,17 +157,10 @@ class Trainer:
 
             batch_y, batch_y_hat = self.__comment_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
 
-            # remove batch_x
-            del batch_x
-
             # move batch_y and batch_y_hat to cpu
             cpu = torch.device("cpu")
             batch_y = batch_y.to(cpu)
             batch_y_hat = batch_y_hat.to(cpu)
-
-            # remove cache
-            gc.collect()
-            torch.cuda.empty_cache()
 
             print(get_memory_status())
 
@@ -179,6 +175,10 @@ class Trainer:
 
         y = torch.cat(y)
         y_hat = torch.cat(y_hat)
+
+        # remove cache
+        gc.collect()
+        torch.cuda.empty_cache()
 
         return y, y_hat
 
