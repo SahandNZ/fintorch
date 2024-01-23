@@ -159,6 +159,9 @@ class Trainer:
 
             batch_y, batch_y_hat = self.__comment_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
 
+            # remove batch_x
+            del batch_x
+
             # move batch_y and batch_y_hat to cpu
             cpu = torch.device("cpu")
             batch_y = batch_y.to(cpu)
@@ -173,6 +176,7 @@ class Trainer:
         if optimize:
             self.lr_scheduler.step()
 
+        # concatenate batch_y and batch_y_hat values
         y = torch.cat(y)
         y_hat = torch.cat(y_hat)
 
@@ -188,7 +192,6 @@ class Trainer:
         return y, y_hat
 
     def __comment_step(self, model: Model, x: torch.Tensor, y: torch.Tensor, optimize: bool):
-
         if optimize:
             model.train()
 
