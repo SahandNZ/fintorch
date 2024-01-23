@@ -15,6 +15,7 @@ from .metrics import Metrics
 from .model import Model
 from .optimizer import Optimizer
 from .criterion import Criterion
+from ..utils.memory import get_memory_status
 
 
 class Trainer:
@@ -147,7 +148,24 @@ class Trainer:
             task = progress.add_task(description=description, total=self.data_loader.batch_count)
 
         for batch_x, batch_y in batch_iterator:
+            # move to cuda if it's available
+            batch_x = batch_x.to(self.device)
+            batch_y = batch_y.to(self.device)
+
             batch_y, batch_y_hat = self.__comment_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
+
+            # move to cpu
+            cpu = torch.device("cpu")
+            x = x.to(cpu)
+            y = y.to(cpu)
+            y_hat = y_hat.to(cpu)
+
+            # remove cache
+            gc.collect()
+            torch.cuda.empty_cache()
+
+            print(get_memory_status())
+
             y.append(batch_y)
             y_hat.append(batch_y_hat)
 
@@ -163,9 +181,6 @@ class Trainer:
         return y, y_hat
 
     def __comment_step(self, model: Model, x: torch.Tensor, y: torch.Tensor, optimize: bool):
-        # move to cuda
-        x = x.to(self.device)
-        y = y.to(self.device)
 
         if optimize:
             model.train()
@@ -187,15 +202,5 @@ class Trainer:
             model.eval()
             with torch.no_grad():
                 y_hat = model(x)
-
-        # move to cpu
-        cpu = torch.device("cpu")
-        x = x.to(cpu)
-        y = y.to(cpu)
-        y_hat = y_hat.to(cpu)
-
-        # remove cache
-        gc.collect()
-        torch.cuda.empty_cache()
 
         return y, y_hat
