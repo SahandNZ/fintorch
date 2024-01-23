@@ -1,11 +1,14 @@
 import argparse
 import json
 
+from rich.progress import Progress
+
 from fintorch.deep.dtype import Dataset
 from fintorch.deep.model import FeedForward, LSTM
 from fintorch.deep.module import EncoderModule
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
+from fintorch.setting import RICH_PROGRESS_COLUMNS
 
 
 def main():
@@ -64,7 +67,8 @@ def main():
         model=FeedForward
     )
 
-    encoder_module.optimize(dataset=dataset, epochs=args.epochs, batch_size=args.batch_size)
+    with Progress(*RICH_PROGRESS_COLUMNS) as progress:
+        encoder_module.optimize(dataset=dataset, epochs=args.epochs, batch_size=args.batch_size, progress=progress)
 
 
 if __name__ == '__main__':

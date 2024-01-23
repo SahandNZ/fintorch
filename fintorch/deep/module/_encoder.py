@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Tuple, Type
 
 import torch
+from rich.progress import Progress
 
 from ._module import Module
 from ..criterion import MSE
@@ -25,7 +26,7 @@ class EncoderModule(Module):
             optimizer=Adam(lr=1e-3, weight_decay=1e-4),
             lr_scheduler=StepLR(step_size=1, gamma=0.5),
             gradient_clipping_threshold=1,
-            progress_fn=self.__progress_fn
+            log_fn=self.__log_fn
         )
         super().__init__(trainer=trainer)
 
@@ -73,8 +74,8 @@ class EncoderModule(Module):
         latent_x = self.auto_encoder.encode(x)  # dims (Batch, Latent Feature)
         return latent_x
 
-    def optimize(self, dataset: Dataset, epochs: int, batch_size: int):
-        self.trainer.optimize(dataset=dataset, model=self.auto_encoder, epochs=epochs, batch_size=batch_size)
+    def optimize(self, dataset: Dataset, epochs: int, batch_size: int, progress: Progress = None):
+        self.trainer.optimize(dataset, self.auto_encoder, epochs, batch_size, progress)
 
     def predict(self, dataset: Dataset, timestamps: List[int]) -> List:
         pass
@@ -84,7 +85,7 @@ class EncoderModule(Module):
         bsf = bsatf.view(bsatf.shape[0], bsatf.shape[1], -1)  # dims (Batch, Sequence, Asset * Time frame * Feature)
         return bsf, bsf
 
-    def __progress_fn(self, fold: Fold, epoch: int, epochs: int, epoch_time: float) -> None:
+    def __log_fn(self, fold: Fold, epoch: int, epochs: int, epoch_time: float) -> None:
         elapsed_time = epoch_time * epoch
         total_time = elapsed_time * (epochs / epoch)
         remaining_time = total_time - elapsed_time

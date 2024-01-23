@@ -5,7 +5,7 @@ import warnings
 from typing import Callable, List
 
 import torch
-from torch import nn
+from rich.progress import Progress
 
 from .cross_validation import CrossValidation
 from .data_loader import DataLoader
@@ -21,7 +21,7 @@ class Trainer:
     def __init__(self, cross_validation: CrossValidation, data_loader: DataLoader, criterion: Criterion,
                  optimizer: Optimizer, lr_scheduler: LRScheduler, gradient_clipping_threshold: float = None,
                  auto_cuda: bool = True, half_precision: bool = True,
-                 progress_fn: Callable[[Fold, int, int, float], None] = None):
+                 log_fn: Callable[[Fold, int, int, float], None] = None):
         self.__cross_validation = cross_validation
         self.__data_loader: DataLoader = data_loader
         self.__criterion: Criterion = criterion
@@ -31,7 +31,7 @@ class Trainer:
 
         self.__auto_cuda: bool = auto_cuda
         self.__half_precision: bool = half_precision
-        self.___progress_fn: Callable[[Fold, int, int, float], None] = progress_fn
+        self.___log_fn: Callable[[Fold, int, int, float], None] = log_fn
 
     @property
     def cross_validation(self) -> CrossValidation:
@@ -83,17 +83,18 @@ class Trainer:
         else:
             return torch.float32
 
-    def optimize(self, dataset: Dataset, model: Model, epochs: int, batch_size: int) -> List[Fold]:
+    def optimize(self, dataset: Dataset, model: Model, epochs: int, batch_size: int,
+                 progress: Progress = None) -> List[Fold]:
         folds = []
         for fold in self.cross_validation(dataset=dataset):
             self.__prepare(model=model)
             for epoch in range(1, epochs + 1):
                 start_time = time.perf_counter()
-                self.__train(dataset=dataset, model=model, batch_size=batch_size, fold=fold, epoch=epoch)
-                self.__validation(dataset=dataset, model=model, fold=fold, epoch=epoch)
-                self.__test(dataset=dataset, model=model, fold=fold, epoch=epoch)
+                self.__train(dataset, model, batch_size, fold, epoch, progress)
+                self.__validation(dataset, model, fold, epoch)
+                self.__test(dataset, model, fold, epoch)
                 epoch_time = time.perf_counter() - start_time
-                self.__progress(fold=fold, epoch=epoch, epochs=epochs, epoch_time=epoch_time)
+                self.__log_fn(fold, epoch, epochs, epoch_time)
 
             folds.append(fold)
 
@@ -104,13 +105,20 @@ class Trainer:
         self.optimizer.reset(model=model)
         self.lr_scheduler.reset(optimizer=self.optimizer)
 
-    def __train(self, dataset: Dataset, model: Model, batch_size: int, fold: Fold, epoch: int) -> None:
+    def __train(self, dataset: Dataset, model: Model, batch_size: int, fold: Fold, epoch: int,
+                progress: Progress) -> None:
+        if progress is not None:
+            task = progress.add_task('Training on epoch {}'.format(epoch), total=len(dataset))
+
         y, y_hat = [], []
         timestamps = fold.train_timestamps
         for batch_x, batch_y in self.data_loader(dataset=dataset, timestamps=timestamps, batch_size=batch_size):
             batch_y, batch_y_hat = self.__comment_step(model=model, x=batch_x, y=batch_y, optimize=True)
             y.append(batch_y)
             y_hat.append(batch_y_hat)
+
+            if progress is not None:
+                progress.update(task, advance=1)
 
         self.lr_scheduler.step()
 
@@ -126,9 +134,9 @@ class Trainer:
     def __test(self, dataset: Dataset, model: Model, fold: Fold, epoch: int) -> None:
         self.__validation_test_common_step(fold=fold, dataset=dataset, model=model, epoch=epoch, validation=False)
 
-    def __progress(self, fold: Fold, epoch: int, epochs: int, epoch_time: float) -> None:
-        if self.___progress_fn is not None:
-            self.___progress_fn(fold, epoch, epochs, epoch_time)
+    def __log_fn(self, fold: Fold, epoch: int, epochs: int, epoch_time: float) -> None:
+        if self.___log_fn is not None:
+            self.___log_fn(fold, epoch, epochs, epoch_time)
 
     def __validation_test_common_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, validation: bool):
         timestamps = fold.validation_timestamps if validation else fold.test_timestamps
