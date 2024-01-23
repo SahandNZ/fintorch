@@ -107,12 +107,14 @@ class Trainer:
 
     def __train(self, dataset: Dataset, model: Model, batch_size: int, fold: Fold, epoch: int,
                 progress: Progress) -> None:
-        if progress is not None:
-            task = progress.add_task('Training on epoch {}'.format(epoch), total=len(dataset))
-
         y, y_hat = [], []
         timestamps = fold.train_timestamps
-        for batch_x, batch_y in self.data_loader(dataset=dataset, timestamps=timestamps, batch_size=batch_size):
+        batch_iterator = self.data_loader(dataset=dataset, timestamps=timestamps, batch_size=batch_size)
+
+        if progress is not None:
+            task = progress.add_task('Training on epoch {}'.format(epoch), total=self.data_loader.batch_count)
+
+        for batch_x, batch_y in batch_iterator:
             batch_y, batch_y_hat = self.__comment_step(model=model, x=batch_x, y=batch_y, optimize=True)
             y.append(batch_y)
             y_hat.append(batch_y_hat)
