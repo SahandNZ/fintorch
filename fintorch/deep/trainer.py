@@ -156,9 +156,9 @@ class Trainer:
 
             # move to cpu
             cpu = torch.device("cpu")
-            x = x.to(cpu)
-            y = y.to(cpu)
-            y_hat = y_hat.to(cpu)
+            batch_x = batch_x.to(cpu)
+            batch_y = batch_y.to(cpu)
+            batch_y_hat = batch_y_hat.to(cpu)
 
             # remove cache
             gc.collect()
