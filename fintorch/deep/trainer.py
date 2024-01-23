@@ -219,5 +219,6 @@ class Trainer:
             model.eval()
             with torch.no_grad():
                 y_hat = model(x)
+                loss = self.criterion(y_hat, y)
 
         return y, y_hat, loss
