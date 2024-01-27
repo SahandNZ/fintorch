@@ -8,8 +8,8 @@ import torch
 def get_cpu_memory_status(start: str = "", end: str = "\n") -> str:
     process = psutil.Process()
     return "{}CPU:{}" \
-           "{}\tTotal:     {:.2f} MB{}" \
-           "{}\tAllocated: {:.2f} MB{}" \
+           "\t{}Total:     {:.2f} MB{}" \
+           "\t{}Allocated: {:.2f} MB{}" \
         .format(start, end,
                 start, psutil.virtual_memory().total / 2 ** 20, end,
                 start, process.memory_info().rss / 2 ** 20, end)
@@ -17,9 +17,9 @@ def get_cpu_memory_status(start: str = "", end: str = "\n") -> str:
 
 def get_cuda_memory_status(start: str = "", end: str = "\n") -> str:
     return "{}CUDA:{}" \
-           "{}\tTotal:     {:.2f} MB{}" \
-           "{}\tAllocated: {:.2f} MB{}" \
-           "{}\tReserved:  {:.2f} MB{}" \
+           "\t{}Total:     {:.2f} MB{}" \
+           "\t{}Allocated: {:.2f} MB{}" \
+           "\t{}Reserved:  {:.2f} MB{}" \
         .format(start, end,
                 start, torch.cuda.get_device_properties(0).total_memory / 2 ** 20, end,
                 start, torch.cuda.memory_allocated(0) / 2 ** 20, end,
@@ -28,7 +28,7 @@ def get_cuda_memory_status(start: str = "", end: str = "\n") -> str:
 
 def get_memory_status(start: str = "", end: str = "\n") -> str:
     result = "{}Memory status:{}".format(start, end)
-    sub_start = start + "\t"
+    sub_start = "\t" + start
     if torch.cuda.is_available():
         result += get_cpu_memory_status(start=sub_start, end=end) + get_cuda_memory_status(start=sub_start, end=end)
     else:
@@ -37,13 +37,13 @@ def get_memory_status(start: str = "", end: str = "\n") -> str:
     return result
 
 
-def deep_getsizeof(ob):
-    size = sys.getsizeof(ob)
-    if isinstance(ob, (list, tuple, set)):
-        for element in ob:
+def deep_getsizeof(obj):
+    size = sys.getsizeof(obj)
+    if isinstance(obj, (list, tuple, set)):
+        for element in obj:
             size += deep_getsizeof(element)
-    if isinstance(ob, dict):
-        for k, v in ob.items():
+    if isinstance(obj, dict):
+        for k, v in obj.items():
             size += deep_getsizeof(k)
             size += deep_getsizeof(v)
     return size
