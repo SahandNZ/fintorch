@@ -71,31 +71,20 @@ def main():
     x = torch.flatten(x, start_dim=2)
     print("{:<32}: {} => {}\n".format("Batch x", batch_x.shape, x.shape))
 
-    # define models
-    # feed forward
-    model = FeedForward(**model_dims)
-    output = model(x)
-    print("{:<32}: {} => {}".format(model.name, x.shape, output.shape))
+    # define model_types
+    model_types = [
+        FeedForward,
+        GRU,
+        Hybrid,
+        LSTM,
+        ResNet1D,
+        Transformer
+    ]
 
-    model = GRU(**model_dims)
-    output = model(x)
-    print("{:<32}: {} => {}".format(model.name, x.shape, output.shape))
-
-    model = Hybrid(**model_dims)
-    output = model(x)
-    print("{:<32}: {} => {}".format(model.name, x.shape, output.shape))
-
-    model = LSTM(**model_dims)
-    output = model(x)
-    print("{:<32}: {} => {}".format(model.name, x.shape, output.shape))
-
-    model = ResNet1D(**model_dims)
-    output = model(x)
-    print("{:<32}: {} => {}".format(model.name, x.shape, output.shape))
-
-    model = Transformer(**model_dims)
-    output = model(x)
-    print("{:<32}: {} => {}".format(model.name, x.shape, output.shape))
+    for model_type in model_types:
+        model = model_type(**model_dims)
+        output = model(x)
+        print("{:<32}: {} => {}".format(model.name, x.shape, output.shape))
 
 
 if __name__ == '__main__':
