@@ -25,8 +25,7 @@ class EncoderModule(Module):
             criterion=MSE(),
             optimizer=Adam(lr=1e-3, weight_decay=1e-4),
             lr_scheduler=StepLR(step_size=1, gamma=0.75),
-            gradient_clipping_threshold=1,
-            logger_fn=self.__logger_fn
+            gradient_clipping_threshold=1
         )
         super().__init__(trainer=trainer)
 
@@ -84,54 +83,3 @@ class EncoderModule(Module):
         bsatf = x.permute(0, 3, 1, 2, 4).contiguous()  # dims (Batch, Sequence, Asset, Time frame, Feature)
         bsf = bsatf.view(bsatf.shape[0], bsatf.shape[1], -1)  # dims (Batch, Sequence, Asset * Time frame * Feature)
         return bsf, bsf
-
-    def __logger_fn(self, fold: Fold, epoch: int, epochs: int, epoch_time: float) -> None:
-        elapsed_time = epoch_time * epoch
-        total_time = elapsed_time * (epochs / epoch)
-        remaining_time = total_time - elapsed_time
-        elapsed_time_str = datetime.strftime(datetime.utcfromtimestamp(elapsed_time), '%H:%M:%S')
-        remaining_time_str = datetime.strftime(datetime.utcfromtimestamp(remaining_time), '%H:%M:%S')
-        total_time_str = datetime.strftime(datetime.utcfromtimestamp(total_time), '%H:%M:%S')
-
-        # epoch metrics
-        train_metrics = fold.epoch_to_train_metrics[epoch]
-        val_metrics = fold.epoch_to_validation_metrics[epoch]
-        test_metrics = fold.epoch_to_test_metrics[epoch]
-
-        # best metrics
-        best_train_metrics = fold.best_train_metrics
-        best_val_metrics = fold.best_validation_metrics
-        best_test_metrics = fold.best_test_metrics
-
-        # features
-        train_x = train_metrics.y
-        val_x = val_metrics.y
-        test_x = test_metrics.y
-
-        # mean std features
-        train_mstd_feature = torch.mean(torch.std(train_x, dim=0))
-        val_mstd_feature = torch.mean(torch.std(val_x, dim=0))
-        test_mstd_feature = torch.mean(torch.std(test_x, dim=0))
-
-        # latents
-        train_latent = self.auto_encoder.encode(x=train_x)
-        val_latent = self.auto_encoder.encode(x=val_x)
-        test_latent = self.auto_encoder.encode(x=test_x)
-
-        # mean std latents
-        train_mstd_latent = torch.mean(torch.std(train_latent, dim=0))
-        val_mstd_latent = torch.mean(torch.std(val_latent, dim=0))
-        test_mstd_latent = torch.mean(torch.std(test_latent, dim=0))
-
-        # logs
-        print("Epoch ({}/{}) (elapsed: {} remaining: {} total: {})"
-              .format(epoch, epochs, elapsed_time_str, remaining_time_str, total_time_str))
-        print("\t- {:<12} MSE: {:.4f}({:.4f}) | MSTD feature: {:.4f} | MSTD latent: {:.4f}"
-              .format("Train", train_metrics.mse_loss, best_train_metrics.mse_loss,
-                      train_mstd_feature, train_mstd_latent))
-        print("\t- {:<12} MSE: {:.4f}({:.4f}) | MSTD feature: {:.4f} | MSTD latent: {:.4f}"
-              .format("Validation", val_metrics.mse_loss, best_val_metrics.mse_loss,
-                      val_mstd_feature, val_mstd_latent))
-        print("\t- {:<12} MSE: {:.4f}({:.4f}) | MSTD feature: {:.4f} | MSTD latent: {:.4f}\n"
-              .format("Test", test_metrics.mse_loss, best_test_metrics.mse_loss,
-                      test_mstd_feature, test_mstd_latent))
