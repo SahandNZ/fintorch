@@ -20,5 +20,5 @@ class MNP(Criterion):
     def to_str(self, value: float):
         return "MNP: {:.6f}".format(value)
 
-    def less_than(self, first: float, second: float):
+    def compare(self, first: float, second: float):
         return first < second

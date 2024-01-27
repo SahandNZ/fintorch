@@ -32,5 +32,5 @@ class Criterion(nn.Module, ABC):
         raise NotImplemented()
 
     @abstractmethod
-    def less_than(self, first: float, second: float) -> bool:
+    def compare(self, first: float, second: float) -> bool:
         raise NotImplemented()

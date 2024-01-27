@@ -13,5 +13,5 @@ class MAPE(Criterion):
     def to_str(self, value: float) -> str:
         return "MAPE: {:.6f}".format(value)
 
-    def less_than(self, first: float, second: float) -> bool:
+    def compare(self, first: float, second: float) -> bool:
         return second < first
