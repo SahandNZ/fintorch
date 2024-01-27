@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Dict, List, Tuple
 
 from ..criterion import Criterion
-from ..metrics import Metrics
 
 
 class Fold:
@@ -71,39 +70,45 @@ class Fold:
 
     @property
     def best_train_epoch(self) -> int:
-        best_train_epoch, _ = self.__best_epoch_and_loss(self.epoch_to_train_loss)
-        return best_train_epoch
+        return self.__best_epoch_and_loss(self.epoch_to_train_loss)
 
     @property
     def best_validation_epoch(self) -> int:
-        best_validation_epoch, _ = self.__best_epoch_and_loss(self.epoch_to_validation_loss)
-        return best_validation_epoch
+        return self.__best_epoch_and_loss(self.epoch_to_validation_loss)
 
     @property
     def best_test_epoch(self) -> int:
-        best_test_epoch, _ = self.__best_epoch_and_loss(self.epoch_to_test_loss)
-        return best_test_epoch
+        return self.__best_epoch_and_loss(self.epoch_to_test_loss)
 
     @property
     def best_train_loss(self) -> float:
-        _, best_train_loss = self.__best_epoch_and_loss(self.epoch_to_train_loss)
-        return best_train_loss
+        return self.epoch_to_train_loss[self.best_train_epoch]
 
     @property
     def best_validation_loss(self) -> float:
-        _, best_validation_loss = self.__best_epoch_and_loss(self.epoch_to_validation_loss)
-        return best_validation_loss
+        return self.epoch_to_validation_loss[self.best_validation_epoch]
 
     @property
     def best_test_loss(self) -> float:
-        _, best_test_loss = self.__best_epoch_and_loss(self.epoch_to_test_loss)
-        return best_test_loss
+        return self.epoch_to_test_loss[self.best_test_epoch]
 
-    def __best_epoch_and_loss(self, fold_to_loss: Dict[int, float]) -> Tuple[int, float]:
+    @property
+    def best_train_model_state_dict(self) -> Dict:
+        return self.epoch_to_model_state_dict[self.best_train_epoch]
+
+    @property
+    def best_validation_model_state_dict(self) -> Dict:
+        return self.epoch_to_model_state_dict[self.best_validation_epoch]
+
+    @property
+    def best_test_model_state_dict(self) -> Dict:
+        return self.epoch_to_model_state_dict[self.best_test_epoch]
+
+    def __best_epoch_and_loss(self, fold_to_loss: Dict[int, float]) -> int:
         best_epoch, best_loss = None, None
         for epoch, loss in fold_to_loss.items():
             if best_loss is None or self.criterion.compare(best_loss, loss):
                 best_loss = loss
                 best_epoch = epoch
 
-        return best_epoch, best_loss
+        return best_epoch
