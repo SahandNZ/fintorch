@@ -1,6 +1,7 @@
 import argparse
 import itertools
 import json
+import os.path
 
 from rich.progress import Progress
 
@@ -79,7 +80,8 @@ def main():
                 encoder=FeedForward
             )
 
-            encoder_module.optimize_and_store(epochs=args.epochs, batch_size=args.batch_size, progress=progress)
+            if not os.path.exists(encoder_module.path):
+                encoder_module.optimize_and_store(epochs=args.epochs, batch_size=args.batch_size, progress=progress)
 
 
 if __name__ == '__main__':
