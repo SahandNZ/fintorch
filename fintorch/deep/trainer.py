@@ -135,15 +135,14 @@ class Trainer:
         print("Epoch ({}/{}) (elapsed: {} remaining: {} total: {}) (lr: {:.8f})"
               .format(epoch, epochs, elapsed_time_str, remaining_time_str, total_time_str, self.optimizer.lr))
         print("\t- Metrics")
-        print("\t\t- {:<24} {}: {:.4f} ({:.4f})"
+        print("\t\t- {:<24} {}: {:.4f} (best: {:.4f})"
               .format("Train", self.criterion.name, fold.epoch_to_train_loss[epoch], fold.best_train_loss))
-        print("\t\t- {:<24} {}: {:.4f} ({:.4f})"
+        print("\t\t- {:<24} {}: {:.4f} (best: {:.4f})"
               .format("Validation", self.criterion.name, fold.epoch_to_validation_loss[epoch],
                       fold.best_validation_loss))
-        print("\t\t- {:<24} {}: {:.4f} ({:.4f})"
-              .format("Test", self.criterion.name, fold.epoch_to_test_loss[epoch], fold.best_test_loss))
-        print("\t\t- {:<24} {}: {:.4f}"
-              .format("Best Validation on test", self.criterion.name, fold.best_validation_on_test_loss))
+        print("\t\t- {:<24} {}: {:.4f} (best: {:.4f}) (best validation: {})"
+              .format("Test", self.criterion.name, fold.epoch_to_test_loss[epoch], fold.best_test_loss,
+                      fold.best_validation_on_test_loss))
         print(get_memory_status(start="\t- "))
 
     def ___val_and_test_common_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, batch_size: int,
