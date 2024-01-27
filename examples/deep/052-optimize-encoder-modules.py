@@ -16,9 +16,9 @@ from fintorch.setting import RICH_PROGRESS_COLUMNS
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-batch-norm", action="store_false")
-    parser.add_argument("--epochs", action="store", type=int, required=False, default=10)
-    parser.add_argument("--batch-size", action="store", type=int, required=False, default=64)
-    parser.add_argument("--dim-latent", action="store", type=int, required=False, default=128)
+    parser.add_argument("--epochs", action="store", type=int, required=False, default=20)
+    parser.add_argument("--batch-size", action="store", type=int, required=False, default=4096)
+    parser.add_argument("--dim-latent", action="store", type=int, required=False, default=256)
     parser.add_argument("--sequence-length", action="store", type=int, required=False, default=32)
     parser.add_argument("--num-hidden-layers", action="store", type=int, required=False, default=2)
     parser.add_argument("--sampling-time-frame", action="store", type=int, required=False, default=900)
@@ -77,7 +77,7 @@ def main():
                 dim_latent=args.dim_latent,
                 num_hidden_layers=args.num_hidden_layers,
                 batch_norm=args.no_batch_norm,
-                encoder=FeedForward
+                encoder=model_type
             )
 
             if not os.path.exists(encoder_module.path):

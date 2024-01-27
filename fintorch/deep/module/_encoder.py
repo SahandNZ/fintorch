@@ -1,6 +1,6 @@
 import os.path
 import pickle
-from typing import Dict, List, Tuple, Type
+from typing import List, Tuple, Type
 
 import torch
 from rich.progress import Progress
@@ -17,7 +17,7 @@ from ..optimizer import Adam
 from ..trainer import Trainer
 from ...setting import MODULE_DIR
 from ...utils.directory import create_directory
-from ...utils.hash import static_hash, static_list_hash
+from ...utils.hash import static_list_hash
 
 
 class EncoderModule(Module):
@@ -74,9 +74,7 @@ class EncoderModule(Module):
     def directory(self) -> str:
         symbols_hash = static_list_hash(self.dataset.symbols)
         time_frames_hash = static_list_hash(self.dataset.time_frames)
-        dim_sequence = self.dataset.sequence_length
-        dim_features = len(self.dataset.feature_transform.features)
-        dataset_hash = static_list_hash([symbols_hash, time_frames_hash, dim_sequence, dim_features])
+        dataset_hash = static_list_hash([symbols_hash, time_frames_hash, self.dim_sequence, self.dim_feature])
 
         directory = os.path.join(MODULE_DIR, "encoder", self.auto_encoder.encoder.short_name,
                                  self.dataset.feature_transform.short_name, str(dataset_hash))
