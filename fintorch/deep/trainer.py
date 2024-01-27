@@ -189,6 +189,9 @@ class Trainer:
         if optimize and self.lr_scheduler is not None:
             self.lr_scheduler.step()
 
+        if progress is not None:
+            progress.update(task, visible=False)
+
         # move model to cpu
         model.to(torch.device("cpu"))
 

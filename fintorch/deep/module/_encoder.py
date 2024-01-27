@@ -38,7 +38,7 @@ class EncoderModule(Module):
             data_loader=DataLoader(post_load_fn=self.__post_load_fn),
             criterion=MSE(),
             optimizer=Adam(lr=1e-3, weight_decay=1e-4),
-            lr_scheduler=StepLR(step_size=5, gamma=0.75),
+            lr_scheduler=StepLR(step_size=1, gamma=0.9),
             gradient_clipping_threshold=1
         )
 
