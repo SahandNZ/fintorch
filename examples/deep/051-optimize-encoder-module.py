@@ -4,7 +4,7 @@ import json
 from rich.progress import Progress
 
 from fintorch.deep.dtype import Dataset
-from fintorch.deep.model import FeedForward, LSTM
+from fintorch.deep.model import FeedForward
 from fintorch.deep.module import EncoderModule
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
