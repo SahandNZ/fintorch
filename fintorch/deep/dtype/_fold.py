@@ -64,6 +64,7 @@ class Fold:
     def epoch_to_test_loss(self) -> Dict[int, float]:
         return self.__epoch_to_test_loss
 
+
     @property
     def epoch_to_model_state_dict(self) -> Dict[int, Dict]:
         return self.__epoch_to_model_state_dict
@@ -91,6 +92,10 @@ class Fold:
     @property
     def best_test_loss(self) -> float:
         return self.epoch_to_test_loss[self.best_test_epoch]
+
+    @property
+    def best_validation_on_test_loss(self) -> float:
+        return self.epoch_to_test_loss[self.best_validation_epoch]
 
     @property
     def best_train_model_state_dict(self) -> Dict:

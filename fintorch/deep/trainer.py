@@ -135,13 +135,15 @@ class Trainer:
         print("Epoch ({}/{}) (elapsed: {} remaining: {} total: {})"
               .format(epoch, epochs, elapsed_time_str, remaining_time_str, total_time_str))
         print("\t- Metrics")
-        print("\t\t- {:<12} {}: {:.4f} ({:.4f})"
+        print("\t\t- {:<24} {}: {:.4f} ({:.4f})"
               .format("Train", self.criterion.name, fold.epoch_to_train_loss[epoch], fold.best_train_loss))
-        print("\t\t- {:<12} {}: {:.4f} ({:.4f})"
+        print("\t\t- {:<24} {}: {:.4f} ({:.4f})"
               .format("Validation", self.criterion.name, fold.epoch_to_validation_loss[epoch],
                       fold.best_validation_loss))
-        print("\t\t- {:<12} {}: {:.4f} ({:.4f})"
+        print("\t\t- {:<24} {}: {:.4f} ({:.4f})"
               .format("Test", self.criterion.name, fold.epoch_to_test_loss[epoch], fold.best_test_loss))
+        print("\t\t- {:<24} {}: {:.4f} ({:.4f})"
+              .format("Best Validation on test", self.criterion.name, fold.best_validation_on_test_loss))
         print(get_memory_status(start="\t- "))
 
     def ___val_and_test_common_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, batch_size: int,
@@ -165,6 +167,7 @@ class Trainer:
         model.to(self.device)
 
         total_loss = 0
+        total_items = 0
         for index, (batch_x, batch_y) in enumerate(iterator):
             # move to cuda if it's available
             batch_x = batch_x.to(self.device)
@@ -172,7 +175,9 @@ class Trainer:
 
             batch_loss = self.___common_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
             batch_loss = batch_loss.detach().cpu().item()
-            total_loss = ((total_loss * index) + batch_loss) / (index + 1)
+
+            total_loss = (total_loss * total_items + batch_loss * batch_size) / (total_items + batch_size)
+            total_items += batch_size
 
             # update rich progress bar
             if progress is not None:
