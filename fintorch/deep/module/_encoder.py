@@ -74,11 +74,12 @@ class EncoderModule(Module):
     def directory(self) -> str:
         symbols_hash = static_list_hash(self.dataset.symbols)
         time_frames_hash = static_list_hash(self.dataset.time_frames)
-        feature_transform_hash = static_hash(self.dataset.feature_transform.name)
-        list_hash = [symbols_hash, time_frames_hash, self.dataset.sequence_length, feature_transform_hash]
-        dataset_hash = static_list_hash(list_hash)
+        dim_sequence = self.dataset.sequence_length
+        dim_features = len(self.dataset.feature_transform.features)
+        dataset_hash = static_list_hash([symbols_hash, time_frames_hash, dim_sequence, dim_features])
 
-        directory = os.path.join(MODULE_DIR, "encoder", self.auto_encoder.encoder.short_name, str(dataset_hash))
+        directory = os.path.join(MODULE_DIR, "encoder", self.auto_encoder.encoder.short_name,
+                                 self.dataset.feature_transform.short_name, str(dataset_hash))
         create_directory(directory)
 
         return directory
