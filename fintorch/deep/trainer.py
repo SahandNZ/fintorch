@@ -142,7 +142,7 @@ class Trainer:
                       fold.best_validation_loss))
         print("\t\t- {:<24} {}: {:.4f} ({:.4f})"
               .format("Test", self.criterion.name, fold.epoch_to_test_loss[epoch], fold.best_test_loss))
-        print("\t\t- {:<24} {}: {:.4f} ({:.4f})"
+        print("\t\t- {:<24} {}: {:.4f}"
               .format("Best Validation on test", self.criterion.name, fold.best_validation_on_test_loss))
         print(get_memory_status(start="\t- "))
 
