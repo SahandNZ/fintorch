@@ -3,7 +3,7 @@ import gc
 import time
 import warnings
 from datetime import datetime
-from typing import Callable, List, Tuple
+from typing import List
 
 import torch
 from rich.progress import Progress
@@ -155,7 +155,7 @@ class Trainer:
 
     def ___batched_common_step(self, dataset: Dataset, model: Model, timestamps: List[int], epoch: int, batch_size: int,
                                optimize: bool, progress: Progress) -> float:
-        batch_iterator = self.data_loader(dataset=dataset, timestamps=timestamps, batch_size=batch_size)
+        iterator = self.data_loader(dataset=dataset, timestamps=timestamps, batch_size=batch_size)
 
         if progress is not None:
             description = "Training epoch {}".format(epoch) if optimize else "Evaluating epoch {}".format(epoch)
@@ -165,7 +165,7 @@ class Trainer:
         model.to(self.device)
 
         total_loss = 0
-        for index, (batch_x, batch_y) in enumerate(batch_iterator):
+        for index, (batch_x, batch_y) in enumerate(iterator):
             # move to cuda if it's available
             batch_x = batch_x.to(self.device)
             batch_y = batch_y.to(self.device)
