@@ -78,7 +78,7 @@ class EncoderModule(Module):
         list_hash = [symbols_hash, time_frames_hash, self.dataset.sequence_length, feature_transform_hash]
         dataset_hash = static_list_hash(list_hash)
 
-        directory = os.path.join(MODULE_DIR, "Encoder", self.auto_encoder.encoder.short_name, str(dataset_hash))
+        directory = os.path.join(MODULE_DIR, "encoder", self.auto_encoder.encoder.short_name, str(dataset_hash))
         create_directory(directory)
 
         return directory
