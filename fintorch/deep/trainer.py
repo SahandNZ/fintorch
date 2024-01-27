@@ -11,7 +11,6 @@ from .cross_validation import CrossValidation
 from .data_loader import DataLoader
 from .dtype import Dataset, Fold
 from .lr_scheduler import LRScheduler
-from .metrics import Metrics
 from .model import Model
 from .optimizer import Optimizer
 from .criterion import Criterion
@@ -132,8 +131,6 @@ class Trainer:
         loss = self.__batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
                                           batch_size=1024, optimize=False, progress=progress)
 
-        epoch_to_metrics = fold.epoch_to_validation_metrics if validation else fold.epoch_to_test_metrics
-
     def __batched_common_step(self, dataset: Dataset, model: Model, timestamps: List[int], epoch: int, batch_size: int,
                               optimize: bool, progress: Progress = None) -> Tuple[torch.Tensor, torch.Tensor]:
         batch_iterator = self.data_loader(dataset=dataset, timestamps=timestamps, batch_size=batch_size)
@@ -154,13 +151,14 @@ class Trainer:
             batch_y = batch_y.to(self.device)
 
             batch_loss = self.__common_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
+            batch_loss = batch_loss.detach().cpu().item()
             total_loss = ((total_loss * index) + batch_loss) / (index + 1)
 
             # update rich progress bar
             if progress is not None:
                 progress.update(task, advance=1)
 
-            # remove batch_x, batch_loss
+            # remove batch_x, batch_y, batch_loss
             del batch_x, batch_y, batch_loss
 
         if optimize and self.lr_scheduler is not None:
