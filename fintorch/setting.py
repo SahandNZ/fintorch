@@ -8,7 +8,7 @@ HOME_DIR = os.path.expanduser("~")
 DATA_DIR = os.environ.get("FINTORCH_DATA_DIR", os.path.join(HOME_DIR, "Data"))
 CANDLE_DIR = os.path.join(DATA_DIR, "candle")
 TRANSFORM_DIR = os.path.join(DATA_DIR, "transform")
-DATASET_DIR = os.path.join(DATA_DIR, "dataset")
+MODULE_DIR = os.path.join(DATA_DIR, "module")
 
 # Storage
 FEATURE_BYTES = os.environ.get("FINTORCH_FEATURE_BYTES", 4)
