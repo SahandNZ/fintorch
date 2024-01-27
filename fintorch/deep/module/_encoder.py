@@ -15,6 +15,7 @@ from ..model import FeedForward, Model
 from ..model import AutoEncoder
 from ..optimizer import Adam
 from ..trainer import Trainer
+from ...dtype import Data
 from ...setting import MODULE_DIR
 from ...utils.directory import create_directory
 from ...utils.hash import static_list_hash
@@ -24,7 +25,7 @@ class EncoderModule(Module):
     def __init__(self, dataset: Dataset, dim_latent: int = 128, num_hidden_layers: int = 2, batch_norm: bool = True,
                  encoder: Type[Model] = FeedForward):
         dim_flat_feature = len(dataset.symbols) * len(dataset.time_frames) * len(dataset.feature_transform.features)
-        model = AutoEncoder(
+        auto_encoder = AutoEncoder(
             dim_sequence=dataset.feature_transform.sequence_length,
             dim_feature=dim_flat_feature,
             dim_output=dim_latent,
@@ -42,8 +43,8 @@ class EncoderModule(Module):
             gradient_clipping_threshold=1
         )
 
-        super().__init__(dataset=dataset, model=model, trainer=trainer)
-        self.__auto_encoder: AutoEncoder = model
+        super().__init__(dataset=dataset, model=auto_encoder, trainer=trainer)
+        self.__auto_encoder: AutoEncoder = auto_encoder
         self.__dim_latent: int = dim_latent
 
     @property
@@ -94,12 +95,27 @@ class EncoderModule(Module):
         with open(self.path, "wb+") as file:
             pickle.dump(model_state_dict, file)
 
-    def predict(self, timestamps: List[int]):
+    def predict(self, data: Data, timestamps: List[int]):
         with open(self.path, "rb") as file:
             model_state_dict = pickle.load(file)
-        self.model.load_state_dict(model_state_dict)
+        self.auto_encoder.load_state_dict(model_state_dict)
+
+        latent_x = []
+        for timestamp in timestamps:
+            sample = self.dataset.preprocess(data=data, timestamp=timestamp)
+            x = self.__flatten_x(sample.feature.unsqueeze(0))
+            encoded_x = self.auto_encoder.encode(x)
+            latent_x.append(encoded_x)
+
+        latent_x = torch.cat(latent_x, dim=0)
+        return latent_x
 
     def __post_load_fn(self, x: torch.tensor, y: torch.tensor) -> Tuple[torch.tensor, torch.tensor]:
-        bsatf = x.permute(0, 3, 1, 2, 4).contiguous()  # dims (Batch, Sequence, Asset, Time frame, Feature)
-        bsf = bsatf.view(bsatf.shape[0], bsatf.shape[1], -1)  # dims (Batch, Sequence, Asset * Time frame * Feature)
+        bsf = self.__flatten_x(x)
         return bsf, bsf
+
+    def __flatten_x(self, x: torch.Tensor) -> torch.Tensor:
+        bsatf = x.permute(0, 3, 1, 2, 4).contiguous()  # dims (Batch, Sequence, Asset, Time frame, Feature)
+        bsf = torch.flatten(bsatf, start_dim=2)  # dims (Batch, Sequence, Asset * Time frame * Feature)
+
+        return bsf

@@ -6,6 +6,7 @@ from rich.progress import Progress
 from ..dtype import Dataset
 from ..model import Model
 from ..trainer import Trainer
+from ...dtype import Data
 
 
 class Module(ABC):
@@ -41,5 +42,5 @@ class Module(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def predict(self, timestamps: List[int]) -> List:
+    def predict(self, data: Data, timestamps: List[int]) -> List:
         raise NotImplementedError()
