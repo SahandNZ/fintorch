@@ -57,7 +57,7 @@ def main():
         print("{}{:^32}{}".format("=" * 16, feature_transform.short_name + " " + model_type.__name__, "=" * 16))
         print("=" * 64)
 
-        with Progress(*RICH_PROGRESS_COLUMNS) as progress:
+        with Progress(*RICH_PROGRESS_COLUMNS, transient=True) as progress:
             # create dataset
             dataset = Dataset(
                 start_date=args.start_date,
