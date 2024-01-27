@@ -109,7 +109,7 @@ class Trainer:
                      progress: Progress) -> None:
         timestamps = fold.train_timestamps
         loss = self.___batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
-                                           batch_size=batch_size, optimize=True, progress=progress)
+                                           batch_size=batch_size, optimize=True, validation=False, progress=progress)
         fold.epoch_to_train_loss[epoch] = loss
         fold.epoch_to_model_state_dict[epoch] = copy.deepcopy(model.state_dict())
 
@@ -149,17 +149,23 @@ class Trainer:
                                     progress: Progress, validation: bool) -> None:
         timestamps = fold.validation_timestamps if validation else fold.test_timestamps
         loss = self.___batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
-                                           batch_size=batch_size, optimize=False, progress=progress)
+                                           batch_size=batch_size, optimize=False, validation=validation,
+                                           progress=progress)
 
         epoch_to_loss = fold.epoch_to_validation_loss if validation else fold.epoch_to_test_loss
         epoch_to_loss[epoch] = loss
 
     def ___batched_common_step(self, dataset: Dataset, model: Model, timestamps: List[int], epoch: int, batch_size: int,
-                               optimize: bool, progress: Progress) -> float:
+                               optimize: bool, validation: bool, progress: Progress) -> float:
         iterator = self.data_loader(dataset=dataset, timestamps=timestamps, batch_size=batch_size)
 
         if progress is not None:
-            description = "Training epoch {}".format(epoch) if optimize else "Evaluating epoch {}".format(epoch)
+            if optimize:
+                description = "Training step of epoch {}".format(epoch)
+            elif validation:
+                description = "Validation step of epoch {}".format(epoch)
+            else:
+                description = "Test step of epoch {}".format(epoch)
             task = progress.add_task(description=description, total=self.data_loader.batch_count)
 
         # move model to cuda if it's available
