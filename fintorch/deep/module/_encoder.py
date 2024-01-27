@@ -21,7 +21,7 @@ from ...utils.hash import static_list_hash
 
 
 class EncoderModule(Module):
-    def __init__(self, dataset: Dataset, dim_latent: int = 256, num_hidden_layers: int = 4, batch_norm: bool = False,
+    def __init__(self, dataset: Dataset, dim_latent: int = 256, num_hidden_layers: int = 4, batch_norm: bool = True,
                  encoder: Type[Model] = FeedForward):
         dim_flat_feature = len(dataset.symbols) * len(dataset.time_frames) * len(dataset.feature_transform.features)
         model = AutoEncoder(
