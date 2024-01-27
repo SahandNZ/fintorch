@@ -132,8 +132,8 @@ class Trainer:
         total_time_str = datetime.strftime(datetime.utcfromtimestamp(total_time), '%H:%M:%S')
 
         # logs
-        print("Epoch ({}/{}) (elapsed: {} remaining: {} total: {})"
-              .format(epoch, epochs, elapsed_time_str, remaining_time_str, total_time_str))
+        print("Epoch ({}/{}) (elapsed: {} remaining: {} total: {}) (lr: {:.8f})"
+              .format(epoch, epochs, elapsed_time_str, remaining_time_str, total_time_str, self.optimizer.lr))
         print("\t- Metrics")
         print("\t\t- {:<24} {}: {:.4f} ({:.4f})"
               .format("Train", self.criterion.name, fold.epoch_to_train_loss[epoch], fold.best_train_loss))
