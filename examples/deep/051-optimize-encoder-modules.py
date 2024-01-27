@@ -48,27 +48,17 @@ def main():
         label_transform=label_transform
     )
 
-    # dataset and model dims
-    dim_symbol = len(symbols)
-    dim_time_frame = len(time_frames)
-    dim_sequence = args.sequence_length
-    dim_feature = 4
-    dim_latent = args.dim_latent
-
     # define auto encoder
     encoder_module = EncoderModule(
-        dim_symbol=dim_symbol,
-        dim_time_frame=dim_time_frame,
-        dim_sequence=dim_sequence,
-        dim_feature=dim_feature,
-        dim_latent=dim_latent,
+        dataset=dataset,
+        dim_latent=args.dim_latent,
         num_hidden_layers=args.num_hidden_layers,
         batch_norm=args.no_batch_norm,
-        model=FeedForward
+        encoder=FeedForward
     )
 
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
-        encoder_module.optimize(dataset=dataset, epochs=args.epochs, batch_size=args.batch_size, progress=progress)
+        encoder_module.optimize_and_store(epochs=args.epochs, batch_size=args.batch_size, progress=progress)
 
 
 if __name__ == '__main__':
