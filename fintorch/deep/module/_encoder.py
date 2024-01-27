@@ -26,7 +26,7 @@ class EncoderModule(Module):
             optimizer=Adam(lr=1e-3, weight_decay=1e-4),
             lr_scheduler=StepLR(step_size=1, gamma=0.75),
             gradient_clipping_threshold=1,
-            log_fn=self.__log_fn
+            logger_fn=self.__logger_fn
         )
         super().__init__(trainer=trainer)
 
@@ -85,7 +85,7 @@ class EncoderModule(Module):
         bsf = bsatf.view(bsatf.shape[0], bsatf.shape[1], -1)  # dims (Batch, Sequence, Asset * Time frame * Feature)
         return bsf, bsf
 
-    def __log_fn(self, fold: Fold, epoch: int, epochs: int, epoch_time: float) -> None:
+    def __logger_fn(self, fold: Fold, epoch: int, epochs: int, epoch_time: float) -> None:
         elapsed_time = epoch_time * epoch
         total_time = elapsed_time * (epochs / epoch)
         remaining_time = total_time - elapsed_time

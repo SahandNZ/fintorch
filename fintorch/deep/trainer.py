@@ -5,7 +5,7 @@ import warnings
 from typing import Callable, List, Tuple
 
 import torch
-from rich.progress import Progress, Task, TaskID
+from rich.progress import Progress
 
 from .cross_validation import CrossValidation
 from .data_loader import DataLoader
@@ -22,7 +22,7 @@ class Trainer:
     def __init__(self, cross_validation: CrossValidation, data_loader: DataLoader, criterion: Criterion,
                  optimizer: Optimizer, lr_scheduler: LRScheduler, gradient_clipping_threshold: float = None,
                  auto_cuda: bool = True, half_precision: bool = True,
-                 log_fn: Callable[[Fold, int, int, float], None] = None):
+                 logger_fn: Callable[[Fold, int, int, float], None] = None) -> None:
         self.__cross_validation = cross_validation
         self.__data_loader: DataLoader = data_loader
         self.__criterion: Criterion = criterion
@@ -32,7 +32,7 @@ class Trainer:
 
         self.__auto_cuda: bool = auto_cuda
         self.__half_precision: bool = half_precision
-        self.___log_fn: Callable[[Fold, int, int, float], None] = log_fn
+        self.___logger_fn: Callable[[Fold, int, int, float], None] = logger_fn
 
     @property
     def cross_validation(self) -> CrossValidation:
@@ -91,11 +91,11 @@ class Trainer:
             self.__prepare(model=model)
             for epoch in range(1, epochs + 1):
                 start_time = time.perf_counter()
-                self.__train(dataset, model, batch_size, fold, epoch, progress)
-                self.__validation(dataset, model, fold, epoch, progress)
-                self.__test(dataset, model, fold, epoch, progress)
+                self.__train_step(dataset, model, batch_size, fold, epoch, progress)
+                self.__val_step(dataset, model, fold, epoch, progress)
+                self.__test_step(dataset, model, fold, epoch, progress)
                 epoch_time = time.perf_counter() - start_time
-                self.__log_fn(fold, epoch, epochs, epoch_time)
+                self.__logger_fn(fold, epoch, epochs, epoch_time)
 
             folds.append(fold)
 
@@ -106,8 +106,8 @@ class Trainer:
         self.optimizer.reset(model=model)
         self.lr_scheduler.reset(optimizer=self.optimizer)
 
-    def __train(self, dataset: Dataset, model: Model, batch_size: int, fold: Fold, epoch: int,
-                progress: Progress) -> None:
+    def __train_step(self, dataset: Dataset, model: Model, batch_size: int, fold: Fold, epoch: int,
+                     progress: Progress) -> None:
         timestamps = fold.train_timestamps
         y, y_hat = self.__batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
                                               batch_size=batch_size, optimize=True, progress=progress)
@@ -116,17 +116,17 @@ class Trainer:
         fold.epoch_to_train_metrics[epoch] = metrics
         fold.epoch_to_model_state_dict[epoch] = copy.deepcopy(model.state_dict())
 
-    def __validation(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, progress: Progress) -> None:
+    def __val_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, progress: Progress) -> None:
         self.__val_and_test_common_step(dataset=dataset, model=model, fold=fold, epoch=epoch, validation=True,
                                         progress=progress)
 
-    def __test(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, progress: Progress) -> None:
+    def __test_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, progress: Progress) -> None:
         self.__val_and_test_common_step(dataset=dataset, model=model, fold=fold, epoch=epoch, validation=False,
                                         progress=progress)
 
-    def __log_fn(self, fold: Fold, epoch: int, epochs: int, epoch_time: float) -> None:
-        if self.___log_fn is not None:
-            self.___log_fn(fold, epoch, epochs, epoch_time)
+    def __logger_fn(self, fold: Fold, epoch: int, epochs: int, epoch_time: float) -> None:
+        if self.___logger_fn is not None:
+            self.___logger_fn(fold, epoch, epochs, epoch_time)
 
     def __val_and_test_common_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, validation: bool,
                                    progress: Progress):
@@ -157,7 +157,7 @@ class Trainer:
             batch_x = batch_x.to(self.device)
             batch_y = batch_y.to(self.device)
 
-            batch_y, batch_y_hat, batch_loss = self.__comment_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
+            batch_y, batch_y_hat, batch_loss = self.__common_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
 
             # update rich progress bar
             if progress is not None:
@@ -174,32 +174,25 @@ class Trainer:
             y.append(batch_y)
             y_hat.append(batch_y_hat)
 
-        if optimize:
+        if optimize and self.lr_scheduler is not None:
             self.lr_scheduler.step()
 
         # concatenate batch_y and batch_y_hat values
         y = torch.cat(y)
         y_hat = torch.cat(y_hat)
 
-        print("1")
-        print(get_memory_status())
-
         # move model to cpu
         model.to(torch.device("cpu"))
-
-        print("2")
-        print(get_memory_status())
 
         # remove cache
         gc.collect()
         torch.cuda.empty_cache()
 
-        print("3")
         print(get_memory_status())
 
         return y, y_hat
 
-    def __comment_step(self, model: Model, x: torch.Tensor, y: torch.Tensor, optimize: bool):
+    def __common_step(self, model: Model, x: torch.Tensor, y: torch.Tensor, optimize: bool):
         if optimize:
             model.train()
 
