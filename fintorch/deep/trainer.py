@@ -109,11 +109,9 @@ class Trainer:
     def __train_step(self, dataset: Dataset, model: Model, batch_size: int, fold: Fold, epoch: int,
                      progress: Progress) -> None:
         timestamps = fold.train_timestamps
-        y, y_hat = self.__batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
-                                              batch_size=batch_size, optimize=True, progress=progress)
+        loss = self.__batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
+                                          batch_size=batch_size, optimize=True, progress=progress)
 
-        metrics = Metrics(criterion=self.criterion, epoch=epoch, y=y, y_hat=y_hat)
-        fold.epoch_to_train_metrics[epoch] = metrics
         fold.epoch_to_model_state_dict[epoch] = copy.deepcopy(model.state_dict())
 
     def __val_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, progress: Progress) -> None:
@@ -131,12 +129,10 @@ class Trainer:
     def __val_and_test_common_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, validation: bool,
                                    progress: Progress):
         timestamps = fold.validation_timestamps if validation else fold.test_timestamps
-        y, y_hat = self.__batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
-                                              batch_size=1024, optimize=False, progress=progress)
+        loss = self.__batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
+                                          batch_size=1024, optimize=False, progress=progress)
 
         epoch_to_metrics = fold.epoch_to_validation_metrics if validation else fold.epoch_to_test_metrics
-        metrics = Metrics(criterion=self.criterion, epoch=epoch, y=y, y_hat=y_hat)
-        epoch_to_metrics[epoch] = metrics
 
     def __batched_common_step(self, dataset: Dataset, model: Model, timestamps: List[int], epoch: int, batch_size: int,
                               optimize: bool, progress: Progress = None) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -151,35 +147,24 @@ class Trainer:
         # move model to cuda if it's available
         model.to(self.device)
 
-        y, y_hat = [], []
-        for batch_x, batch_y in batch_iterator:
+        total_loss = 0
+        for index, (batch_x, batch_y) in enumerate(batch_iterator):
             # move to cuda if it's available
             batch_x = batch_x.to(self.device)
             batch_y = batch_y.to(self.device)
 
-            batch_y, batch_y_hat, batch_loss = self.__common_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
+            batch_loss = self.__common_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
+            total_loss = ((total_loss * index) + batch_loss) / (index + 1)
 
             # update rich progress bar
             if progress is not None:
                 progress.update(task, advance=1)
 
             # remove batch_x, batch_loss
-            del batch_x, batch_loss
-
-            # move batch_y and batch_y_hat to cpu
-            cpu = torch.device("cpu")
-            batch_y = batch_y.to(cpu)
-            batch_y_hat = batch_y_hat.to(cpu)
-
-            y.append(batch_y)
-            y_hat.append(batch_y_hat)
+            del batch_x, batch_y, batch_loss
 
         if optimize and self.lr_scheduler is not None:
             self.lr_scheduler.step()
-
-        # concatenate batch_y and batch_y_hat values
-        y = torch.cat(y)
-        y_hat = torch.cat(y_hat)
 
         # move model to cpu
         model.to(torch.device("cpu"))
@@ -190,7 +175,7 @@ class Trainer:
 
         print(get_memory_status())
 
-        return y, y_hat
+        return total_loss
 
     def __common_step(self, model: Model, x: torch.Tensor, y: torch.Tensor, optimize: bool):
         if optimize:
@@ -215,4 +200,4 @@ class Trainer:
                 y_hat = model(x)
                 loss = self.criterion(y_hat, y)
 
-        return y, y_hat, loss
+        return loss
