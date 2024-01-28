@@ -21,7 +21,7 @@ class NextFractalLabelTransform(LabelTransform):
     def look_back(self) -> int:
         return self.__look_back
 
-    def _fit_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         df["bmin"] = df.low.rolling(self.look_back).min()
         df["bmax"] = df.high.rolling(self.look_back).max()
         df["fmin"] = df.low.rolling(self.look_ahead).min().shift(-self.look_ahead + 1)

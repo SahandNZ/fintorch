@@ -3,6 +3,7 @@ import math
 import os
 import pickle
 from abc import abstractmethod
+from datetime import datetime
 from typing import Union, List
 
 import numpy as np
@@ -22,12 +23,9 @@ class Transform(Component):
         super().__init__(name=name, short_name=short_name, description=description)
         self.__sequence_length: int = sequence_length
 
-        self.__atsf_directory: str = os.path.join(TRANSFORM_DIR, self.short_name, "Asset-TimeFrame-Sequence-Feature")
-        self.__sf_directory: str = os.path.join(TRANSFORM_DIR, self.short_name, "Sequence-Feature")
-        create_directory(self.__atsf_directory)
-        create_directory(self.__sf_directory)
-
-        self.__data: Data = None
+        self.__stsf_directory: str = os.path.join(TRANSFORM_DIR, self.short_name, "symbol-timeframe-sequence-feature")
+        self.__sf_directory: str = os.path.join(TRANSFORM_DIR, self.short_name, "sequence-feature")
+        self.__data: Data = Data()
 
     @property
     def sequence_length(self) -> int:
@@ -42,46 +40,26 @@ class Transform(Component):
         return self.__sf_directory
 
     @property
-    def atsf_directory(self) -> str:
-        return self.__atsf_directory
+    def stsf_directory(self) -> str:
+        return self.__stsf_directory
 
-    @property
-    @abstractmethod
-    def _store_none(self) -> bool:
-        raise NotImplementedError()
+    def load(self, timestamp: int, symbols: List[str], time_frames: List[TimeFrame]) -> Union[np.array, None]:
+        return self._load_or_transform_stsf(data=None, timestamp=timestamp, symbols=symbols, time_frames=time_frames,
+                                            transform_missing=False)
 
-    def fit(self, data: Data, progress: Progress = None) -> None:
-        items = list(itertools.product(data.symbols, data.time_frames))
+    def load_or_transform(self, data: Union[Data, None], timestamp: int, symbols: List[str],
+                          time_frames: List[TimeFrame]) -> Union[np.array, None]:
+        return self._load_or_transform_stsf(data=data, timestamp=timestamp, symbols=symbols, time_frames=time_frames,
+                                            transform_missing=True)
 
-        if progress is not None:
-            desc = "[green]Fit data to {}".format(self.short_name)
-            task = progress.add_task(description=desc, total=len(items))
-
-        self.__data = Data()
-        for symbol, time_frame in items:
-            df = data[symbol, time_frame].copy()
-            df = self._fit_dataframe(df)
-            self.__data[symbol, time_frame] = df
-
-            if progress is not None:
-                progress.update(task, advance=1)
-
-    @abstractmethod
-    def _fit_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        raise NotImplementedError()
-
-    def transform(self, timestamp: int, symbols: List[str], time_frames: List[TimeFrame],
-                  transform_missing: bool = True) -> Union[np.array, None]:
-        return self._load_or_transform_atsf(timestamp, symbols, time_frames, transform_missing)
-
-    def _load_or_transform_atsf(self, timestamp: int, symbols: List[str], time_frames: List[TimeFrame],
-                                transform_missing: bool) -> Union[np.array, None]:
+    def _load_or_transform_stsf(self, data: Union[Data, None], timestamp: int, symbols: List[str],
+                                time_frames: List[TimeFrame], transform_missing: bool) -> Union[np.array, None]:
         symbols_static_hash = static_list_hash(symbols)
         time_frames_static_hash = static_list_hash(time_frames)
         static_hash = static_list_hash([symbols_static_hash, time_frames_static_hash])
 
         # define directory
-        directory = os.path.join(self.atsf_directory, str(static_hash), str(self.sequence_length))
+        directory = os.path.join(self.stsf_directory, str(static_hash), str(self.sequence_length))
         create_directory(directory)
 
         # define file path
@@ -89,51 +67,52 @@ class Transform(Component):
         file_name = math.floor(timestamp / file_compress_factor) * file_compress_factor
         file_path = os.path.join(directory, f"{file_name}.pkl")
 
-        # safe load timestamp_to_sf if exist
+        # safe load timestamp_to_stsf if exist
         if os.path.exists(file_path):
             try:
                 with open(file_path, "rb") as file:
-                    timestamp_to_atsf = pickle.load(file)
+                    timestamp_to_stsf = pickle.load(file)
             except EOFError:
-                timestamp_to_atsf = {}
+                timestamp_to_stsf = {}
         else:
-            timestamp_to_atsf = {}
+            timestamp_to_stsf = {}
 
-        # if timestamp is in timestamp_to_atsf then load atsf else transform and store it
-        if timestamp in timestamp_to_atsf and (timestamp_to_atsf[timestamp] is not None or self._store_none):
-            atsf = timestamp_to_atsf[timestamp]
+        # update stsf value if needed
+        if timestamp in timestamp_to_stsf:
+            stsf = timestamp_to_stsf[timestamp]
+            if stsf is None and not self._is_none_possible(timestamp=timestamp):
+                del timestamp_to_stsf[timestamp]
+                stsf = self._transform_stsf(data=data, timestamp=timestamp, symbols=symbols, time_frames=time_frames)
         elif transform_missing:
-            atsf = self._transform_atsf(timestamp, symbols, time_frames)
-            if self._store_none or atsf is not None:
-                timestamp_to_atsf[timestamp] = atsf
-                with open(file_path, "wb+") as file:
-                    pickle.dump(timestamp_to_atsf, file)
+            stsf = self._transform_stsf(data=data, timestamp=timestamp, symbols=symbols, time_frames=time_frames)
         else:
-            atsf = None
+            stsf = None
 
-        return atsf
+        # store stsf if its value missed or changed
+        if timestamp not in timestamp_to_stsf:
+            timestamp_to_stsf[timestamp] = stsf
+            with open(file_path, "wb+") as file:
+                pickle.dump(timestamp_to_stsf, file)
 
-    def _transform_atsf(self, timestamp: int, symbols: List[str], time_frames: List[TimeFrame]) -> Union[
-        np.array, None]:
-        atsf = []  # dimensions (asset, time frame, sequence, feature)
+        return stsf
+
+    def _transform_stsf(self, data: Data, timestamp: int, symbols: List[str], time_frames: List[TimeFrame]) \
+            -> Union[np.array, None]:
+        stsf = []  # dimensions (symbol, time frame, sequence, feature)
         for symbol in symbols:
             tsf = []
             for time_frame in time_frames:
-                shifted_timestamp = self._shift_timestamp(timestamp=timestamp, time_frame=time_frame)
-                sf = self._load_or_transform_sf(timestamp=shifted_timestamp, symbol=symbol, time_frame=time_frame)
+                timestamp = self._shift_timestamp(timestamp=timestamp, time_frame=time_frame)
+                sf = self._load_or_transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
                 if sf is None:
                     return None
 
                 tsf.append(sf)
-            atsf.append(tsf)
+            stsf.append(tsf)
 
-        return np.array(atsf)
+        return np.array(stsf)
 
-    @abstractmethod
-    def _shift_timestamp(self, timestamp: int, time_frame: int) -> int:
-        raise NotImplementedError()
-
-    def _load_or_transform_sf(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
+    def _load_or_transform_sf(self, data: Data, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
         directory = os.path.join(self.sf_directory, symbol, str(time_frame), str(self.sequence_length))
         create_directory(directory)
 
@@ -151,21 +130,59 @@ class Transform(Component):
         else:
             timestamp_to_sf = {}
 
-        # if timestamp is in timestamp_to_sf then load sf else transform and store it
-        if timestamp in timestamp_to_sf and (timestamp_to_sf[timestamp] is not None or self._store_none):
+        # update value of sf if needed
+        if timestamp in timestamp_to_sf:
             sf = timestamp_to_sf[timestamp]
+            if sf is None and not self._is_none_possible(timestamp=timestamp):
+                del timestamp_to_sf[timestamp]
+                sf = self._transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
         else:
-            sf = self._transform_sf(timestamp=timestamp, symbol=symbol, time_frame=time_frame)
-            if self._store_none or sf is not None:
-                timestamp_to_sf[timestamp] = sf
-                with open(file_path, "wb+") as file:
-                    pickle.dump(timestamp_to_sf, file)
+            sf = self._transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
+
+        # store sf if its value missed or changed
+        if timestamp not in timestamp_to_sf:
+            timestamp_to_sf[timestamp] = sf
+            with open(file_path, "wb+") as file:
+                pickle.dump(timestamp_to_sf, file)
 
         return sf
 
+    def _transform_sf(self, data: Data, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
+        df = self._preprocess_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
+        sf = self._transform_dataframe(df=df, timestamp=timestamp)
+
+        return sf
+
+    def _preprocess_sf(self, data: Data, timestamp: int, symbol: str, time_frame: int) -> pd.DataFrame:
+        if not self.data.has(symbol, time_frame) or timestamp not in self.data[symbol, time_frame].index:
+            current_open_timestamp = datetime.now().timestamp() // time_frame * time_frame
+            if timestamp not in data[symbol, time_frame].index and timestamp <= current_open_timestamp:
+                raise ValueError("Data has missing value at {}.".format(datetime.fromtimestamp(timestamp)))
+
+            # TODO set dynamic value instead of 256 in below line
+            start_timestamp = timestamp - time_frame * 256
+            df = data[symbol, time_frame]
+            df = df[start_timestamp <= df.index].copy()
+            df = self._preprocess_dataframe(df)
+            self.data[symbol, time_frame] = df
+
+        return self.data[symbol, time_frame]
+
     @abstractmethod
-    def _transform_sf(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
+    def _shift_timestamp(self, timestamp: int, time_frame: int) -> int:
         raise NotImplementedError()
 
-    def __str__(self):
+    @abstractmethod
+    def _is_none_possible(self, timestamp: int) -> bool:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def _preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def _transform_dataframe(self, df: pd.DataFrame, timestamp: int) -> Union[np.array, None]:
+        raise NotImplementedError()
+
+    def __str__(self) -> str:
         return self.name

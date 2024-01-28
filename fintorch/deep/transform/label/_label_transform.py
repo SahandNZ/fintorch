@@ -1,5 +1,6 @@
 import math
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Union, List
 
 import numpy as np
@@ -28,22 +29,19 @@ class LabelTransform(Transform, ABC):
     def num_classes(self) -> int:
         return len(self.classes)
 
-    @property
-    def _store_none(self) -> bool:
-        return False
-
-    @abstractmethod
-    def _fit_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        raise NotImplementedError()
-
     def _shift_timestamp(self, timestamp: int, time_frame: int) -> int:
         return math.ceil(timestamp / time_frame) * time_frame
 
-    def _transform_sf(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
-        ldf = self.data[symbol, time_frame]
+    def _is_none_possible(self, timestamp: int) -> bool:
+        return datetime.strptime("2022-01-01", "%Y-%m-%d").timestamp() < timestamp
 
+    @abstractmethod
+    def _preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        raise NotImplementedError()
+
+    def _transform_dataframe(self, df: pd.DataFrame, timestamp: int) -> Union[np.array, None]:
         # forward cropping label dataframe with timestamp and sequence length
-        ldf = ldf[timestamp <= ldf.index]
+        ldf = df[timestamp <= df.index]
         ldf = ldf.iloc[:self.sequence_length]
 
         if self.sequence_length != len(ldf):

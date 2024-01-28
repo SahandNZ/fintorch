@@ -10,12 +10,12 @@ class StftTrRocFeatureTransform(FeatureTransform):
             name="Short Term Fourier Transform of True Range and Rate of Change",
             short_name="STFT",
             sequence_length=sequence_length,
-            look_back=None,
+            look_back=-1,
             features=["tr", "roc", "clean-tr", "clean-roc"],
         )
         self.dfft = DFFT(muting_percentage=muting_percentage)
 
-    def _fit_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         df["tr"] = df.high / df.low - 1
         df["roc"] = df.close / df.open - 1
         df["clean-tr"] = self.dfft.transform(df.tr)

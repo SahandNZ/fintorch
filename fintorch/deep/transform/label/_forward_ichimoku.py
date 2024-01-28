@@ -30,7 +30,7 @@ class ForwardIchimokuLabelTransform(LabelTransform):
     def donchian(df: pd.DataFrame, length: int) -> pd.Series:
         return (df.close.rolling(length).max() + df.close.rolling(length).min()) / 2
 
-    def _fit_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         df["base"] = self.donchian(df, length=self.base_length)
         df["conversion"] = self.donchian(df, length=self.conversion_length)
 

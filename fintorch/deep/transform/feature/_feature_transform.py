@@ -1,11 +1,13 @@
 import math
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import List, Union
 
 import numpy as np
 import pandas as pd
 
 from .._transform import Transform
+from ....dtype import Data
 from ....setting import NUMPY_FEATURE_DTYPE
 
 
@@ -24,22 +26,19 @@ class FeatureTransform(Transform, ABC):
     def features(self) -> List[str]:
         return self.__features
 
-    @property
-    def _store_none(self) -> bool:
-        return True
-
-    @abstractmethod
-    def _fit_dataframe(self, df: pd.DataFrame):
-        raise NotImplementedError()
-
     def _shift_timestamp(self, timestamp: int, time_frame: int) -> int:
         return math.floor(timestamp / time_frame) * time_frame
 
-    def _transform_sf(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
-        fdf = self.data[symbol, time_frame]
+    def _is_none_possible(self, timestamp: int) -> bool:
+        return timestamp < datetime.strptime("2022-01-01", "%Y-%m-%d").timestamp()
 
+    @abstractmethod
+    def _preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        raise NotImplementedError()
+
+    def _transform_dataframe(self, df: pd.DataFrame, timestamp: int) -> Union[np.array, None]:
         # backward cropping feature dataframe with timestamp and sequence length
-        fdf = fdf[fdf.index < timestamp]
+        fdf = df[df.index < timestamp]
         fdf = fdf.iloc[-self.sequence_length:]
         fdf = fdf[self.features]
 

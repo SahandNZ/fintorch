@@ -15,7 +15,7 @@ class UpDownLabelTransform(LabelTransform):
             classes=["UP", "DOWN"]
         )
 
-    def _fit_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         df["up"] = df.close < df.close.shift(-self.look_ahead)
         df["label"] = df.up.astype(int)
         df.dropna(inplace=True)
