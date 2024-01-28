@@ -32,7 +32,7 @@ class LabelTransform(Transform, ABC):
     def _shift_timestamp(self, timestamp: int, time_frame: int) -> int:
         return math.ceil(timestamp / time_frame) * time_frame
 
-    def _is_none_possible(self, timestamp: int) -> bool:
+    def _can_be_none(self, timestamp: int) -> bool:
         return datetime.strptime("2022-01-01", "%Y-%m-%d").timestamp() < timestamp
 
     @abstractmethod

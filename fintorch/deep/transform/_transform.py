@@ -1,4 +1,3 @@
-import itertools
 import math
 import os
 import pickle
@@ -8,7 +7,6 @@ from typing import Union, List
 
 import numpy as np
 import pandas as pd
-from rich.progress import Progress
 
 from ...component import Component
 from ...dtype import Data
@@ -80,7 +78,7 @@ class Transform(Component):
         # update stsf value if needed
         if timestamp in timestamp_to_stsf:
             stsf = timestamp_to_stsf[timestamp]
-            if stsf is None and not self._is_none_possible(timestamp=timestamp):
+            if stsf is None and not self._can_be_none(timestamp=timestamp):
                 del timestamp_to_stsf[timestamp]
                 stsf = self._transform_stsf(data=data, timestamp=timestamp, symbols=symbols, time_frames=time_frames)
         elif transform_missing:
@@ -133,7 +131,7 @@ class Transform(Component):
         # update value of sf if needed
         if timestamp in timestamp_to_sf:
             sf = timestamp_to_sf[timestamp]
-            if sf is None and not self._is_none_possible(timestamp=timestamp):
+            if sf is None and not self._can_be_none(timestamp=timestamp):
                 del timestamp_to_sf[timestamp]
                 sf = self._transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
         else:
@@ -173,7 +171,7 @@ class Transform(Component):
         raise NotImplementedError()
 
     @abstractmethod
-    def _is_none_possible(self, timestamp: int) -> bool:
+    def _can_be_none(self, timestamp: int) -> bool:
         raise NotImplementedError()
 
     @abstractmethod
