@@ -57,7 +57,7 @@ class Transform(Component):
         static_hash = static_list_hash([symbols_static_hash, time_frames_static_hash])
 
         # define directory
-        directory = os.path.join(self.stsf_directory, str(static_hash), str(self.sequence_length))
+        directory = os.path.join(self.stsf_directory, str(static_hash), f"sequence-length-{self.sequence_length}")
         create_directory(directory)
 
         # define file path
@@ -111,7 +111,7 @@ class Transform(Component):
         return np.array(stsf)
 
     def _load_or_transform_sf(self, data: Data, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
-        directory = os.path.join(self.sf_directory, symbol, str(time_frame), str(self.sequence_length))
+        directory = os.path.join(self.sf_directory, symbol, str(time_frame), f"sequence-length-{self.sequence_length}")
         create_directory(directory)
 
         file_compress_factor = FILE_COMPRESS_FACTOR * time_frame
