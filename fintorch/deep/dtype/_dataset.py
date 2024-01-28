@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import List, Union
 
+import numpy as np
 from rich.progress import Progress
 
 from ._sample import Sample
@@ -65,43 +66,31 @@ class Dataset:
     def prepare(self, data: Data, progress: Progress = None) -> None:
         # create new task in rich progress bar for creating samples
         if progress is not None:
-            desc = "[green]Creating Dataset samples"
-            task = progress.add_task(description=desc, total=len(self.timestamps))
+            task = progress.add_task(description="[green]Creating Dataset samples", total=len(self.timestamps))
 
-        # fit data to feature and label transforms
-        self._fit(data=data, progress=progress)
-
+        # create samples
         for timestamp in self.timestamps:
-            self._load_or_create_sample(timestamp=timestamp)
+            self.feature_transform.load_or_transform(data, timestamp, self.symbols, self.time_frames)
+            self.label_transform.load_or_transform(data, timestamp, self.symbols, self.time_frames)
+
             if progress is not None:
                 progress.update(task, advance=1)
 
-    def preprocess(self, data: Data, timestamp: int) -> Sample:
-        self._fit(data=data, progress=None)
-        return self._load_or_create_sample(timestamp=timestamp)
-
-    def _fit(self, data: Data, progress: Progress = None):
-        self.feature_transform.fit(data=data, progress=progress)
-        self.label_transform.fit(data=data, progress=progress)
-
-    def _load_or_create_sample(self, timestamp: int, create_missing: bool = True) -> Sample:
-        feature = self.feature_transform.transform(timestamp, self.symbols, self.time_frames, create_missing)
-        label = self.label_transform.transform(timestamp, self.symbols, self.time_frames, create_missing)
-        sample = Sample(timestamp=timestamp, feature=feature, label=label)
-
-        return sample
+    def preprocess(self, data: Data, timestamp: int) -> np.array:
+        return self.feature_transform.load_or_transform(data, timestamp, self.symbols, self.time_frames)
 
     def _load_samples(self, timestamps: List[int]) -> List[Sample]:
         samples = []
         for timestamp in timestamps:
-            sample = self._load_or_create_sample(timestamp=timestamp, create_missing=False)
+            feature = self.feature_transform.load(timestamp, self.symbols, self.time_frames)
+            label = self.label_transform.load(timestamp, self.symbols, self.time_frames)
+            sample = Sample(timestamp=timestamp, feature=feature, label=label)
             samples.append(sample)
 
         return samples
 
     def __len__(self):
-        samples = int(self.stop_date.timestamp() - self.start_date.timestamp()) // self.sampling_time_frame
-        return samples
+        return int(self.stop_date.timestamp() - self.start_date.timestamp()) // self.sampling_time_frame
 
     def __getitem__(self, item: Union[int, List[int]]) -> List[Sample]:
         if isinstance(item, int):
