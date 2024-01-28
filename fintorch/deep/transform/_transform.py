@@ -155,7 +155,8 @@ class Transform(Component):
         if not self.data.has(symbol, time_frame) or timestamp not in self.data[symbol, time_frame].index:
             current_open_timestamp = datetime.now().timestamp() // time_frame * time_frame
             if timestamp not in data[symbol, time_frame].index and timestamp <= current_open_timestamp:
-                raise ValueError("Data has missing value at {}.".format(datetime.fromtimestamp(timestamp)))
+                raise ValueError("Data has missing value at in {}-{} at {}."
+                                 .format(symbol, time_frame, datetime.fromtimestamp(timestamp)))
 
             # TODO set dynamic value instead of 256 in below line
             start_timestamp = timestamp - time_frame * 256
