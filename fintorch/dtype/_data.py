@@ -16,7 +16,7 @@ class Data:
         return list(self.__symbols)
 
     @property
-    def time_frames(self) -> List[TimeFrame]:
+    def time_frames(self) -> List[int]:
         return list(self.__time_frames)
 
     def crop(self, start_timestamp: int = None, stop_timestamp: int = None):
@@ -32,6 +32,9 @@ class Data:
             data[key] = df
 
         return data
+
+    def has(self, symbol: str, time_frame: int) -> bool:
+        return (symbol, time_frame) in self.__dict
 
     def __setitem__(self, key: Tuple[str, int], value):
         self.__symbols.add(key[0])
