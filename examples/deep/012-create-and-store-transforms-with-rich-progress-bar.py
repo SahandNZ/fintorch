@@ -20,9 +20,8 @@ def terminate_child_processes(child_processes: List[Process]):
 
 
 def target(transform_: Transform, data: Data, timestamps: List[int], queue: Queue):
-    transform_.fit(data=data)
     for index, timestamp in enumerate(timestamps):
-        transform_.transform(timestamp=timestamp, symbols=data.symbols, time_frames=data.time_frames)
+        transform_.load_or_transform(data=data, timestamp=timestamp, symbols=data.symbols, time_frames=data.time_frames)
         queue.put((1))
 
 
