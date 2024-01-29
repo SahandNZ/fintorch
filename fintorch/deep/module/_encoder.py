@@ -38,7 +38,7 @@ class EncoderModule(Module):
             cross_validation=CrossValidation(train_percentage=60, dev_percentage=20),
             data_loader=DataLoader(post_load_fn=self.__post_load_fn),
             criterion=MSE(),
-            optimizer=Adam(lr=1e-3, weight_decay=1e-4),
+            optimizer=Adam(lr=1e-3, weight_decay=1e-3),
             lr_scheduler=StepLR(step_size=1, gamma=0.9),
             gradient_clipping_threshold=1
         )
