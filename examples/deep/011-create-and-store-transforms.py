@@ -1,9 +1,7 @@
 import argparse
 import atexit
-import itertools
 import json
 import math
-import os
 import time
 from datetime import datetime
 from multiprocessing import Process, active_children
