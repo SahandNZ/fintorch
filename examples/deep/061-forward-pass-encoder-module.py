@@ -61,7 +61,7 @@ def main():
 
     # encoder module forward pass
     start_time = time.perf_counter()
-    latent_x = encoder_module.predict(data=data, timestamps=dataset.timestamps)
+    latent_x = encoder_module.predict(data=data, timestamps=dataset.timestamps[-1024:])
     elapsed_time_ms = (time.perf_counter() - start_time) * 1000
     mstd = torch.mean(torch.std(latent_x, dim=-1), dim=0)
 
