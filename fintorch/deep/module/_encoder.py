@@ -106,8 +106,8 @@ class EncoderModule(Module):
         # load dataset and predict values
         latent_x = []
         for timestamp in timestamps:
-            sample = self.dataset.preprocess(data=data, timestamp=timestamp)
-            x = torch.from_numpy(sample.feature).unsqueeze(0)
+            feature = self.dataset.preprocess(data=data, timestamp=timestamp)
+            x = torch.from_numpy(feature).unsqueeze(0)
             flat_x = self.__flatten_x(x=x)
             encoded_x = self.auto_encoder.encode(flat_x)
             latent_x.append(encoded_x)
