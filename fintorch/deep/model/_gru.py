@@ -7,7 +7,7 @@ from ._model import Model
 class GRU(Model):
     def __init__(self, dim_sequence: int, dim_feature: int, dim_output: int, num_hidden_layers: int = 2,
                  batch_norm: bool = True, dropout: float = 0.5, activation_fn: nn.Module = None, dim_hidden: int = 32,
-                 num_layers: int = 1):
+                 num_layers: int = 2):
         super().__init__(
             name="Gated Recurrent Unit",
             short_name="GRU",
