@@ -2,6 +2,8 @@ import argparse
 import json
 import time
 
+import torch
+
 from fintorch.data import load_data
 from fintorch.deep.dtype import Dataset
 from fintorch.deep.model import FeedForward
@@ -59,10 +61,13 @@ def main():
 
     # encoder module forward pass
     start_time = time.perf_counter()
-    latent_x = encoder_module.predict(data=data, timestamps=dataset.timestamps[-128:])
+    latent_x = encoder_module.predict(data=data, timestamps=dataset.timestamps)
     elapsed_time_ms = (time.perf_counter() - start_time) * 1000
+    mstd = torch.mean(torch.std(latent_x, dim=-1), dim=0)
+
     print("Encoding latent x takes: {:.3f} ms".format(elapsed_time_ms))
-    print("Latent_x.shape:", latent_x.shape)
+    print("Latent_x.shape: {}".format(latent_x.shape))
+    print("MSTD latent_x: {:.2f}".format(mstd))
 
 
 if __name__ == '__main__':
