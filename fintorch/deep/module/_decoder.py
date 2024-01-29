@@ -43,7 +43,7 @@ class DecoderModule(Module):
             dropout=dropout
         )
 
-        self.__active_pair: Tuple[str, TimeFrame] = None
+        self.__active_indices: Tuple[int, int] = None
         self.__models_dict: Dict[Tuple[str, TimeFrame], Model] = {}
 
     @property
@@ -59,8 +59,10 @@ class DecoderModule(Module):
         return ""
 
     def optimize_and_store(self, epochs: int, batch_size: int, progress: Progress = None):
-        for pair in itertools.product(self.dataset.symbols, self.dataset.time_frames):
-            self.__active_pair = pair
+        symbol_values = list(range(len(self.dataset.symbols)))
+        time_frame_values = list(range(len(self.dataset.time_frames)))
+        for indices in itertools.product(symbol_values, time_frame_values):
+            self.__active_indices = indices
             model = self._get_model()
             folds = self.trainer.optimize(dataset=self.dataset, model=model, epochs=epochs, batch_size=batch_size,
                                           progress=progress)
@@ -69,13 +71,15 @@ class DecoderModule(Module):
         pass
 
     def _get_model(self) -> Model:
-        if self.__active_pair not in self.__models_dict:
-            self.__models_dict[self.__active_pair] = self.__model_type()
+        if self.__active_indices not in self.__models_dict:
+            self.__models_dict[self.__active_indices] = self.__model_type()
 
-        return self.__models_dict[self.__active_pair]
+        return self.__models_dict[self.__active_indices]
 
     def _post_load_fn(self, x: torch.tensor, y: torch.tensor) -> Tuple[torch.tensor, torch.tensor]:
+        symbol_index, time_frame_index = self.__active_indices
         latent_x = self.encoder_module.predict(x=x)
-        y = y.squeeze(-2)
+
+        y = y[:, symbol_index, time_frame_index, 0]
 
         return latent_x, y
