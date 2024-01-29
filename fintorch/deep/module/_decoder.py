@@ -1,4 +1,6 @@
-from typing import Tuple, Type
+import functools
+import itertools
+from typing import Dict, Tuple, Type
 
 import torch
 from rich.progress import Progress
@@ -13,21 +15,13 @@ from ..lr_scheduler import StepLR
 from ..model import FeedForward, Model
 from ..optimizer import Adam
 from ..trainer import Trainer
+from ...enum import TimeFrame
 
 
 class DecoderModule(Module):
-    def __init__(self, dataset: Dataset, encoder_module: EncoderModule, dim_output: int = 2, num_hidden_layers: int = 2,
-                 batch_norm: bool = True, dropout: float = 0.5, model: Type[Model] = FeedForward,
+    def __init__(self, dataset: Dataset, encoder_module: EncoderModule, num_hidden_layers: int = 2,
+                 batch_norm: bool = True, dropout: float = 0.5, model_type: Type[Model] = FeedForward,
                  auto_cuda: bool = True):
-        model = model(
-            dim_sequence=1,
-            dim_feature=encoder_module.dim_latent,
-            dim_output=dim_output,
-            num_hidden_layers=num_hidden_layers,
-            batch_norm=batch_norm,
-            dropout=dropout,
-        )
-
         trainer = Trainer(
             cross_validation=SlidingWindowCrossValidation(train_percentage=80, dev_percentage=10, window_length=5000),
             data_loader=DataLoader(post_load_fn=self._post_load_fn),
@@ -37,8 +31,18 @@ class DecoderModule(Module):
             gradient_clipping_threshold=1
         )
 
-        super().__init__(dataset=dataset, model=model, trainer=trainer, auto_cuda=auto_cuda)
+        super().__init__(dataset=dataset, trainer=trainer, auto_cuda=auto_cuda)
         self.__encoder_module: EncoderModule = encoder_module
+        self.__model_type: Type[Model] = functools.partial(
+            model_type,
+            dim_output=2,
+            num_hidden_layers=num_hidden_layers,
+            batch_norm=batch_norm,
+            dropout=dropout
+        )
+
+        self.__active_pair: Tuple[str, TimeFrame] = None
+        self.__models_dict: Dict[Tuple[str, TimeFrame], Model] = {}
 
     @property
     def encoder_module(self) -> EncoderModule:
@@ -53,11 +57,20 @@ class DecoderModule(Module):
         return ""
 
     def optimize_and_store(self, epochs: int, batch_size: int, progress: Progress = None):
-        folds = self.trainer.optimize(dataset=self.dataset, model=self.model, epochs=epochs, batch_size=batch_size,
-                                      progress=progress)
+        for pair in itertools.product(self.dataset.symbols, self.dataset.time_frames):
+            self.__active_pair = pair
+            model = self._get_model()
+            folds = self.trainer.optimize(dataset=self.dataset, model=model, epochs=epochs, batch_size=batch_size,
+                                          progress=progress)
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         pass
+
+    def _get_model(self) -> Model:
+        if self.__active_pair not in self.__models_dict:
+            self.__models_dict[self.__active_pair] = self.__model_type()
+
+        return self.__models_dict[self.__active_pair]
 
     def _post_load_fn(self, x: torch.tensor, y: torch.tensor) -> Tuple[torch.tensor, torch.tensor]:
         latent_x = self.encoder_module.predict(x=x)
