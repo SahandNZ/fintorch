@@ -1,14 +1,12 @@
 import argparse
 import itertools
 import json
-from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import Process, Queue
 from typing import List
 
 from rich.progress import Progress
 
 from examples.args import add_default_args_and_parse
-from fintorch.data import Data
 from fintorch.data import load_data
 from fintorch.deep.transform import Transform
 from fintorch.deep.transform.feature import *
@@ -28,7 +26,8 @@ def target(transform_: Transform, symbol: str, time_frame: int, timestamps: List
 
     for index, timestamp in enumerate(timestamps):
         transform_.load_or_transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
-        queue.put((1))
+        if (index + 1) % 10 == 0:
+            queue.put((10))
     queue.put((-1))
 
 
