@@ -135,13 +135,13 @@ class Trainer:
         print("Epoch ({}/{}) (elapsed: {} remaining: {} total: {}) (lr: {:.8f})"
               .format(epoch, epochs, elapsed_time_str, remaining_time_str, total_time_str, self.optimizer.lr))
         print("\t- Metrics")
-        print("\t\t- {:<12} {}: {:.4f} (best {}: {:.4f}) (epoch: {:<3})"
+        print("\t\t- {:<12} {}: {:.4f} (best {}: {:.4f}) (best epoch: {})"
               .format("Train", self.criterion.name, fold.epoch_to_train_loss[epoch], self.criterion.name,
                       fold.best_train_loss, fold.best_train_epoch))
-        print("\t\t- {:<12} {}: {:.4f} (best {}: {:.4f}) (epoch: {:<3})"
+        print("\t\t- {:<12} {}: {:.4f} (best {}: {:.4f}) (best epoch: {})"
               .format("Validation", self.criterion.name, fold.epoch_to_validation_loss[epoch],
                       self.criterion.name, fold.best_validation_loss, fold.best_validation_epoch))
-        print("\t\t- {:<12} {}: {:.4f} (best {}: {:.4f}) (epoch: {:<3}) (best validation: {:.4f})"
+        print("\t\t- {:<12} {}: {:.4f} (best {}: {:.4f}) (best epoch: {}) (best validation: {:.4f})"
               .format("Test", self.criterion.name, fold.epoch_to_test_loss[epoch], self.criterion.name,
                       fold.best_test_loss, fold.best_test_epoch, fold.best_validation_on_test_loss))
         print(get_memory_status(start="\t- "))
