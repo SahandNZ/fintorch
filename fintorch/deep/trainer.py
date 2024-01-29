@@ -3,7 +3,7 @@ import gc
 import time
 import warnings
 from datetime import datetime
-from typing import List
+from typing import List, Tuple
 
 import torch
 from rich.progress import Progress
@@ -108,8 +108,9 @@ class Trainer:
     def __train_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, batch_size: int,
                      progress: Progress) -> None:
         timestamps = fold.train_timestamps
-        loss = self.___batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
-                                           batch_size=batch_size, optimize=True, validation=False, progress=progress)
+        loss, accuracy = self.___batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
+                                                     batch_size=batch_size, optimize=True, validation=False,
+                                                     progress=progress)
         fold.epoch_to_train_loss[epoch] = loss
         fold.epoch_to_model_state_dict[epoch] = copy.deepcopy(model.state_dict())
 
@@ -149,15 +150,15 @@ class Trainer:
     def ___val_and_test_common_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, batch_size: int,
                                     progress: Progress, validation: bool) -> None:
         timestamps = fold.validation_timestamps if validation else fold.test_timestamps
-        loss = self.___batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
-                                           batch_size=batch_size, optimize=False, validation=validation,
-                                           progress=progress)
+        loss, accuracy = self.___batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
+                                                     batch_size=batch_size, optimize=False, validation=validation,
+                                                     progress=progress)
 
         epoch_to_loss = fold.epoch_to_validation_loss if validation else fold.epoch_to_test_loss
         epoch_to_loss[epoch] = loss
 
     def ___batched_common_step(self, dataset: Dataset, model: Model, timestamps: List[int], epoch: int, batch_size: int,
-                               optimize: bool, validation: bool, progress: Progress) -> float:
+                               optimize: bool, validation: bool, progress: Progress) -> Tuple[float, float]:
         iterator = self.data_loader(dataset=dataset, timestamps=timestamps, batch_size=batch_size)
 
         if progress is not None:
@@ -172,25 +173,29 @@ class Trainer:
         # move model to cuda if it's available
         model.to(self.device)
 
-        total_loss = 0
-        total_items = 0
+        total_loss, total_items, total_corrects = 0, 0, 0
         for index, (batch_x, batch_y) in enumerate(iterator):
             # move to cuda if it's available
             batch_x = batch_x.to(self.device)
             batch_y = batch_y.to(self.device)
 
-            batch_loss = self.___common_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
+            batch_y, batch_y_hat, batch_loss = self.___common_step(model=model, x=batch_x, y=batch_y, optimize=optimize)
             batch_loss = batch_loss.detach().cpu().item()
 
             total_loss = (total_loss * total_items + batch_loss * batch_size) / (total_items + batch_size)
             total_items += batch_size
+            if self.criterion.classification_criterion:
+                actual = torch.argmax(batch_y, dim=-1)
+                prediction = torch.argmax(batch_y_hat, dim=-1)
+                batch_corrects = (actual == prediction).sum()
+                total_corrects += batch_corrects
 
             # update rich progress bar
             if progress is not None:
                 progress.update(task, advance=1)
 
             # remove batch_x, batch_y, batch_loss
-            del batch_x, batch_y, batch_loss
+            del batch_x, batch_y, batch_y_hat, batch_loss
 
         if optimize and self.lr_scheduler is not None:
             self.lr_scheduler.step()
@@ -205,7 +210,11 @@ class Trainer:
         gc.collect()
         torch.cuda.empty_cache()
 
-        return total_loss
+        total_accuracy = total_corrects / total_items * 100
+
+        print(total_accuracy)
+
+        return total_loss, total_accuracy
 
     def ___common_step(self, model: Model, x: torch.Tensor, y: torch.Tensor, optimize: bool):
         if optimize:
@@ -230,4 +239,4 @@ class Trainer:
                 y_hat = model(x)
                 loss = self.criterion(y_hat, y)
 
-        return loss
+        return y, y_hat, loss
