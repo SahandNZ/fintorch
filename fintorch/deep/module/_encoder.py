@@ -96,7 +96,7 @@ class EncoderModule(Module):
         with open(self.path, "wb+") as file:
             pickle.dump(model_state_dict, file)
 
-    def predict(self, data: Data, timestamps: List[int]):
+    def predict(self, data: Data, timestamps: List[int]) -> torch.Tensor:
         # load model and set it to eval mode
         with open(self.path, "rb") as file:
             model_state_dict = pickle.load(file)

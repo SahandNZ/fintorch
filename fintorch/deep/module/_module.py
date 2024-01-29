@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
+import torch
 from rich.progress import Progress
 
 from ..dtype import Dataset
@@ -42,5 +43,5 @@ class Module(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def predict(self, data: Data, timestamps: List[int]) -> List:
+    def predict(self, data: Data, timestamps: List[int]) -> torch.Tensorfintorch/deep/module/_module.py:
         raise NotImplementedError()
