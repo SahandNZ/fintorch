@@ -41,17 +41,17 @@ class Transform(Component):
     def stsf_directory(self) -> str:
         return self.__stsf_directory
 
-    def load(self, timestamp: int, symbols: List[str], time_frames: List[TimeFrame]) -> Union[np.array, None]:
+    def load_stsf(self, timestamp: int, symbols: List[str], time_frames: List[TimeFrame]) -> Union[np.array, None]:
         return self._load_or_transform_stsf(data=None, timestamp=timestamp, symbols=symbols, time_frames=time_frames,
                                             transform_missing=False)
 
-    def load_or_transform(self, data: Union[Data, None], timestamp: int, symbols: List[str],
-                          time_frames: List[TimeFrame]) -> Union[np.array, None]:
+    def load_or_transform_stsf(self, data: Data, timestamp: int, symbols: List[str], time_frames: List[TimeFrame]) \
+            -> Union[np.array, None]:
         return self._load_or_transform_stsf(data=data, timestamp=timestamp, symbols=symbols, time_frames=time_frames,
                                             transform_missing=True)
 
     def _load_or_transform_stsf(self, data: Union[Data, None], timestamp: int, symbols: List[str],
-                                time_frames: List[TimeFrame], transform_missing: bool) -> Union[np.array, None]:
+                                time_frames: List[TimeFrame], transform_missing: bool = True) -> Union[np.array, None]:
         symbols_static_hash = static_list_hash(symbols)
         time_frames_static_hash = static_list_hash(time_frames)
         static_hash = static_list_hash([symbols_static_hash, time_frames_static_hash])
@@ -100,7 +100,6 @@ class Transform(Component):
         for symbol in symbols:
             tsf = []
             for time_frame in time_frames:
-                timestamp = self._shift_timestamp(timestamp=timestamp, time_frame=time_frame)
                 sf = self._load_or_transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
                 if sf is None:
                     return None
@@ -110,7 +109,18 @@ class Transform(Component):
 
         return np.array(stsf)
 
-    def _load_or_transform_sf(self, data: Data, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
+    def load_sf(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
+        return self._load_or_transform_sf(data=None, timestamp=timestamp, symbol=symbol, time_frame=time_frame,
+                                          transform_missing=False)
+
+    def load_or_transform_sf(self, data: Data, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
+        return self._load_or_transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame,
+                                          transform_missing=True)
+
+    def _load_or_transform_sf(self, data: Union[Data, None], timestamp: int, symbol: str, time_frame: int,
+                              transform_missing: bool = True) -> Union[np.array, None]:
+        timestamp = self._shift_timestamp(timestamp=timestamp, time_frame=time_frame)
+
         directory = os.path.join(self.sf_directory, symbol, str(time_frame), f"sequence-length-{self.sequence_length}")
         create_directory(directory)
 
@@ -134,8 +144,10 @@ class Transform(Component):
             if sf is None and not self._can_be_none(timestamp=timestamp):
                 del timestamp_to_sf[timestamp]
                 sf = self._transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
-        else:
+        elif transform_missing:
             sf = self._transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
+        else:
+            sf = None
 
         # store sf if its value missed or changed
         if timestamp not in timestamp_to_sf:

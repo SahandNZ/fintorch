@@ -4,30 +4,23 @@ import time
 
 import torch
 
+from examples.args import add_default_args_and_parse
 from fintorch.data import load_data
 from fintorch.deep.dtype import Dataset
 from fintorch.deep.model import FeedForward
-from fintorch.deep.module import EncoderModule
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--no-batch-norm", action="store_false")
-    parser.add_argument("--dim-latent", action="store", type=int, required=False, default=128)
-    parser.add_argument("--sequence-length", action="store", type=int, required=False, default=32)
-    parser.add_argument("--num-hidden-layers", action="store", type=int, required=False, default=2)
-    parser.add_argument("--sampling-time-frame", action="store", type=int, required=False, default=900)
-    parser.add_argument("--start-date", action="store", type=str, required=False, default="2021-01-01")
-    parser.add_argument("--stop-date", action="store", type=str, required=False, default="2024-01-01")
-    parser.add_argument("--config-path", action="store", type=str, required=False, default="./../config.json")
-    args = parser.parse_args()
+    args = add_default_args_and_parse(parser)
 
     # load symbols and time frames
     with open(args.config_path, "r") as file:
         config_dict = json.load(file)
 
+    # load symbols and time_frames from config file
     symbols = config_dict["symbols"]
     time_frames = config_dict["time-frames"]
 
@@ -39,7 +32,7 @@ def main():
     dataset = Dataset(
         start_date=args.start_date,
         stop_date=args.stop_date,
-        sampling_time_frame=args.sampling_time_frame,
+        interval=args.interval,
         symbols=symbols,
         time_frames=time_frames,
         sequence_length=args.sequence_length,

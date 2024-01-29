@@ -1,6 +1,7 @@
 import argparse
 import json
 
+from examples.args import add_default_args_and_parse
 from fintorch.deep.cross_validation import SlidingWindowCrossValidation
 from fintorch.deep.dtype import Dataset
 from fintorch.deep.transform.feature import RollingMeanStdTrRocFeatureTransform
@@ -9,12 +10,7 @@ from fintorch.deep.transform.label import UpDownLabelTransform
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--sequence-length", action="store", type=int, required=False, default=32)
-    parser.add_argument("--sampling-time-frame", action="store", type=int, required=False, default=900)
-    parser.add_argument("--start-date", action="store", type=str, required=False, default="2021-01-01")
-    parser.add_argument("--stop-date", action="store", type=str, required=False, default="2024-01-01")
-    parser.add_argument("--config-path", action="store", type=str, required=False, default="./../config.json")
-    args = parser.parse_args()
+    args = add_default_args_and_parse(parser)
 
     # load symbols and time frames
     with open(args.config_path, "r") as file:

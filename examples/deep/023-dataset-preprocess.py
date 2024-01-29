@@ -2,6 +2,7 @@ import argparse
 import json
 import time
 
+from examples.args import add_default_args_and_parse
 from fintorch.data import load_data
 from fintorch.deep.dtype import Dataset
 from fintorch.deep.transform.feature import *
@@ -10,15 +11,7 @@ from fintorch.deep.transform.label import *
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--no-batch-norm", action="store_false")
-    parser.add_argument("--dim-latent", action="store", type=int, required=False, default=128)
-    parser.add_argument("--sequence-length", action="store", type=int, required=False, default=32)
-    parser.add_argument("--num-hidden-layers", action="store", type=int, required=False, default=2)
-    parser.add_argument("--sampling-time-frame", action="store", type=int, required=False, default=900)
-    parser.add_argument("--start-date", action="store", type=str, required=False, default="2021-01-01")
-    parser.add_argument("--stop-date", action="store", type=str, required=False, default="2024-01-01")
-    parser.add_argument("--config-path", action="store", type=str, required=False, default="./../config.json")
-    args = parser.parse_args()
+    args = add_default_args_and_parse(parser)
 
     # load symbols and time frames
     with open(args.config_path, "r") as file:

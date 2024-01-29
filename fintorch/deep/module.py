@@ -1,40 +1,33 @@
 from abc import ABC, abstractmethod
-from typing import List, Tuple
+from typing import Tuple
 
 import torch
 from rich.progress import Progress
 
-from ..dtype import Dataset
-from ..model import Model
-from ..trainer import Trainer
-from ...dtype import Data
+from .dtype import Dataset
+from .model import Model
+from .trainer import Trainer
 
 
 class Module(ABC):
-    def __init__(self, dataset: Dataset, trainer: Trainer, auto_cuda: bool):
+    def __init__(self, dataset: Dataset, model: Model, trainer: Trainer):
         self.__dataset: Dataset = dataset
+        self.__model: Model = model
         self.__trainer: Trainer = trainer
-        self.__auto_cuda: bool = auto_cuda
+
+        self.__last_train_timestamp: int = 0
 
     @property
     def dataset(self) -> Dataset:
         return self.__dataset
 
     @property
+    def model(self) -> Model:
+        return self.__model
+
+    @property
     def trainer(self) -> Trainer:
         return self.__trainer
-
-    @property
-    def auto_cuda(self) -> bool:
-        return self.__auto_cuda
-
-    @property
-    def device_type(self) -> str:
-        return "cuda" if torch.cuda.is_available() and self.auto_cuda else "cpu"
-
-    @property
-    def device(self) -> torch.device:
-        return torch.device(self.device_type)
 
     @property
     @abstractmethod
@@ -48,7 +41,8 @@ class Module(ABC):
 
     @abstractmethod
     def optimize_and_store(self, epochs: int, batch_size: int, progress: Progress = None):
-        raise NotImplementedError()
+        folds = self.trainer.optimize(dataset=self.dataset, model=self.model, epochs=epochs, batch_size=batch_size,
+                                      progress=progress)
 
     @abstractmethod
     def predict(self, x: torch.Tensor) -> torch.Tensor:
