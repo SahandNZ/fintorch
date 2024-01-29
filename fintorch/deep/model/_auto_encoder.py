@@ -8,8 +8,8 @@ from fintorch.deep.model._model import Model
 
 
 class AutoEncoder(Model):
-    def __init__(self, dim_sequence: int, dim_feature: int, dim_output: int, num_hidden_layers: int = 4,
-                 batch_norm: bool = False, dropout: float = 0, encoder: Type[Model] = FeedForward) -> None:
+    def __init__(self, dim_sequence: int, dim_feature: int, dim_output: int, num_hidden_layers: int = 2,
+                 batch_norm: bool = True, dropout: float = 0.5, encoder: Type[Model] = FeedForward) -> None:
         super().__init__(
             name="Auto Encoder",
             short_name="AE",

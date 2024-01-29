@@ -6,8 +6,8 @@ from ._model import Model
 
 
 class Hybrid(Model):
-    def __init__(self, dim_sequence: int, dim_feature: int, dim_output: int, num_hidden_layers: int = 4,
-                 batch_norm: bool = False, dropout: float = 0, activation_fn: nn.Module = None):
+    def __init__(self, dim_sequence: int, dim_feature: int, dim_output: int, num_hidden_layers: int = 2,
+                 batch_norm: bool = True, dropout: float = 0.5, activation_fn: nn.Module = None):
         super().__init__(
             name="Hybrid",
             short_name="HYB",

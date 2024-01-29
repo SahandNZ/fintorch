@@ -10,8 +10,8 @@ from .block import Residual1D
 
 
 class ResNet1D(Model):
-    def __init__(self, dim_sequence: int, dim_feature: int, dim_output: int, dropout: float = 0,
-                 num_hidden_layers: int = 4, batch_norm: bool = False, activation_fn: nn.Module = None):
+    def __init__(self, dim_sequence: int, dim_feature: int, dim_output: int, num_hidden_layers: int = 2,
+                 batch_norm: bool = True, dropout: float = 0.5, activation_fn: nn.Module = None):
         super().__init__(
             name="Residual Network 1D",
             short_name="RN-1D",

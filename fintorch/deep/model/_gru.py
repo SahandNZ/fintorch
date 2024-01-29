@@ -5,8 +5,8 @@ from ._model import Model
 
 
 class GRU(Model):
-    def __init__(self, dim_sequence: int, dim_feature: int, dim_output: int, num_hidden_layers: int = 4,
-                 batch_norm: bool = False, dropout: float = 0, activation_fn: nn.Module = None, dim_hidden: int = 16,
+    def __init__(self, dim_sequence: int, dim_feature: int, dim_output: int, num_hidden_layers: int = 2,
+                 batch_norm: bool = True, dropout: float = 0.5, activation_fn: nn.Module = None, dim_hidden: int = 32,
                  num_layers: int = 1):
         super().__init__(
             name="Gated Recurrent Unit",
@@ -27,6 +27,7 @@ class GRU(Model):
             batch_first=True,
             dropout=dropout
         )
+
         self.ff = FeedForward(
             dim_sequence=dim_sequence,
             dim_feature=dim_hidden,
