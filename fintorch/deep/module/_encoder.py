@@ -109,7 +109,8 @@ class EncoderModule(Module):
             feature = self.dataset.preprocess(data=data, timestamp=timestamp)
             x = torch.from_numpy(feature).unsqueeze(0)
             flat_x = self.__flatten_x(x=x)
-            encoded_x = self.auto_encoder.encode(flat_x)
+            with torch.no_grad():
+                encoded_x = self.auto_encoder.encode(flat_x)
             latent_x.append(encoded_x)
 
         latent_x = torch.cat(latent_x, dim=0)
