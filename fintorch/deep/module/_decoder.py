@@ -61,4 +61,6 @@ class DecoderModule(Module):
 
     def _post_load_fn(self, x: torch.tensor, y: torch.tensor) -> Tuple[torch.tensor, torch.tensor]:
         latent_x = self.encoder_module.predict(x=x)
+        y = y.squeeze(-2)
+
         return latent_x, y
