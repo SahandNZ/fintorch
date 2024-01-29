@@ -53,11 +53,12 @@ def main():
     # load candlestick data
     data = load_data(symbols=symbols, time_frames=time_frames)
 
-    # create single sample
+    # preprocess single feature
     start_time = time.perf_counter()
     feature = dataset.preprocess(data=data, timestamp=dataset.timestamps[-1])
-    print(time.perf_counter() - start_time)
-    print(feature)
+    elapsed_ms = (time.perf_counter() - start_time) * 1000
+    print("Preprocessing takes: {:.3f} ms".format(elapsed_ms))
+    print("Feature's shape is:", feature.shape)
 
 
 if __name__ == '__main__':
