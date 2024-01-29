@@ -54,7 +54,7 @@ def main():
         dim_latent=args.dim_latent,
         num_hidden_layers=args.num_hidden_layers,
         batch_norm=args.no_batch_norm,
-        model=FeedForward
+        model_type=FeedForward
     )
 
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:

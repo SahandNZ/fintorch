@@ -58,7 +58,7 @@ def main():
     batch_x, _ = next(iter(data_loader(dataset=dataset, timestamps=fold.train_timestamps, batch_size=args.batch_size)))
 
     # define auto encoder
-    encoder_module = EncoderModule(dataset=dataset, dim_latent=16, model=FeedForward)
+    encoder_module = EncoderModule(dataset=dataset, dim_latent=16, model_type=FeedForward)
 
     encoded_x = encoder_module.model.encode(batch_x)
     x_hat = encoder_module.model.decode(encoded_x)

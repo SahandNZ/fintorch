@@ -5,8 +5,7 @@ from rich.progress import Progress
 
 from fintorch.deep.dtype import Dataset
 from fintorch.deep.model import FeedForward
-from fintorch.deep.module import EncoderModule
-from fintorch.deep.module._decoder import DecoderModule
+from fintorch.deep.module import EncoderModule, DecoderModule
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
 from fintorch.setting import RICH_PROGRESS_COLUMNS
@@ -55,7 +54,7 @@ def main():
         dim_latent=args.dim_latent,
         num_hidden_layers=args.num_hidden_layers,
         batch_norm=args.no_batch_norm,
-        model=FeedForward
+        model_type=FeedForward
     )
 
     # define decoder module
@@ -64,7 +63,7 @@ def main():
         encoder_module=encoder_module,
         num_hidden_layers=args.num_hidden_layers,
         batch_norm=args.no_batch_norm,
-        model=FeedForward
+        model_type=FeedForward
     )
 
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:

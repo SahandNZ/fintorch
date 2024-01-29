@@ -77,7 +77,7 @@ def main():
                 dim_latent=args.dim_latent,
                 num_hidden_layers=args.num_hidden_layers,
                 batch_norm=args.no_batch_norm,
-                model=model_type
+                model_type=model_type
             )
 
             if not os.path.exists(encoder_module.path):
