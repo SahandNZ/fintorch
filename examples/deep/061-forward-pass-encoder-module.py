@@ -1,5 +1,6 @@
 import argparse
 import json
+import time
 
 from fintorch.data import load_data
 from fintorch.deep.dtype import Dataset
@@ -57,7 +58,11 @@ def main():
     data = load_data(symbols=symbols, time_frames=time_frames)
 
     # encoder module forward pass
-    print(encoder_module.predict(data=data, timestamps=dataset.timestamps[-1:]))
+    start_time = time.perf_counter()
+    latent_x = encoder_module.predict(data=data, timestamps=dataset.timestamps[-1:])
+    elapsed_time_ms = (time.perf_counter() - start_time) * 1000
+    print("Encoding latent x takes: {:.3f} ms".format(elapsed_time_ms))
+    print("Latent_x.shape:", latent_x.shape)
 
 
 if __name__ == '__main__':
