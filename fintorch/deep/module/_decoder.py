@@ -35,6 +35,8 @@ class DecoderModule(Module):
         self.__encoder_module: EncoderModule = encoder_module
         self.__model_type: Type[Model] = functools.partial(
             model_type,
+            dim_sequence=1,
+            dim_feature=encoder_module.dim_latent,
             dim_output=2,
             num_hidden_layers=num_hidden_layers,
             batch_norm=batch_norm,
