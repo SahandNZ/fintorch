@@ -78,8 +78,9 @@ class DecoderModule(Module):
 
     def _post_load_fn(self, x: torch.tensor, y: torch.tensor) -> Tuple[torch.tensor, torch.tensor]:
         symbol_index, time_frame_index = self.__active_indices
+        # latent_x = self.encoder_module.predict(x=x)
 
-        latent_x = self.encoder_module.predict(x=x)
+        latent_x = self.encoder_module.flatten_x(x=x)
         y = y[:, symbol_index, time_frame_index, 0]
 
         return latent_x, y

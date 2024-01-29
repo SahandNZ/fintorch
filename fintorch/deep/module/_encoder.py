@@ -103,17 +103,17 @@ class EncoderModule(Module):
             self.auto_encoder.eval()
 
         # forward pass through encoder
-        flat_x = self.__flatten_x(x=x)
+        flat_x = self.flatten_x(x=x)
         with torch.no_grad():
             latent_x = self.auto_encoder.encode(flat_x)
 
         return latent_x
 
     def _post_load_fn(self, x: torch.tensor, y: torch.tensor) -> Tuple[torch.tensor, torch.tensor]:
-        bsf = self.__flatten_x(x)
+        bsf = self.flatten_x(x)
         return bsf, bsf
 
-    def __flatten_x(self, x: torch.Tensor) -> torch.Tensor:
+    def flatten_x(self, x: torch.Tensor) -> torch.Tensor:
         bsatf = x.permute(0, 3, 1, 2, 4).contiguous()  # dims (Batch, Sequence, Asset, Time frame, Feature)
         bsf = torch.flatten(bsatf, start_dim=2)  # dims (Batch, Sequence, Asset * Time frame * Feature)
 
