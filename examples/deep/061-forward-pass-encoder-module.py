@@ -59,7 +59,7 @@ def main():
 
     # encoder module forward pass
     start_time = time.perf_counter()
-    latent_x = encoder_module.predict(data=data, timestamps=dataset.timestamps[-1:])
+    latent_x = encoder_module.predict(data=data, timestamps=dataset.timestamps[-128:])
     elapsed_time_ms = (time.perf_counter() - start_time) * 1000
     print("Encoding latent x takes: {:.3f} ms".format(elapsed_time_ms))
     print("Latent_x.shape:", latent_x.shape)
