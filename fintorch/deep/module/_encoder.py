@@ -23,7 +23,7 @@ from ...utils.hash import static_list_hash
 
 class EncoderModule(Module):
     def __init__(self, dataset: Dataset, dim_latent: int = 128, num_hidden_layers: int = 2, batch_norm: bool = True,
-                 dropout: float = 0.5, encoder: Type[Model] = FeedForward):
+                 dropout: float = 0.5, encoder: Type[Model] = FeedForward, auto_cuda: bool = True):
         dim_flat_feature = len(dataset.symbols) * len(dataset.time_frames) * len(dataset.feature_transform.features)
         auto_encoder = AutoEncoder(
             dim_sequence=dataset.feature_transform.sequence_length,
@@ -44,7 +44,7 @@ class EncoderModule(Module):
             gradient_clipping_threshold=1
         )
 
-        super().__init__(dataset=dataset, model=auto_encoder, trainer=trainer)
+        super().__init__(dataset=dataset, model=auto_encoder, trainer=trainer, auto_cuda=auto_cuda)
         self.__auto_encoder: AutoEncoder = auto_encoder
         self.__dim_latent: int = dim_latent
 
@@ -97,26 +97,30 @@ class EncoderModule(Module):
             pickle.dump(model_state_dict, file)
 
     def predict(self, data: Data, timestamps: List[int]) -> torch.Tensor:
-        # load model and set it to eval mode
+        # prepare model for prediction
         with open(self.path, "rb") as file:
             model_state_dict = pickle.load(file)
         self.auto_encoder.load_state_dict(model_state_dict)
+        self.auto_encoder.to(self.device)
         self.auto_encoder.eval()
 
-        # prepare x from features
+        # forward pass through encoder
+        flat_x = self.preprocess(data=data, timestamps=timestamps)
+        with torch.no_grad():
+            latent_x = self.auto_encoder.encode(flat_x)
+
+        return latent_x
+
+    def preprocess(self, data: Data, timestamps: List[int]) -> torch.Tensor:
         x = []
         for timestamp in timestamps:
             feature = self.dataset.preprocess(data=data, timestamp=timestamp)
             feature = torch.from_numpy(feature)
             x.append(feature)
         x = torch.cat(x, dim=0)
-
-        # predict latent x
         flat_x = self.__flatten_x(x=x)
-        with torch.no_grad():
-            latent_x = self.auto_encoder.encode(flat_x)
 
-        return latent_x
+        return flat_x
 
     def __post_load_fn(self, x: torch.tensor, y: torch.tensor) -> Tuple[torch.tensor, torch.tensor]:
         bsf = self.__flatten_x(x)
