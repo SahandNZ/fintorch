@@ -43,5 +43,5 @@ class Module(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def predict(self, data: Data, timestamps: List[int]) -> torch.Tensorfintorch/deep/module/_module.py:
+    def predict(self, data: Data, timestamps: List[int]) -> torch.Tensor:
         raise NotImplementedError()
