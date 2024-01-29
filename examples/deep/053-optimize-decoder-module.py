@@ -34,7 +34,7 @@ def main():
 
     # define feature and label transforms
     feature_transform = StftTrRocFeatureTransform(sequence_length=args.sequence_length)
-    label_transform = UpDownLabelTransform()
+    label_transform = ForwardBackwardMinimumLabelTransform()
 
     # create dataset
     dataset = Dataset(
