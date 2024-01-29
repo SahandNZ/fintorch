@@ -115,7 +115,7 @@ class EncoderModule(Module):
         x = []
         for timestamp in timestamps:
             feature = self.dataset.preprocess(data=data, timestamp=timestamp)
-            feature = torch.from_numpy(feature)
+            feature = torch.from_numpy(feature).unsqueeze(0)
             x.append(feature)
         x = torch.cat(x, dim=0)
         flat_x = self.__flatten_x(x=x)
