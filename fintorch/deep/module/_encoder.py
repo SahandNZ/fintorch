@@ -101,7 +101,7 @@ class EncoderModule(Module):
         with open(self.path, "rb") as file:
             model_state_dict = pickle.load(file)
         self.auto_encoder.load_state_dict(model_state_dict)
-        self.auto_encoder.to(self.device)
+        # self.auto_encoder.to(self.device)
         self.auto_encoder.eval()
 
         # forward pass through encoder
