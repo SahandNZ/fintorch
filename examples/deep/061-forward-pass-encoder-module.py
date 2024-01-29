@@ -1,17 +1,12 @@
 import argparse
-import itertools
 import json
-import os.path
-
-from rich.progress import Progress
 
 from fintorch.data import load_data
 from fintorch.deep.dtype import Dataset
-from fintorch.deep.model import FeedForward, GRU, Hybrid, LSTM, ResNet1D, Transformer
+from fintorch.deep.model import FeedForward
 from fintorch.deep.module import EncoderModule
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
-from fintorch.setting import RICH_PROGRESS_COLUMNS
 
 
 def main():
@@ -34,7 +29,7 @@ def main():
     time_frames = config_dict["time-frames"]
 
     # define feature and label transforms
-    feature_transform = StftTrRocFeatureTransform(sequence_length=args.sequence_length)
+    feature_transform = RollingMeanStdTrRocFeatureTransform(sequence_length=args.sequence_length)
     label_transform = UpDownLabelTransform()
 
     # create dataset

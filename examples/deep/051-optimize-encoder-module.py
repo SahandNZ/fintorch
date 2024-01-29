@@ -33,7 +33,7 @@ def main():
     time_frames = config_dict["time-frames"]
 
     # define feature and label transforms
-    feature_transform = StftTrRocFeatureTransform(sequence_length=args.sequence_length)
+    feature_transform = RollingMeanStdTrRocFeatureTransform(sequence_length=args.sequence_length)
     label_transform = UpDownLabelTransform()
 
     # create dataset
