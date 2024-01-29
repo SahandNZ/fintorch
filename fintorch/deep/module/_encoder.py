@@ -103,17 +103,19 @@ class EncoderModule(Module):
         self.auto_encoder.load_state_dict(model_state_dict)
         self.auto_encoder.eval()
 
-        # load dataset and predict values
-        latent_x = []
+        # prepare x from features
+        x = []
         for timestamp in timestamps:
             feature = self.dataset.preprocess(data=data, timestamp=timestamp)
-            x = torch.from_numpy(feature).unsqueeze(0)
-            flat_x = self.__flatten_x(x=x)
-            with torch.no_grad():
-                encoded_x = self.auto_encoder.encode(flat_x)
-            latent_x.append(encoded_x)
+            feature = torch.from_numpy(feature)
+            x.append(feature)
+        x = torch.cat(x, dim=0)
 
-        latent_x = torch.cat(latent_x, dim=0)
+        # predict latent x
+        flat_x = self.__flatten_x(x=x)
+        with torch.no_grad():
+            latent_x = self.auto_encoder.encode(flat_x)
+
         return latent_x
 
     def __post_load_fn(self, x: torch.tensor, y: torch.tensor) -> Tuple[torch.tensor, torch.tensor]:
