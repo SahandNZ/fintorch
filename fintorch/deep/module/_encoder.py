@@ -15,7 +15,6 @@ from ..model import FeedForward, Model
 from ..model import AutoEncoder
 from ..optimizer import Adam
 from ..trainer import Trainer
-from ...dtype import Data
 from ...setting import MODULE_DIR
 from ...utils.directory import create_directory
 from ...utils.hash import static_list_hash
@@ -23,7 +22,7 @@ from ...utils.hash import static_list_hash
 
 class EncoderModule(Module):
     def __init__(self, dataset: Dataset, dim_latent: int = 128, num_hidden_layers: int = 2, batch_norm: bool = True,
-                 dropout: float = 0.5, encoder: Type[Model] = FeedForward, auto_cuda: bool = True):
+                 dropout: float = 0.5, model: Type[Model] = FeedForward, auto_cuda: bool = True):
         dim_flat_feature = len(dataset.symbols) * len(dataset.time_frames) * len(dataset.feature_transform.features)
         auto_encoder = AutoEncoder(
             dim_sequence=dataset.feature_transform.sequence_length,
@@ -32,12 +31,12 @@ class EncoderModule(Module):
             num_hidden_layers=num_hidden_layers,
             batch_norm=batch_norm,
             dropout=dropout,
-            encoder=encoder,
+            encoder=model,
         )
 
         trainer = Trainer(
             cross_validation=CrossValidation(train_percentage=60, dev_percentage=20),
-            data_loader=DataLoader(post_load_fn=self.__post_load_fn),
+            data_loader=DataLoader(post_load_fn=self._post_load_fn),
             criterion=MSE(),
             optimizer=Adam(lr=1e-3, weight_decay=1e-3),
             lr_scheduler=StepLR(step_size=1, gamma=0.9),
@@ -45,7 +44,6 @@ class EncoderModule(Module):
         )
 
         super().__init__(dataset=dataset, model=auto_encoder, trainer=trainer, auto_cuda=auto_cuda)
-        self.__auto_encoder: AutoEncoder = auto_encoder
         self.__dim_latent: int = dim_latent
 
     @property
@@ -65,10 +63,6 @@ class EncoderModule(Module):
         return len(self.dataset.feature_transform.features)
 
     @property
-    def auto_encoder(self) -> AutoEncoder:
-        return self.__auto_encoder
-
-    @property
     def dim_latent(self) -> int:
         return self.__dim_latent
 
@@ -78,7 +72,7 @@ class EncoderModule(Module):
         time_frames_hash = static_list_hash(self.dataset.time_frames)
         dataset_hash = static_list_hash([symbols_hash, time_frames_hash, self.dim_sequence, self.dim_feature])
 
-        directory = os.path.join(MODULE_DIR, "encoder", self.auto_encoder.encoder.short_name,
+        directory = os.path.join(MODULE_DIR, "encoder", self.model.encoder.short_name,
                                  self.dataset.feature_transform.short_name, str(dataset_hash))
         create_directory(directory)
 
@@ -96,33 +90,23 @@ class EncoderModule(Module):
         with open(self.path, "wb+") as file:
             pickle.dump(model_state_dict, file)
 
-    def predict(self, data: Data, timestamps: List[int]) -> torch.Tensor:
+    def predict(self, x: torch.Tensor) -> torch.Tensor:
         # prepare model for prediction
-        with open(self.path, "rb") as file:
-            model_state_dict = pickle.load(file)
-        self.auto_encoder.load_state_dict(model_state_dict)
-        # self.auto_encoder.to(self.device)
-        self.auto_encoder.eval()
+        if os.path.exists(self.path):
+            with open(self.path, "rb") as file:
+                model_state_dict = pickle.load(file)
+            self.model.load_state_dict(model_state_dict)
+            # self.auto_encoder.to(self.device)
+            self.model.eval()
 
         # forward pass through encoder
-        flat_x = self.preprocess(data=data, timestamps=timestamps)
+        flat_x = self.__flatten_x(x=x)
         with torch.no_grad():
-            latent_x = self.auto_encoder.encode(flat_x)
+            latent_x = self.model.encode(flat_x)
 
         return latent_x
 
-    def preprocess(self, data: Data, timestamps: List[int]) -> torch.Tensor:
-        x = []
-        for timestamp in timestamps:
-            feature = self.dataset.preprocess(data=data, timestamp=timestamp)
-            feature = torch.from_numpy(feature).unsqueeze(0)
-            x.append(feature)
-        x = torch.cat(x, dim=0)
-        flat_x = self.__flatten_x(x=x)
-
-        return flat_x
-
-    def __post_load_fn(self, x: torch.tensor, y: torch.tensor) -> Tuple[torch.tensor, torch.tensor]:
+    def _post_load_fn(self, x: torch.tensor, y: torch.tensor) -> Tuple[torch.tensor, torch.tensor]:
         bsf = self.__flatten_x(x)
         return bsf, bsf
 

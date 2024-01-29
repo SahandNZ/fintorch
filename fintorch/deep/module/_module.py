@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Tuple
 
 import torch
 from rich.progress import Progress
@@ -56,9 +56,9 @@ class Module(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def predict(self, data: Data, timestamps: List[int]) -> torch.Tensor:
+    def predict(self, x: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError()
 
     @abstractmethod
-    def preprocess(self, data: Data, timestamps: List[int]) -> torch.Tensor:
+    def _post_load_fn(self, x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         raise NotImplementedError()
