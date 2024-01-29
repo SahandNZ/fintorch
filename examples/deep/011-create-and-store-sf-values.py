@@ -50,6 +50,9 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int], transfor
         tasks_dict = {}
         while any(subprocess.is_alive() or not is_started for subprocess, is_started in subprocesses_dict.values()):
             while sum(subprocess.is_alive() for subprocess, _ in subprocesses_dict.values()) < args.max_workers:
+                if len(subprocesses_dict) <= subprocess_index:
+                    break
+
                 key, (subprocess, is_started) = list(subprocesses_dict.items())[subprocess_index]
                 transform, symbol, time_frame = key
                 subprocess_index += 1
