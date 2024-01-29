@@ -2,14 +2,15 @@ from datetime import datetime
 from typing import List, Union
 
 import numpy as np
+import torch
 from rich.progress import Progress
 
-from ._sample import Sample
-from ..transform.feature import FeatureTransform
-from ..transform.label import LabelTransform
-from ...dtype import Data
-from ...enum import TimeFrame
-from ...utils.timestamp import create_timestamps
+from fintorch.deep.dtype._sample import Sample
+from fintorch.deep.transform.feature import FeatureTransform
+from fintorch.deep.transform.label import LabelTransform
+from fintorch.dtype import Data
+from fintorch.enum import TimeFrame
+from fintorch.utils.timestamp import create_timestamps
 
 
 class Dataset:
@@ -76,8 +77,15 @@ class Dataset:
             if progress is not None:
                 progress.update(task, advance=1)
 
-    def preprocess(self, data: Data, timestamp: int) -> np.array:
-        return self.feature_transform.load_or_transform(data, timestamp, self.symbols, self.time_frames)
+    def preprocess(self, data: Data, timestamps: List[int]) -> torch.Tensor:
+        x = []
+        for timestamp in timestamps:
+            feature = self.feature_transform.load_or_transform(data, timestamp, self.symbols, self.time_frames)
+            feature = torch.from_numpy(feature).unsqueeze(0)
+            x.append(feature)
+
+        x = torch.cat(x, dim=0).float()
+        return x
 
     def _load_samples(self, timestamps: List[int]) -> List[Sample]:
         samples = []

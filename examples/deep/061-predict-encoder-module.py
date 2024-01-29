@@ -53,15 +53,16 @@ def main():
         dim_latent=args.dim_latent,
         num_hidden_layers=args.num_hidden_layers,
         batch_norm=args.no_batch_norm,
-        encoder=FeedForward
+        model=FeedForward
     )
 
-    # load candlestick data
+    # prepare inputs (load candlestick data and preprocess x)
     data = load_data(symbols=symbols, time_frames=time_frames)
+    x = dataset.preprocess(data=data, timestamps=dataset.timestamps)
 
     # encoder module forward pass
     start_time = time.perf_counter()
-    latent_x = encoder_module.predict(data=data, timestamps=dataset.timestamps)
+    latent_x = encoder_module.predict(x=x)
     elapsed_time_ms = (time.perf_counter() - start_time) * 1000
     mstd = torch.mean(torch.std(latent_x, dim=-1), dim=0)
 
