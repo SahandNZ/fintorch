@@ -96,15 +96,19 @@ class EncoderModule(Module):
             pickle.dump(model_state_dict, file)
 
     def predict(self, data: Data, timestamps: List[int]):
+        # load model and set it to eval mode
         with open(self.path, "rb") as file:
             model_state_dict = pickle.load(file)
         self.auto_encoder.load_state_dict(model_state_dict)
+        self.auto_encoder.eval()
 
+        # load dataset and predict values
         latent_x = []
         for timestamp in timestamps:
             sample = self.dataset.preprocess(data=data, timestamp=timestamp)
-            x = self.__flatten_x(sample.feature.unsqueeze(0))
-            encoded_x = self.auto_encoder.encode(x)
+            x = torch.from_numpy(sample.feature).unsqueeze(0)
+            flat_x = self.__flatten_x(x=x)
+            encoded_x = self.auto_encoder.encode(flat_x)
             latent_x.append(encoded_x)
 
         latent_x = torch.cat(latent_x, dim=0)

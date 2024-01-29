@@ -135,14 +135,15 @@ class Trainer:
         print("Epoch ({}/{}) (elapsed: {} remaining: {} total: {}) (lr: {:.8f})"
               .format(epoch, epochs, elapsed_time_str, remaining_time_str, total_time_str, self.optimizer.lr))
         print("\t- Metrics")
-        print("\t\t- {:<12} {}: {:.4f} (best: {:.4f})"
-              .format("Train", self.criterion.name, fold.epoch_to_train_loss[epoch], fold.best_train_loss))
-        print("\t\t- {:<12} {}: {:.4f} (best: {:.4f})"
+        print("\t\t- {:<12} {}: {:.4f}, best {}: {:.4f}, best epoch {:<3}"
+              .format("Train", self.criterion.name, fold.epoch_to_train_loss[epoch], self.criterion.name,
+                      fold.best_train_loss, fold.best_train_epoch))
+        print("\t\t- {:<12} {}: {:.4f}, best {}: {:.4f}, best epoch {:<3}"
               .format("Validation", self.criterion.name, fold.epoch_to_validation_loss[epoch],
-                      fold.best_validation_loss))
-        print("\t\t- {:<12} {}: {:.4f} (best: {:.4f}) (best validation: {:.4f})"
-              .format("Test", self.criterion.name, fold.epoch_to_test_loss[epoch], fold.best_test_loss,
-                      fold.best_validation_on_test_loss))
+                      self.criterion.name, fold.best_validation_loss, fold.best_validation_epoch))
+        print("\t\t- {:<12} {}: {:.4f}, best {}: {:.4f}, best epoch {:<3}, best validation: {:.4f}"
+              .format("Test", self.criterion.name, fold.epoch_to_test_loss[epoch], self.criterion.name,
+                      fold.best_test_loss, fold.best_test_epoch, fold.best_validation_on_test_loss))
         print(get_memory_status(start="\t- "))
 
     def ___val_and_test_common_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, batch_size: int,
@@ -161,11 +162,11 @@ class Trainer:
 
         if progress is not None:
             if optimize:
-                description = "Training step of epoch {}".format(epoch)
+                description = "Batched train step of epoch {}".format(epoch)
             elif validation:
-                description = "Validation step of epoch {}".format(epoch)
+                description = "Batched validation step of epoch {}".format(epoch)
             else:
-                description = "Test step of epoch {}".format(epoch)
+                description = "Batched test step of epoch {}".format(epoch)
             task = progress.add_task(description=description, total=self.data_loader.batch_count)
 
         # move model to cuda if it's available
