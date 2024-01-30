@@ -84,7 +84,7 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int], transfor
                         progress.update(total_task, advance=advance)
                     else:
                         progress.update(task, visible=False)
-                        del queue
+                        del process_to_args[process]
 
 
 def main():
