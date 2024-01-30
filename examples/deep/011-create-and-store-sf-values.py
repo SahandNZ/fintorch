@@ -1,5 +1,6 @@
 import argparse
 import atexit
+import copy
 import itertools
 import json
 import time
@@ -17,9 +18,9 @@ from fintorch.setting import RICH_PROGRESS_COLUMNS
 from fintorch.utils.timestamp import create_timestamps
 
 
-def terminate_child_processes(child_processes: List[Process]):
-    for child_process in child_processes:
-        child_process.terminate()
+def terminate_processes(processes: List[Process]):
+    for process in processes:
+        process.terminate()
 
 
 def task_target(transform_: Transform, symbol: str, time_frame: int, timestamps: List[int], queue: Queue):
@@ -38,9 +39,6 @@ def task_target(transform_: Transform, symbol: str, time_frame: int, timestamps:
 
 
 def run_multi_process(args, symbols: List[str], time_frames: List[int], transforms: List[Transform]):
-    # set at exit callback to terminate all processes
-    atexit.register(terminate_child_processes)
-
     # create timestamps
     timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
 
@@ -52,24 +50,33 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int], transfor
         process = Process(target=task_target, args=process_args)
         process_to_args[process] = (transform, symbol, time_frame, queue)
 
+    # set at exit callback to terminate all processes
+    # atexit.register(terminate_processes, processes=list(process_to_args.keys()))
+
     # start processes and update progress bars
     process_to_task = {}
-    process_to_is_started = {p: False for p in process_to_args.keys()}
+    pending_process_set = set(process_to_args.keys())
+    running_process_set = set()
+    done_process_set = set()
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
         total_items = len(transforms) * len(symbols) * len(time_frames) * len(timestamps)
         total_task = progress.add_task(description="Total", total=total_items)
-
-        while any(process.is_alive() or not is_started for process, is_started in process_to_is_started.items()):
-            for process, (transform, symbol, time_frame, queue) in process_to_args.items():
-                # start process if there is free worker (processor)
-                is_started = process_to_is_started[process]
+        while 0 < len(pending_process_set) or 0 < len(running_process_set):
+            # start process if there is free worker (processor)
+            for process in pending_process_set:
                 alive_process_count = sum(process.is_alive() for process in process_to_args.keys())
-                if not is_started and alive_process_count < args.max_workers:
-                    process_to_is_started[process] = True
+                if alive_process_count < args.max_workers:
+                    running_process_set.add(process)
                     process.start()
 
+            # remove running processes from pending set
+            pending_process_set = pending_process_set - running_process_set
+
+            # update progress bars
+            for process in running_process_set:
+                transform, symbol, time_frame, queue = process_to_args[process]
                 # create progress bar
-                if process not in process_to_task and process.is_alive() and process_to_is_started[process]:
+                if process not in process_to_task:
                     description = "Creating and storing SF values of {:^12} for {}-{}" \
                         .format(transform.short_name, symbol, time_frame)
                     task = progress.add_task(description=description, total=len(timestamps))
@@ -84,7 +91,10 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int], transfor
                         progress.update(total_task, advance=advance)
                     else:
                         progress.update(task, visible=False)
-                        del process_to_args[process]
+                        done_process_set.add(process)
+
+            # remove done processes from running set
+            running_process_set = running_process_set - done_process_set
 
 
 def main():
