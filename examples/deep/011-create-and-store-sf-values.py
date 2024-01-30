@@ -38,17 +38,18 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int], transfor
     # create processes
     process_to_args = {}
     for transform, symbol, time_frame in itertools.product(transforms, symbols, time_frames):
-        process_args = (transform, symbol, time_frame, timestamps, Queue())
+        queue = Queue()
+        process_args = (transform, symbol, time_frame, timestamps, queue)
         process = Process(target=task_target, args=process_args)
-        process_to_args[process] = process_args
+        process_to_args[process] = (transform, symbol, time_frame, queue)
 
     # start processes and update progress bars
     process_to_task = {}
     process_to_is_started = {p: False for p in process_to_args.keys()}
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
         while any(process.is_alive() or not is_started for process, is_started in process_to_is_started.items()):
-            for process, (transform, symbol, time_frame, timestamps, queue) in process_to_args.items():
-                # start processes there is free worker (processor)
+            for process, (transform, symbol, time_frame, queue) in process_to_args.items():
+                # start process if there is free worker (processor)
                 is_started = process_to_is_started[process]
                 alive_process_count = sum(process.is_alive() for process in process_to_args.keys())
                 if not is_started and alive_process_count < args.max_workers:
