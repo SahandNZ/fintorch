@@ -1,4 +1,5 @@
 import argparse
+import atexit
 import itertools
 import json
 import time
@@ -37,6 +38,9 @@ def task_target(transform_: Transform, symbol: str, time_frame: int, timestamps:
 
 
 def run_multi_process(args, symbols: List[str], time_frames: List[int], transforms: List[Transform]):
+    # set at exit callback to terminate all processes
+    atexit.register(terminate_child_processes)
+
     # create timestamps
     timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
 
