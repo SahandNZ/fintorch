@@ -47,16 +47,15 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int], transfor
     process_to_is_started = {p: False for p in process_to_args.keys()}
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
         while any(process.is_alive() or not is_started for process, is_started in process_to_is_started.items()):
-            # start processes there is free worker (processor)
-            for process, is_started in process_to_is_started.items():
+            for process, (transform, symbol, time_frame, timestamps, queue) in process_to_args.items():
+                # start processes there is free worker (processor)
+                is_started = process_to_is_started[process]
                 alive_process_count = sum(process.is_alive() for process in process_to_args.keys())
                 if not is_started and alive_process_count < args.max_workers:
                     process_to_is_started[process] = True
                     process.start()
 
-            # update progress bar
-            for process, (transform, symbol, time_frame, timestamps, queue) in process_to_args.items():
-                # create task in rich progress bar
+                # create progress bar
                 if process not in process_to_task and process.is_alive() and process_to_is_started[process]:
                     description = "Creating and storing SF values of {:^12} for {}-{}" \
                         .format(transform.short_name, symbol, time_frame)
