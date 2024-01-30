@@ -26,8 +26,8 @@ def target(transform_: Transform, symbol: str, time_frame: int, timestamps: List
 
     for index, timestamp in enumerate(timestamps):
         transform_.load_or_transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
-        if (index + 1) % 10 == 0:
-            queue.put((10))
+        if (index + 1) % 100 == 0:
+            queue.put((100))
     queue.put((-1))
 
 
