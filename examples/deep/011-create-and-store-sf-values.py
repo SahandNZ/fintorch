@@ -20,7 +20,7 @@ def terminate_child_processes(child_processes: List[Process]):
         child_process.terminate()
 
 
-def target(transform_: Transform, symbol: str, time_frame: int, timestamps: List[int], queue: Queue):
+def task_target(transform_: Transform, symbol: str, time_frame: int, timestamps: List[int], queue: Queue):
     # load candlestick data
     data = load_data(symbols=[symbol], time_frames=[time_frame])
 
@@ -35,49 +35,43 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int], transfor
     # create timestamps
     timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
 
-    queues_dict = {}
-    subprocesses_dict = {}
-    for key in itertools.product(transforms, symbols, time_frames):
-        queue = Queue()
-        queues_dict[key] = queue
+    # create processes
+    process_to_args = {}
+    for transform, symbol, time_frame in itertools.product(transforms, symbols, time_frames):
+        process_args = (transform, symbol, time_frame, timestamps, Queue())
+        process = Process(target=task_target, args=process_args)
+        process_to_args[process] = process_args
 
-        subprocess_args = (*key, timestamps, queue)
-        subprocesses = Process(target=target, args=subprocess_args)
-        subprocesses_dict[key] = (subprocesses, False)
-
+    # start processes and update progress bars
+    process_to_task = {}
+    process_to_is_started = {p: False for p in process_to_args.keys()}
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
-        subprocess_index = 0
-        tasks_dict = {}
-        while any(subprocess.is_alive() or not is_started for subprocess, is_started in subprocesses_dict.values()):
-            while sum(subprocess.is_alive() for subprocess, _ in subprocesses_dict.values()) < args.max_workers:
-                if len(subprocesses_dict) <= subprocess_index:
-                    break
+        while any(process.is_alive() or not is_started for process, is_started in process_to_is_started.items()):
+            # start processes there is free worker (processor)
+            for process, is_started in process_to_is_started.items():
+                alive_process_count = sum(process.is_alive() for process in process_to_args.keys())
+                if not is_started and alive_process_count < args.max_workers:
+                    process_to_is_started[process] = True
+                    process.start()
 
-                key, (subprocess, is_started) = list(subprocesses_dict.items())[subprocess_index]
-                transform, symbol, time_frame = key
-                subprocess_index += 1
-
-                # start subprocess
-                subprocess.start()
-                subprocesses_dict[key] = (subprocess, True)
-
+            # update progress bar
+            for process, (transform, symbol, time_frame, timestamps, queue) in process_to_args.items():
                 # create task in rich progress bar
-                description = "Creating and storing SF values of {:^12} for {}-{}" \
-                    .format(transform.short_name, symbol, time_frame)
-                task = progress.add_task(description=description, total=len(timestamps))
-                tasks_dict[key] = task
+                if process not in process_to_task and process.is_alive() and process_to_is_started[process]:
+                    description = "Creating and storing SF values of {:^12} for {}-{}" \
+                        .format(transform.short_name, symbol, time_frame)
+                    task = progress.add_task(description=description, total=len(timestamps))
+                    process_to_task[process] = task
 
-            # update rich progress bars
-            for key, (subprocess, is_started) in subprocesses_dict.items():
-                if is_started:
-                    queue = queues_dict[key]
-                    if not queue.empty():
-                        advance = queue.get()
-                        task = tasks_dict[key]
-                        if 0 < advance:
-                            progress.update(task, advance=advance)
-                        else:
-                            progress.update(task, visible=False)
+                # update progress bar
+                if not queue.empty():
+                    advance = queue.get()
+                    task = process_to_task[process]
+                    if 0 < advance:
+                        progress.update(task, advance=advance)
+                    else:
+                        progress.update(task, visible=False)
+                        del queue
 
 
 def main():
