@@ -1,6 +1,7 @@
 import argparse
 import itertools
 import json
+import time
 from multiprocessing import Process, Queue
 from typing import List
 
@@ -24,10 +25,14 @@ def task_target(transform_: Transform, symbol: str, time_frame: int, timestamps:
     # load candlestick data
     data = load_data(symbols=[symbol], time_frames=[time_frame])
 
+    previous_message_time, previous_message_index = time.time(), 0
     for index, timestamp in enumerate(timestamps):
         transform_.load_or_transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
-        if (index + 1) % 100 == 0:
-            queue.put((100))
+        if 1 < time.time() - previous_message_time:
+            queue.put((index - previous_message_index + 1))
+            previous_message_time = time.time()
+            previous_message_index = index
+
     queue.put((-1))
 
 
