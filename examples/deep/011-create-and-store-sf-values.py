@@ -96,6 +96,10 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int], transfor
             # remove done processes from running set
             running_process_set = running_process_set - done_process_set
 
+            # remove args of done processes
+            for process in done_process_set:
+                del process_to_args[process]
+
 
 def main():
     parser = argparse.ArgumentParser()
