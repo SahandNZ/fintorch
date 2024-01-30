@@ -98,7 +98,8 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int], transfor
 
             # remove args of done processes
             for process in done_process_set:
-                del process_to_args[process]
+                if process in process_to_args:
+                    del process_to_args[process]
 
 
 def main():
