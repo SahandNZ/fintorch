@@ -52,6 +52,9 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int], transfor
     process_to_task = {}
     process_to_is_started = {p: False for p in process_to_args.keys()}
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
+        total_items = len(transforms) * len(symbols) * len(time_frames) * len(timestamps)
+        total_task = progress.add_task(description="Total", total=total_items)
+
         while any(process.is_alive() or not is_started for process, is_started in process_to_is_started.items()):
             for process, (transform, symbol, time_frame, queue) in process_to_args.items():
                 # start process if there is free worker (processor)
@@ -74,6 +77,7 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int], transfor
                     task = process_to_task[process]
                     if 0 < advance:
                         progress.update(task, advance=advance)
+                        progress.update(total_task, advance=advance)
                     else:
                         progress.update(task, visible=False)
                         del queue
