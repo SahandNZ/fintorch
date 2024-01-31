@@ -23,7 +23,7 @@ def main():
     feature_transform = RollingMeanStdTrRocFeatureTransform(sequence_length=args.dim_sequence)
     label_transform = ForwardMiddleSmaLabelTransform()
 
-    # create dataset
+    # define dataset
     dataset = SfDataset(
         start_date=args.start_date,
         stop_date=args.stop_date,
