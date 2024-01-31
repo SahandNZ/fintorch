@@ -7,14 +7,14 @@ from ...enum import TimeFrame
 
 
 class CrossValidation(ABC):
-    def __init__(self, train_percentage: float, dev_percentage: float):
+    def __init__(self, train_percentage: float, val_percentage: float):
         self.__train_percentage: float = train_percentage
-        self.__dev_percentage: float = dev_percentage
+        self.__val_percentage: float = val_percentage
 
         self.__dataset: Dataset = None
 
         self._train_length: int = None
-        self._dev_length: int = None
+        self._val_length: int = None
         self._test_length: int = None
         self._folds_count: int = None
         self._index: int = -1
@@ -24,16 +24,16 @@ class CrossValidation(ABC):
         return self.__train_percentage
 
     @property
-    def dev_percentage(self) -> float:
-        return self.__dev_percentage
+    def val_percentage(self) -> float:
+        return self.__val_percentage
 
     @property
     def dataset(self) -> Dataset:
         return self.__dataset
 
     @property
-    def time_frame(self) -> TimeFrame:
-        return self.dataset.sampling_time_frame
+    def interval(self) -> TimeFrame:
+        return self.dataset.interval
 
     @property
     def start_date(self) -> datetime:
@@ -52,8 +52,8 @@ class CrossValidation(ABC):
         return self._train_length
 
     @property
-    def dev_length(self) -> int:
-        return self._dev_length
+    def val_length(self) -> int:
+        return self._val_length
 
     @property
     def test_length(self) -> int:
@@ -68,13 +68,13 @@ class CrossValidation(ABC):
         return self._index
 
     def _create_fold_by_start_timestamp(self, start_timestamp: int) -> Fold:
-        train_stop_timestamp = int(start_timestamp + self.train_length * self.time_frame)
-        dev_stop_timestamp = int(train_stop_timestamp + self.dev_length * self.time_frame)
-        test_stop_timestamp = int(dev_stop_timestamp + self.test_length * self.time_frame)
+        train_stop_timestamp = int(start_timestamp + self.train_length * self.interval)
+        dev_stop_timestamp = int(train_stop_timestamp + self.val_length * self.interval)
+        test_stop_timestamp = int(dev_stop_timestamp + self.test_length * self.interval)
 
-        train_timestamps = list(range(start_timestamp, train_stop_timestamp, self.time_frame))
-        dev_timestamps = list(range(train_stop_timestamp, dev_stop_timestamp, self.time_frame))
-        test_timestamps = list(range(dev_stop_timestamp, test_stop_timestamp, self.time_frame))
+        train_timestamps = list(range(start_timestamp, train_stop_timestamp, self.interval))
+        dev_timestamps = list(range(train_stop_timestamp, dev_stop_timestamp, self.interval))
+        test_timestamps = list(range(dev_stop_timestamp, test_stop_timestamp, self.interval))
 
         fold = Fold(train_timestamps, dev_timestamps, test_timestamps)
         return fold
@@ -83,8 +83,8 @@ class CrossValidation(ABC):
         self.__dataset = dataset
 
         self._train_length = int(self.samples_count * self.train_percentage // 100)
-        self._dev_length = int(self.samples_count * self.dev_percentage // 100)
-        self._test_length = int(self.samples_count - self.train_length - self.dev_length)
+        self._val_length = int(self.samples_count * self.val_percentage // 100)
+        self._test_length = int(self.samples_count - self.train_length - self.val_length)
 
         return self.__iter__()
 
