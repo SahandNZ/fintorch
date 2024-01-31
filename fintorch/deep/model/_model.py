@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Iterator, List
 
 import torch
 from torch import nn
@@ -58,12 +59,17 @@ class Model(nn.Module, Component, ABC):
         x = x.to(self.device)
         return self._forward(x)
 
-    def reset(self, xavier: bool = True):
-        for layer in self.children():
-            if xavier and (type(layer) == nn.Linear or type(layer) == nn.Conv2d):
-                nn.init.xavier_uniform_(layer.weight)
-            elif hasattr(layer, 'reset_parameters'):
+    def reset(self, layers: List[nn.Module] = None):
+        if layers is None:
+            layers = list(self.children())
+
+        for layer in layers:
+            if hasattr(layer, "reset_parameters"):
                 layer.reset_parameters()
+            elif hasattr(layer, "children"):
+                layer_children = list(layer.children())
+                if 0 < len(layer_children):
+                    self.reset(layers=layer_children)
 
     @abstractmethod
     def _forward(self, x: torch.Tensor) -> torch.Tensor:
