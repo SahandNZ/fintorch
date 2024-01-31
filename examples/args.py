@@ -20,6 +20,9 @@ def add_default_args_and_parse(parser: argparse):
     parser.add_argument("--batch-size", action="store", type=int, required=False, default=256)
     parser.add_argument("--max-workers", action="store", type=int, required=False, default=os.cpu_count())
 
+    # float args
+    parser.add_argument("--dropout", action="store", type=float, required=False, default=0.5)
+
     # string args
     parser.add_argument("--config-path", action="store", type=str, required=False, default="./../config.json")
     args = parser.parse_args()
