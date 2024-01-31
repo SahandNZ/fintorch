@@ -4,7 +4,7 @@ import torch
 from rich.progress import Progress
 
 from ._dataset import Dataset
-from ...dtype import Sample
+from .._sample import Sample
 from ...transform.feature import FeatureTransform
 from ...transform.label import LabelTransform
 from ....dtype import Data

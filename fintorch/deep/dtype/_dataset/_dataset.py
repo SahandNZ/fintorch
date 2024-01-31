@@ -5,7 +5,7 @@ from typing import List, Union
 import torch
 from rich.progress import Progress
 
-from .. import Sample
+from .._sample import Sample
 from ...transform.feature import FeatureTransform
 from ...transform.label import LabelTransform
 from ....dtype import Data
