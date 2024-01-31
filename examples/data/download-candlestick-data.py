@@ -4,6 +4,7 @@ from typing import List
 
 from rich.progress import Progress
 
+from examples.args import add_default_args_and_parse
 from fintorch.data import LOCAL_DATA
 from fintorch.setting import RICH_PROGRESS_COLUMNS
 
@@ -20,9 +21,7 @@ def run(args, symbols: List[str]):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--time-frame", action="store", type=int, required=False, default=900)
-    parser.add_argument("--config-path", action="store", type=str, required=False, default="./../config.json")
-    args = parser.parse_args()
+    args = add_default_args_and_parse(parser)
 
     # load config
     with open(args.config_path, "r") as file:
