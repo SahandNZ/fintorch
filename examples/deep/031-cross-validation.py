@@ -37,9 +37,10 @@ def main():
 
     # define sliding window cross validation
     cross_validation = CrossValidation(train_percentage=80, val_percentage=10)
-    cross_validation = SlidingWindowCrossValidation(train_percentage=80, val_percentage=10, window_length=10000)
+    cross_validation = SlidingWindowCrossValidation(train_percentage=50, val_percentage=20, window_length=50000)
 
     for fold in cross_validation(dataset=dataset):
+        print("{:<32}: {}".format("Fold index", fold.index))
         print("{:<32}: {}".format("Fold train start datetime", fold.train_start_datetime))
         print("{:<32}: {}".format("Fold validation start datetime", fold.val_start_datetime))
         print("{:<32}: {}".format("Fold test start datetime", fold.test_start_datetime))
