@@ -69,14 +69,15 @@ class CrossValidation(ABC):
 
     def _create_fold_by_start_timestamp(self, start_timestamp: int) -> Fold:
         train_stop_timestamp = int(start_timestamp + self.train_length * self.interval)
-        dev_stop_timestamp = int(train_stop_timestamp + self.val_length * self.interval)
-        test_stop_timestamp = int(dev_stop_timestamp + self.test_length * self.interval)
+        val_stop_timestamp = int(train_stop_timestamp + self.val_length * self.interval)
+        test_stop_timestamp = int(val_stop_timestamp + self.test_length * self.interval)
 
         train_timestamps = list(range(start_timestamp, train_stop_timestamp, self.interval))
-        dev_timestamps = list(range(train_stop_timestamp, dev_stop_timestamp, self.interval))
-        test_timestamps = list(range(dev_stop_timestamp, test_stop_timestamp, self.interval))
+        val_timestamps = list(range(train_stop_timestamp, val_stop_timestamp, self.interval))
+        test_timestamps = list(range(val_stop_timestamp, test_stop_timestamp, self.interval))
 
-        fold = Fold(train_timestamps, dev_timestamps, test_timestamps)
+        fold = Fold(index=self.index, train_timestamps=train_timestamps, val_timestamps=val_timestamps,
+                    test_timestamps=test_timestamps)
         return fold
 
     def __call__(self, dataset: Dataset) -> Iterator:

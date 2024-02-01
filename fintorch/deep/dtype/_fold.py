@@ -5,9 +5,10 @@ from ..criterion import Criterion
 
 
 class Fold:
-    def __init__(self, train_timestamps: List[int], validation_timestamps: List[int], test_timestamps: List[int]):
+    def __init__(self, index: int, train_timestamps: List[int], val_timestamps: List[int], test_timestamps: List[int]):
+        self.__index: int = index
         self.__train_timestamps: List[int] = train_timestamps
-        self.__validation_timestamps: List[int] = validation_timestamps
+        self.__val_timestamps: List[int] = val_timestamps
         self.__test_timestamp: List[int] = test_timestamps
 
         self.__criterion: Criterion = None
@@ -17,12 +18,24 @@ class Fold:
         self.__epoch_to_model_state_dict: Dict[int, Dict] = {}
 
     @property
+    def index(self) -> int:
+        return self.__index
+
+    @property
+    def start_date(self) -> datetime:
+        return self.train_start_datetime
+
+    @property
+    def stop_date(self) -> datetime:
+        return self.test_stop_datetime
+
+    @property
     def train_timestamps(self) -> List[int]:
         return self.__train_timestamps
 
     @property
-    def validation_timestamps(self) -> List[int]:
-        return self.__validation_timestamps
+    def val_timestamps(self) -> List[int]:
+        return self.__val_timestamps
 
     @property
     def test_timestamps(self) -> List[int]:
@@ -33,8 +46,8 @@ class Fold:
         return datetime.fromtimestamp(self.train_timestamps[0])
 
     @property
-    def validation_start_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.validation_timestamps[0])
+    def val_start_datetime(self) -> datetime:
+        return datetime.fromtimestamp(self.val_timestamps[0])
 
     @property
     def test_start_datetime(self) -> datetime:
@@ -57,13 +70,12 @@ class Fold:
         return self.__epoch_to_train_loss
 
     @property
-    def epoch_to_validation_loss(self) -> Dict[int, float]:
+    def epoch_to_val_loss(self) -> Dict[int, float]:
         return self.__epoch_to_validation_loss
 
     @property
     def epoch_to_test_loss(self) -> Dict[int, float]:
         return self.__epoch_to_test_loss
-
 
     @property
     def epoch_to_model_state_dict(self) -> Dict[int, Dict]:
@@ -74,8 +86,8 @@ class Fold:
         return self.__best_epoch_and_loss(self.epoch_to_train_loss)
 
     @property
-    def best_validation_epoch(self) -> int:
-        return self.__best_epoch_and_loss(self.epoch_to_validation_loss)
+    def best_val_epoch(self) -> int:
+        return self.__best_epoch_and_loss(self.epoch_to_val_loss)
 
     @property
     def best_test_epoch(self) -> int:
@@ -86,24 +98,24 @@ class Fold:
         return self.epoch_to_train_loss[self.best_train_epoch]
 
     @property
-    def best_validation_loss(self) -> float:
-        return self.epoch_to_validation_loss[self.best_validation_epoch]
+    def best_val_loss(self) -> float:
+        return self.epoch_to_val_loss[self.best_val_epoch]
 
     @property
     def best_test_loss(self) -> float:
         return self.epoch_to_test_loss[self.best_test_epoch]
 
     @property
-    def best_validation_on_test_loss(self) -> float:
-        return self.epoch_to_test_loss[self.best_validation_epoch]
+    def best_val_on_test_loss(self) -> float:
+        return self.epoch_to_test_loss[self.best_val_epoch]
 
     @property
     def best_train_model_state_dict(self) -> Dict:
         return self.epoch_to_model_state_dict[self.best_train_epoch]
 
     @property
-    def best_validation_model_state_dict(self) -> Dict:
-        return self.epoch_to_model_state_dict[self.best_validation_epoch]
+    def best_val_model_state_dict(self) -> Dict:
+        return self.epoch_to_model_state_dict[self.best_val_epoch]
 
     @property
     def best_test_model_state_dict(self) -> Dict:
