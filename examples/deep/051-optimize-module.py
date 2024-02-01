@@ -2,11 +2,12 @@ import argparse
 import json
 
 from rich.progress import Progress
+from torch import nn
 
 from examples.args import add_default_args_and_parse
-from fintorch.deep.dtype import Dataset
+from fintorch.deep.dtype import SfDataset
 from fintorch.deep.model import FeedForward
-from fintorch.deep.module import EncoderModule
+from fintorch.deep.module import Module
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
 from fintorch.setting import RICH_PROGRESS_COLUMNS
@@ -24,32 +25,40 @@ def main():
     time_frames = config_dict["time-frames"]
 
     # define feature and label transforms
-    feature_transform = StftTrRocFeatureTransform(sequence_length=args.sequence_length)
-    label_transform = UpDownLabelTransform()
+    feature_transform = RollingMeanStdTrRocFeatureTransform(sequence_length=args.dim_sequence)
+    label_transform = ForwardMiddleSmaLabelTransform()
 
-    # create dataset
-    dataset = Dataset(
+    # define dataset
+    dataset = SfDataset(
         start_date=args.start_date,
         stop_date=args.stop_date,
-        sampling_time_frame=args.sampling_time_frame,
-        symbols=symbols,
-        time_frames=time_frames,
-        sequence_length=args.sequence_length,
+        interval=args.interval,
+        symbol=symbols[0],
+        time_frame=time_frames[0],
+        sequence_length=args.dim_sequence,
         feature_transform=feature_transform,
         label_transform=label_transform
     )
 
-    # define encoder module
-    encoder_module = EncoderModule(
-        dataset=dataset,
-        dim_latent=args.dim_latent,
+    # define model
+    model = FeedForward(
+        dim_sequence=args.dim_sequence,
+        dim_feature=4,
+        dim_output=2,
         num_hidden_layers=args.num_hidden_layers,
         batch_norm=args.no_batch_norm,
-        model_type=FeedForward
+        dropout=args.dropout,
+        activation_fn=nn.Softmax(dim=-1)
+    )
+
+    # define module
+    module = Module(
+        dataset=dataset,
+        model=model
     )
 
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
-        encoder_module.optimize_and_store(epochs=args.epochs, batch_size=args.batch_size, progress=progress)
+        module.optimize_and_store(epochs=args.epochs, batch_size=args.batch_size, progress=progress)
 
 
 if __name__ == '__main__':
