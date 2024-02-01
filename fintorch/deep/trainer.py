@@ -89,7 +89,7 @@ class Trainer:
             fold_start_time = time.time()
             self.__fold_prepare_step(model=model, fold=fold)
             self.__fold_optimization_step(dataset, model, fold, epochs, batch_size, progress)
-            self.__fold_post_optimization_step(model=model, fold=fold)
+            self.__fold_post_optimization_step(model=model)
             fold_time = time.time() - fold_start_time
             self.__fold_log_step(fold=fold, fold_time=fold_time)
             folds.append(fold)
@@ -113,7 +113,7 @@ class Trainer:
             epoch_time = time.time() - epoch_start_time
             self.__epoch_log_step(fold, epoch, epochs, epoch_time)
 
-    def __fold_post_optimization_step(self, model: Model, fold: Fold):
+    def __fold_post_optimization_step(self, model: Model):
         cpu = torch.device("cpu")
         model.to(cpu)
 
@@ -133,21 +133,25 @@ class Trainer:
 
     def __epoch_train_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, batch_size: int,
                            progress: Progress) -> None:
-        timestamps = fold.train_timestamps
-        loss = self.___batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
+        loss = self.___batched_common_step(dataset=dataset, model=model, timestamps=fold.train_timestamps, epoch=epoch,
                                            batch_size=batch_size, optimize=True, validation=False, progress=progress)
         fold.epoch_to_train_loss[epoch] = loss
-        fold.epoch_to_model_state_dict[epoch] = copy.deepcopy(model.state_dict())
 
     def __epoch_val_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, batch_size: int,
                          progress: Progress) -> None:
-        self.___val_and_test_common_step(dataset=dataset, model=model, fold=fold, epoch=epoch, batch_size=batch_size,
-                                         progress=progress, validation=True)
+        loss = self.___batched_common_step(dataset=dataset, model=model, timestamps=fold.val_timestamps, epoch=epoch,
+                                           batch_size=batch_size, optimize=False, validation=True, progress=progress)
+        fold.epoch_to_val_loss[epoch] = loss
+
+        # update best_model_state_dict if best val loss updated
+        if epoch == fold.best_val_epoch:
+            fold.best_model_state_dict = {k: v.cpu() for k, v in copy.deepcopy(model.state_dict()).items()}
 
     def __epoch_test_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, batch_size: int,
                           progress: Progress) -> None:
-        self.___val_and_test_common_step(dataset=dataset, model=model, fold=fold, epoch=epoch, batch_size=batch_size,
-                                         progress=progress, validation=False)
+        loss = self.___batched_common_step(dataset=dataset, model=model, timestamps=fold.test_timestamps, epoch=epoch,
+                                           batch_size=batch_size, optimize=False, validation=False, progress=progress)
+        fold.epoch_to_test_loss[epoch] = loss
 
     def __epoch_log_step(self, fold: Fold, epoch: int, epochs: int, epoch_time: float) -> None:
         elapsed_time = epoch_time * epoch
@@ -171,16 +175,6 @@ class Trainer:
               .format("Test", self.criterion.name, fold.epoch_to_test_loss[epoch],
                       self.criterion.name, fold.best_test_loss, fold.best_test_epoch))
         print(get_memory_status(start="\t\t- "))
-
-    def ___val_and_test_common_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: int, batch_size: int,
-                                    progress: Progress, validation: bool) -> None:
-        timestamps = fold.val_timestamps if validation else fold.test_timestamps
-        loss = self.___batched_common_step(dataset=dataset, model=model, timestamps=timestamps, epoch=epoch,
-                                           batch_size=batch_size, optimize=False, validation=validation,
-                                           progress=progress)
-
-        epoch_to_loss = fold.epoch_to_val_loss if validation else fold.epoch_to_test_loss
-        epoch_to_loss[epoch] = loss
 
     def ___batched_common_step(self, dataset: Dataset, model: Model, timestamps: List[int], epoch: int, batch_size: int,
                                optimize: bool, validation: bool, progress: Progress) -> float:

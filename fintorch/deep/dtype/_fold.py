@@ -13,9 +13,10 @@ class Fold:
 
         self.__criterion: Criterion = None
         self.__epoch_to_train_loss: Dict[int, float] = {}
-        self.__epoch_to_validation_loss: Dict[int, float] = {}
+        self.__epoch_to_val_loss: Dict[int, float] = {}
         self.__epoch_to_test_loss: Dict[int, float] = {}
-        self.__epoch_to_model_state_dict: Dict[int, Dict] = {}
+
+        self.__best_model_state_dict: Dict = None
 
     @property
     def index(self) -> int:
@@ -71,15 +72,11 @@ class Fold:
 
     @property
     def epoch_to_val_loss(self) -> Dict[int, float]:
-        return self.__epoch_to_validation_loss
+        return self.__epoch_to_val_loss
 
     @property
     def epoch_to_test_loss(self) -> Dict[int, float]:
         return self.__epoch_to_test_loss
-
-    @property
-    def epoch_to_model_state_dict(self) -> Dict[int, Dict]:
-        return self.__epoch_to_model_state_dict
 
     @property
     def best_train_epoch(self) -> int:
@@ -95,35 +92,27 @@ class Fold:
 
     @property
     def best_train_loss(self) -> float:
-        return self.epoch_to_train_loss[self.best_train_epoch]
+        return self.epoch_to_train_loss[self.best_train_epoch] if self.best_train_epoch is not None else None
 
     @property
     def best_val_loss(self) -> float:
-        return self.epoch_to_val_loss[self.best_val_epoch]
+        return self.epoch_to_val_loss[self.best_val_epoch] if self.best_val_epoch is not None else None
 
     @property
     def best_test_loss(self) -> float:
-        return self.epoch_to_test_loss[self.best_test_epoch]
+        return self.epoch_to_test_loss[self.best_test_epoch] if self.best_test_epoch is not None else None
 
     @property
-    def best_val_on_test_loss(self) -> float:
-        return self.epoch_to_test_loss[self.best_val_epoch]
+    def best_model_state_dict(self) -> Dict:
+        return self.__best_model_state_dict
 
-    @property
-    def best_train_model_state_dict(self) -> Dict:
-        return self.epoch_to_model_state_dict[self.best_train_epoch]
+    @best_model_state_dict.setter
+    def best_model_state_dict(self, value: Dict) -> None:
+        self.__best_model_state_dict = value
 
-    @property
-    def best_val_model_state_dict(self) -> Dict:
-        return self.epoch_to_model_state_dict[self.best_val_epoch]
-
-    @property
-    def best_test_model_state_dict(self) -> Dict:
-        return self.epoch_to_model_state_dict[self.best_test_epoch]
-
-    def __best_epoch_and_loss(self, fold_to_loss: Dict[int, float]) -> int:
+    def __best_epoch_and_loss(self, epoch_to_loss: Dict[int, float]) -> int:
         best_epoch, best_loss = None, None
-        for epoch, loss in fold_to_loss.items():
+        for epoch, loss in epoch_to_loss.items():
             if best_loss is None or self.criterion.compare(best_loss, loss):
                 best_loss = loss
                 best_epoch = epoch
