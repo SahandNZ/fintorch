@@ -14,7 +14,7 @@ def add_default_args_and_parse(parser: argparse):
 
     # integer args
     parser.add_argument("--epochs", action="store", type=int, required=False, default=20)
-    parser.add_argument("--batch-size", action="store", type=int, required=False, default=256)
+    parser.add_argument("--batch-size", action="store", type=int, required=False, default=1024)
     parser.add_argument("--dim-sequence", action="store", type=int, required=False, default=32)
     parser.add_argument("--num-hidden-layers", action="store", type=int, required=False, default=2)
     parser.add_argument("--interval", action="store", type=int, required=False, default=TimeFrame.MIN15)
