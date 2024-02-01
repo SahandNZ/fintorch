@@ -121,7 +121,7 @@ class Trainer:
         fold_index = fold.index + 1
         fold_counts = self.cross_validation.folds_count
         elapsed_time = fold_time * fold_index
-        total_time = fold_time * (fold_counts / fold_index)
+        total_time = fold_time * fold_counts
         remaining_time = total_time - elapsed_time
         elapsed_time_str = datetime.strftime(datetime.utcfromtimestamp(elapsed_time), '%H:%M:%S')
         remaining_time_str = datetime.strftime(datetime.utcfromtimestamp(remaining_time), '%H:%M:%S')
