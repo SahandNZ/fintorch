@@ -21,7 +21,7 @@ class Module(ABC):
 
         self.__last_train_timestamp: int = 0
         self.__trainer: Trainer = Trainer(
-            cross_validation=SlidingWindowCrossValidation(train_percentage=50, val_percentage=25, window_length=20000),
+            cross_validation=SlidingWindowCrossValidation(train_percentage=50, val_percentage=20, window_length=50000),
             data_loader=DataLoader(post_load_fn=self._post_load_fn),
             criterion=CE(),
             optimizer=Adam(lr=1e-3, weight_decay=1e-2),
