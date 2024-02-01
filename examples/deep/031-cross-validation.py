@@ -41,7 +41,7 @@ def main():
 
     for fold in cross_validation(dataset=dataset):
         print("{:<32}: {}".format("Fold train start datetime", fold.train_start_datetime))
-        print("{:<32}: {}".format("Fold validation start datetime", fold.validation_start_datetime))
+        print("{:<32}: {}".format("Fold validation start datetime", fold.val_start_datetime))
         print("{:<32}: {}".format("Fold test start datetime", fold.test_start_datetime))
         print("{:<32}: {}\n".format("Fold test stop datetime", fold.test_stop_datetime))
 

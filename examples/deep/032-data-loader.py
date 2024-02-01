@@ -41,8 +41,7 @@ def main():
 
     for fold in cross_validation(dataset=dataset):
         print("=" * 32)
-        print(fold.train_start_datetime, fold.validation_start_datetime, fold.test_start_datetime,
-              fold.test_stop_datetime)
+        print(fold.train_start_datetime, fold.val_start_datetime, fold.test_start_datetime, fold.test_stop_datetime)
         data_loader = DataLoader()
         for batch_x, batch_y in data_loader(dataset=dataset, timestamps=fold.train_timestamps, batch_size=128):
             print("\t- ", batch_x.shape, batch_y.shape)
