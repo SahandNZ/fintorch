@@ -1,6 +1,7 @@
 import importlib
 import inspect
-from typing import Dict, Callable
+import time
+from typing import Dict, Callable, Tuple
 
 
 def import_class(module: str, contains: str = None):
@@ -14,3 +15,11 @@ def call_with_dict(function: Callable, params: Dict):
     params = {k.replace('-', '_'): v for k, v in params.items()}
     params = {k: v for k, v in params.items() if k in parameters_name}
     return function(**params)
+
+
+def timeit_with_args(function: Callable, args: Tuple):
+    start_time = time.time()
+    result = function(*args)
+    elapsed_time = time.time() - start_time
+
+    return result, elapsed_time
