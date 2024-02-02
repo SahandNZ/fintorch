@@ -1,7 +1,8 @@
 import argparse
 import json
 
-from rich.progress import Progress
+from rich.live import Live
+from rich.panel import Panel
 from torch import nn
 
 from examples.args import add_default_args_and_parse
@@ -10,7 +11,6 @@ from fintorch.deep.model import FeedForward
 from fintorch.deep.module import Module
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
-from fintorch.setting import RICH_PROGRESS_COLUMNS
 
 
 def main():
@@ -57,8 +57,9 @@ def main():
         model=model
     )
 
-    with Progress(*RICH_PROGRESS_COLUMNS) as progress:
-        module.optimize_and_store(epochs=args.epochs, batch_size=args.batch_size, progress=progress)
+    with Live(refresh_per_second=2) as live:
+        for fold in module.optimize_and_store():
+            live.update(Panel.fit(str(fold), title=f"[blue]{str(module)}"))
 
 
 if __name__ == '__main__':
