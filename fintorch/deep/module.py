@@ -1,13 +1,12 @@
-from abc import ABC, abstractmethod
-from typing import Tuple
+from abc import ABC
+from typing import Generator, Tuple
 
 import torch
-from rich.progress import Progress
 
 from .criterion import CE
 from .cross_validation import SlidingWindowCrossValidation
 from .data_loader import DataLoader
-from .dtype import Dataset
+from .dtype import Fold, SfDataset
 from .lr_scheduler import StepLR
 from .model import Model
 from .optimizer import Adam
@@ -15,14 +14,15 @@ from .trainer import Trainer
 
 
 class Module(ABC):
-    def __init__(self, dataset: Dataset, model: Model):
-        self.__dataset: Dataset = dataset
+    def __init__(self, dataset: SfDataset, model: Model):
+        self.__dataset: SfDataset = dataset
         self.__model: Model = model
 
         self.__last_train_timestamp: int = 0
         self.__trainer: Trainer = Trainer(
+            epochs_count=20,
             cross_validation=SlidingWindowCrossValidation(train_percentage=50, val_percentage=20, window_length=50000),
-            data_loader=DataLoader(post_load_fn=self._post_load_fn),
+            data_loader=DataLoader(batch_size=1024, post_load_fn=self._post_load_fn),
             criterion=CE(),
             optimizer=Adam(lr=1e-3, weight_decay=1e-2),
             lr_scheduler=StepLR(step_size=1, gamma=0.9),
@@ -30,7 +30,7 @@ class Module(ABC):
         )
 
     @property
-    def dataset(self) -> Dataset:
+    def dataset(self) -> SfDataset:
         return self.__dataset
 
     @property
@@ -49,9 +49,10 @@ class Module(ABC):
     def path(self) -> str:
         raise NotImplementedError()
 
-    def optimize_and_store(self, epochs: int, batch_size: int, progress: Progress = None):
-        folds = self.trainer.optimize(dataset=self.dataset, model=self.model, epochs=epochs, batch_size=batch_size,
-                                      progress=progress)
+    def optimize_and_store(self) -> Generator[Fold, None, None]:
+        generator = self.trainer.optimize(dataset=self.dataset, model=self.model)
+        for fold in generator:
+            yield fold
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError()
@@ -59,3 +60,8 @@ class Module(ABC):
     def _post_load_fn(self, x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         y = y.squeeze(-2)
         return x, y
+
+    def __str__(self):
+        return "{} {} {} {} {}" \
+            .format(self.dataset.symbol, self.dataset.time_frame, self.dataset.feature_transform.short_name,
+                    self.dataset.label_transform.short_name, self.model.short_name)
