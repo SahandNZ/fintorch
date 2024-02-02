@@ -10,12 +10,12 @@ from fintorch.deep.dtype import Dataset
 
 
 class DataLoader:
-    def __init__(self, post_load_fn: Callable = None):
+    def __init__(self, batch_size: int, post_load_fn: Callable = None):
+        self.__batch_size: int = batch_size
         self.__post_load_fn: Callable = post_load_fn
 
         self.__dataset: Dataset = None
         self.__timestamps: List[int] = None
-        self.__batch_size: int = None
         self.__batch_count: int = None
         self.__shuffle: bool = None
 
@@ -26,16 +26,16 @@ class DataLoader:
         return self.__batch_size
 
     @property
+    def post_load_fn(self) -> Callable:
+        return self.__post_load_fn
+
+    @property
     def batch_count(self) -> int:
         return self.__batch_count
 
     @property
     def shuffle(self) -> bool:
         return self.__shuffle
-
-    @property
-    def post_load_fn(self) -> Callable:
-        return self.__post_load_fn
 
     @property
     def dataset(self) -> Dataset:
@@ -49,11 +49,10 @@ class DataLoader:
     def index(self) -> int:
         return self._index
 
-    def __call__(self, dataset: Dataset, timestamps: List[int], batch_size: int, shuffle: bool = True) -> Iterator:
+    def __call__(self, dataset: Dataset, timestamps: List[int], shuffle: bool = True) -> Iterator:
         self.__dataset = dataset
         self.__timestamps = copy.deepcopy(timestamps)
-        self.__batch_size = batch_size
-        self.__batch_count = math.ceil(len(timestamps) / batch_size)
+        self.__batch_count = math.ceil(len(timestamps) / self.batch_size)
         self.__shuffle = shuffle
 
         return self.__iter__()
