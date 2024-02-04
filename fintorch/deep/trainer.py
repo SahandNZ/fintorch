@@ -133,8 +133,9 @@ class Trainer:
 
     def ___batched_common_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: Epoch, mode: str) -> Generator:
         optimize = "train" == mode
+        shuffle = not optimize
         timestamps = getattr(fold, f"{mode}_timestamps")
-        iterator = self.data_loader(dataset=dataset, timestamps=timestamps)
+        iterator = self.data_loader(dataset=dataset, timestamps=timestamps, shuffle=shuffle)
         setattr(epoch, f"{mode}_batch_count", self.data_loader.batch_count)
 
         start_time = time.time()
