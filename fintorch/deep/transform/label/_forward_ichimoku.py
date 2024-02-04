@@ -1,17 +1,21 @@
 import pandas as pd
 
+from ....enum import TimeFrame
 from ._label_transform import LabelTransform
 
 
 class ForwardIchimokuLabelTransform(LabelTransform):
-    def __init__(self, base_length: int = 5, conversion_length: int = 20, look_ahead: int = 12):
+    def __init__(self, symbol: str, time_frame: TimeFrame, base_length: int = 5, conversion_length: int = 20,
+                 look_ahead: int = 12):
         super().__init__(
             name="Forward Ichimoku",
             short_name="F-Ichimoku",
             description="This labeling method works by comparing the base line with the conversion line of "
                         "the Ichimoku indicator, and then shifting back the comparison values to assign trend "
                         "labels to the data.",
-            sequence_length=1,
+            symbol=symbol,
+            time_frame=time_frame,
+            dim_sequence=1,
             look_ahead=look_ahead,
             classes=["UP", "DOWN"]
         )

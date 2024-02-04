@@ -1,17 +1,20 @@
 import pandas as pd
 
+from ....enum import TimeFrame
 from ._label_transform import LabelTransform
 
 
 class ForwardMiddleSmaLabelTransform(LabelTransform):
-    def __init__(self, length: int = 51, look_ahead: int = 12):
+    def __init__(self, symbol: str, time_frame: TimeFrame, length: int = 51, look_ahead: int = 12):
         super().__init__(
             name="Forward Middle Simple Moving Average",
             short_name="F.M-SMA",
             description="This labeling method works by smoothing the close price using a lookahead and "
                         "the Simple Moving Average (SMA) method. It then compares the current smoothed close price "
                         "with the forward values to assign trend labels to the data.",
-            sequence_length=1,
+            symbol=symbol,
+            time_frame=time_frame,
+            dim_sequence=1,
             look_ahead=look_ahead,
             classes=["UP", "DOWN"]
         )

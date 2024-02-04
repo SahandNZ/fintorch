@@ -1,9 +1,8 @@
-import math
 import os
 import pickle
 from abc import abstractmethod
 from datetime import datetime
-from typing import Union, List
+from typing import Generator, Union, List
 
 import numpy as np
 import pandas as pd
@@ -11,176 +10,113 @@ import pandas as pd
 from ...component import Component
 from ...dtype import Data
 from ...enum import TimeFrame
-from ...setting import TRANSFORM_DIR, FILE_COMPRESS_FACTOR
+from ...setting import TRANSFORM_DIR
 from ...utils.directory import create_directory
-from ...utils.hash import static_list_hash
 
 
 class Transform(Component):
-    def __init__(self, name: str, short_name: str, description: str, sequence_length: int):
+    def __init__(self, name: str, short_name: str, description: str, symbol: str, time_frame: TimeFrame,
+                 dim_sequence: int):
         super().__init__(name=name, short_name=short_name, description=description)
-        self.__sequence_length: int = sequence_length
+        self.__symbol: str = symbol
+        self.__time_frame: TimeFrame = time_frame
+        self.__dim_sequence: int = dim_sequence
 
-        self.__stsf_directory: str = os.path.join(TRANSFORM_DIR, self.short_name, "symbol-timeframe-sequence-feature")
-        self.__sf_directory: str = os.path.join(TRANSFORM_DIR, self.short_name, "sequence-feature")
-        self.__data: Data = Data()
-
-    @property
-    def sequence_length(self) -> int:
-        return self.__sequence_length
+        self.__preprocessed_dataframe: pd.DataFrame = None
 
     @property
-    def data(self) -> Data:
-        return self.__data
+    def symbol(self) -> str:
+        return self.__symbol
 
     @property
-    def sf_directory(self) -> str:
-        return self.__sf_directory
+    def time_frame(self) -> TimeFrame:
+        return self.__time_frame
 
     @property
-    def stsf_directory(self) -> str:
-        return self.__stsf_directory
+    def dim_sequence(self) -> int:
+        return self.__dim_sequence
 
-    def load_stsf(self, timestamp: int, symbols: List[str], time_frames: List[TimeFrame]) -> Union[np.array, None]:
-        return self._load_or_transform_stsf(data=None, timestamp=timestamp, symbols=symbols, time_frames=time_frames,
-                                            transform_missing=False)
+    @property
+    def processed_dataframe(self) -> pd.DataFrame:
+        return self.__preprocessed_dataframe
 
-    def load_or_transform_stsf(self, data: Data, timestamp: int, symbols: List[str], time_frames: List[TimeFrame]) \
-            -> Union[np.array, None]:
-        return self._load_or_transform_stsf(data=data, timestamp=timestamp, symbols=symbols, time_frames=time_frames,
-                                            transform_missing=True)
+    @property
+    def directory(self) -> str:
+        return os.path.join(TRANSFORM_DIR, self.short_name, self.symbol, str(int(self.time_frame)))
 
-    def _load_or_transform_stsf(self, data: Union[Data, None], timestamp: int, symbols: List[str],
-                                time_frames: List[TimeFrame], transform_missing: bool = True) -> Union[np.array, None]:
-        symbols_static_hash = static_list_hash(symbols)
-        time_frames_static_hash = static_list_hash(time_frames)
-        static_hash = static_list_hash([symbols_static_hash, time_frames_static_hash])
+    @property
+    def path(self) -> str:
+        return os.path.join(self.directory, f"sequence-length-{self.dim_sequence}.pkl")
 
-        # define directory
-        directory = os.path.join(self.stsf_directory, str(static_hash), f"sequence-length-{self.sequence_length}")
-        create_directory(directory)
-
-        # define file path
-        file_compress_factor = FILE_COMPRESS_FACTOR // 8 * min(time_frames)
-        file_name = math.floor(timestamp / file_compress_factor) * file_compress_factor
-        file_path = os.path.join(directory, f"{file_name}.pkl")
-
-        # safe load timestamp_to_stsf if exist
-        if os.path.exists(file_path):
-            try:
-                with open(file_path, "rb") as file:
-                    timestamp_to_stsf = pickle.load(file)
-            except EOFError:
-                timestamp_to_stsf = {}
-        else:
-            timestamp_to_stsf = {}
-
-        # update stsf value if needed
-        if timestamp in timestamp_to_stsf:
-            stsf = timestamp_to_stsf[timestamp]
-            if stsf is None and not self._can_be_none(timestamp=timestamp):
-                del timestamp_to_stsf[timestamp]
-                stsf = self._transform_stsf(data=data, timestamp=timestamp, symbols=symbols, time_frames=time_frames)
-        elif transform_missing:
-            stsf = self._transform_stsf(data=data, timestamp=timestamp, symbols=symbols, time_frames=time_frames)
-        else:
-            stsf = None
-
-        # store stsf if its value missed or changed
-        if timestamp not in timestamp_to_stsf:
-            timestamp_to_stsf[timestamp] = stsf
-            with open(file_path, "wb+") as file:
-                pickle.dump(timestamp_to_stsf, file)
-
-        return stsf
-
-    def _transform_stsf(self, data: Data, timestamp: int, symbols: List[str], time_frames: List[TimeFrame]) \
-            -> Union[np.array, None]:
-        stsf = []  # dimensions (symbol, time frame, sequence, feature)
-        for symbol in symbols:
-            tsf = []
-            for time_frame in time_frames:
-                sf = self._load_or_transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
-                if sf is None:
-                    return None
-
-                tsf.append(sf)
-            stsf.append(tsf)
-
-        return np.array(stsf)
-
-    def load_sf(self, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
-        return self._load_or_transform_sf(data=None, timestamp=timestamp, symbol=symbol, time_frame=time_frame,
-                                          transform_missing=False)
-
-    def load_or_transform_sf(self, data: Data, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
-        return self._load_or_transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame,
-                                          transform_missing=True)
-
-    def _load_or_transform_sf(self, data: Union[Data, None], timestamp: int, symbol: str, time_frame: int,
-                              transform_missing: bool = True) -> Union[np.array, None]:
-        timestamp = self._shift_timestamp(timestamp=timestamp, time_frame=time_frame)
-
-        directory = os.path.join(self.sf_directory, symbol, str(time_frame), f"sequence-length-{self.sequence_length}")
-        create_directory(directory)
-
-        file_compress_factor = FILE_COMPRESS_FACTOR * time_frame
-        file_name = math.floor(timestamp / file_compress_factor) * file_compress_factor
-        file_path = os.path.join(directory, f"{file_name}.pkl")
-
-        # safe load timestamp_to_sf if exist
-        if os.path.exists(file_path):
-            try:
-                with open(file_path, "rb") as file:
-                    timestamp_to_sf = pickle.load(file)
-            except EOFError:
-                timestamp_to_sf = {}
-        else:
+    def load_sf(self, timestamps: List[int]) -> List[Union[np.array, None]]:
+        # load timestamp_to_sf
+        try:
+            with open(self.path, "rb") as file:
+                timestamp_to_sf = pickle.load(file)
+        except (FileNotFoundError, EOFError) as e:
             timestamp_to_sf = {}
 
-        # update value of sf if needed
-        if timestamp in timestamp_to_sf:
-            sf = timestamp_to_sf[timestamp]
-            if sf is None and not self._can_be_none(timestamp=timestamp):
-                del timestamp_to_sf[timestamp]
-                sf = self._transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
-        elif transform_missing:
-            sf = self._transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
-        else:
-            sf = None
+        sf_values = []
+        for timestamp in timestamps:
+            shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
+            sf = timestamp_to_sf.get(shifted_timestamp, None)
+            sf_values.append(sf)
 
-        # store sf if its value missed or changed
-        if timestamp not in timestamp_to_sf:
-            timestamp_to_sf[timestamp] = sf
-            with open(file_path, "wb+") as file:
+        return sf_values
+
+    def transform_sf(self, data: Data, timestamps: List[int]) -> Generator[Union[np.array, None], None, None]:
+        # load timestamp_to_sf
+        try:
+            with open(self.path, "rb") as file:
+                timestamp_to_sf = pickle.load(file)
+        except (FileNotFoundError, EOFError) as e:
+            timestamp_to_sf = {}
+
+        # update sf values if needed
+        overwrite_file = False
+        for timestamp in timestamps:
+            shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
+
+            # load sf value and update it if needed
+            if timestamp in timestamp_to_sf:
+                sf = timestamp_to_sf[shifted_timestamp]
+                if sf is None and not self._can_be_none(timestamp=shifted_timestamp):
+                    sf = self._transform_sf(data=data, timestamp=shifted_timestamp)
+                    timestamp_to_sf[shifted_timestamp] = sf
+                    overwrite_file = True
+            else:
+                sf = self._transform_sf(data=data, timestamp=shifted_timestamp)
+                timestamp_to_sf[shifted_timestamp] = sf
+                overwrite_file = True
+
+            yield sf
+
+        # dump timestamp_to_sf if needed
+        create_directory(self.directory)
+        if overwrite_file:
+            with open(self.path, "wb+") as file:
                 pickle.dump(timestamp_to_sf, file)
 
-        return sf
-
-    def _transform_sf(self, data: Data, timestamp: int, symbol: str, time_frame: int) -> Union[np.array, None]:
-        df = self._preprocess_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
+    def _transform_sf(self, data: Data, timestamp: int) -> Union[np.array, None]:
+        df = self._preprocess_sf(data=data, timestamp=timestamp)
         sf = self._transform_dataframe(df=df, timestamp=timestamp)
 
         return sf
 
-    def _preprocess_sf(self, data: Data, timestamp: int, symbol: str, time_frame: int) -> pd.DataFrame:
-        if not self.data.has(symbol, time_frame) or timestamp not in self.data[symbol, time_frame].index:
-            current_open_timestamp = datetime.now().timestamp() // time_frame * time_frame
-            if timestamp not in data[symbol, time_frame].index and timestamp <= current_open_timestamp:
+    def _preprocess_sf(self, data: Data, timestamp: int) -> pd.DataFrame:
+        if self.processed_dataframe is None or timestamp not in self.processed_dataframe.index:
+            current_open_timestamp = datetime.now().timestamp() // int(self.time_frame) * int(self.time_frame)
+            if timestamp not in data[self.symbol, self.time_frame].index and timestamp <= current_open_timestamp:
                 raise ValueError("Data has missing value at in {}-{} at {}."
-                                 .format(symbol, time_frame, datetime.fromtimestamp(timestamp)))
+                                 .format(self.symbol, self.time_frame, datetime.fromtimestamp(timestamp)))
 
-            # TODO set dynamic value instead of 256 in below line
-            start_timestamp = timestamp - time_frame * 256
-            df = data[symbol, time_frame]
-            df = df[start_timestamp <= df.index].copy()
-            df = self._preprocess_dataframe(df)
-            self.data[symbol, time_frame] = df
+            df = data[self.symbol, self.time_frame].copy()
+            self.__preprocessed_dataframe = self._preprocess_dataframe(df)
 
-        return self.data[symbol, time_frame]
+        return self.__preprocessed_dataframe
 
     @abstractmethod
-    def _shift_timestamp(self, timestamp: int, time_frame: int) -> int:
+    def _shift_timestamp(self, timestamp: int) -> int:
         raise NotImplementedError()
 
     @abstractmethod
@@ -196,4 +132,4 @@ class Transform(Component):
         raise NotImplementedError()
 
     def __str__(self) -> str:
-        return self.name
+        return "{} {} {}".format(self.symbol, self.time_frame, self.short_name)

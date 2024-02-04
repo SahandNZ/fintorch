@@ -1,14 +1,17 @@
 import pandas as pd
 
+from ....enum import TimeFrame
 from ._feature_transform import FeatureTransform
 
 
 class RollingMeanStdTrRocFeatureTransform(FeatureTransform):
-    def __init__(self, sequence_length: int, look_back: int = 4):
+    def __init__(self, symbol: str, time_frame: TimeFrame, dim_sequence: int, look_back: int = 4):
         super().__init__(
             name="Rolling Mean and Standard deviation of True Range and Rate Of Change",
             short_name="RMSTD",
-            sequence_length=sequence_length,
+            symbol=symbol,
+            time_frame=time_frame,
+            dim_sequence=dim_sequence,
             look_back=look_back,
             features=["mean-tr", "mean-roc", "std-tr", "std-roc"],
         )

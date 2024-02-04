@@ -1,16 +1,19 @@
 import pandas as pd
 
+from ....enum import TimeFrame
 from ._label_transform import LabelTransform
 
 
 class UpDownLabelTransform(LabelTransform):
-    def __init__(self):
+    def __init__(self, symbol: str, time_frame: TimeFrame):
         super().__init__(
             name="Up-Down",
             short_name="Up-Down",
             description="This labeling method compares the current close price with the current open price "
                         "to assign trend labels to the data.",
-            sequence_length=1,
+            symbol=symbol,
+            time_frame=time_frame,
+            dim_sequence=1,
             look_ahead=1,
             classes=["UP", "DOWN"]
         )

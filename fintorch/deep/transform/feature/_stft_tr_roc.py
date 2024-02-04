@@ -1,15 +1,18 @@
 import pandas as pd
 
 from ._feature_transform import FeatureTransform
+from ....enum import TimeFrame
 from ....utils.signal import DFFT
 
 
 class StftTrRocFeatureTransform(FeatureTransform):
-    def __init__(self, sequence_length: int, muting_percentage: int = 95):
+    def __init__(self, symbol: str, time_frame: TimeFrame, dim_sequence: int, muting_percentage: int = 95):
         super().__init__(
             name="Short Term Fourier Transform of True Range and Rate of Change",
             short_name="STFT",
-            sequence_length=sequence_length,
+            symbol=symbol,
+            time_frame=time_frame,
+            dim_sequence=dim_sequence,
             look_back=-1,
             features=["tr", "roc", "clean-tr", "clean-roc"],
         )

@@ -1,16 +1,19 @@
 import pandas as pd
 
+from ....enum import TimeFrame
 from ._label_transform import LabelTransform
 
 
 class ForwardBackwardMinimumLabelTransform(LabelTransform):
-    def __init__(self, look_ahead: int = 10, look_back: int = 10):
+    def __init__(self,  symbol: str, time_frame: TimeFrame, look_ahead: int = 10, look_back: int = 10):
         super().__init__(
             name="Forward Backward Min",
             short_name="F.B-Min",
             description="This labeling method works by comparing the Backward Min series with "
                         "the Forward Min series to assign trend labels to the data.",
-            sequence_length=1,
+            symbol=symbol,
+            time_frame=time_frame,
+            dim_sequence=1,
             look_ahead=look_ahead,
             classes=["UP", "DOWN"]
         )

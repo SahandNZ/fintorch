@@ -1,17 +1,20 @@
 import numpy as np
 import pandas as pd
 
+from ....enum import TimeFrame
 from ._label_transform import LabelTransform
 
 
 class NextFractalLabelTransform(LabelTransform):
-    def __init__(self, look_back: int = 10, look_ahead: int = 10):
+    def __init__(self, symbol: str, time_frame: TimeFrame, look_back: int = 10, look_ahead: int = 10):
         super().__init__(
             name="Next Fractal",
             short_name="N-Fractal",
             description="This labeling method works by comparing the next fractal with the current close price "
                         "to assign trend labels to the data.",
-            sequence_length=1,
+            symbol=symbol,
+            time_frame=time_frame,
+            dim_sequence=1,
             look_ahead=look_ahead,
             classes=["UP", "DOWN"]
         )

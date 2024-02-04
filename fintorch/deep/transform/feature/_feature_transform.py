@@ -7,14 +7,15 @@ import numpy as np
 import pandas as pd
 
 from .._transform import Transform
-from ....dtype import Data
+from ....enum import TimeFrame
 from ....setting import NUMPY_FEATURE_DTYPE
 
 
 class FeatureTransform(Transform, ABC):
-    def __init__(self, name: str, short_name: str, sequence_length: int, look_back: int, features: List[str]):
-        super().__init__(name=name, short_name=short_name, description="", sequence_length=sequence_length)
-        self.__sequence_length: int = sequence_length
+    def __init__(self, name: str, short_name: str, symbol: str, time_frame: TimeFrame, dim_sequence: int,
+                 look_back: int, features: List[str]):
+        super().__init__(name=name, short_name=short_name, description="", symbol=symbol, time_frame=time_frame,
+                         dim_sequence=dim_sequence)
         self.__look_back: int = look_back
         self.__features: List[str] = features
 
@@ -26,11 +27,11 @@ class FeatureTransform(Transform, ABC):
     def features(self) -> List[str]:
         return self.__features
 
-    def _shift_timestamp(self, timestamp: int, time_frame: int) -> int:
-        return math.floor(timestamp / time_frame) * time_frame
+    def _shift_timestamp(self, timestamp: int) -> int:
+        return math.floor(timestamp / self.time_frame) * self.time_frame
 
     def _can_be_none(self, timestamp: int) -> bool:
-        return timestamp < datetime.strptime("2022-01-01", "%Y-%m-%d").timestamp()
+        return timestamp < datetime.strptime("2020-01-01", "%Y-%m-%d").timestamp()
 
     @abstractmethod
     def _preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -39,10 +40,10 @@ class FeatureTransform(Transform, ABC):
     def _transform_dataframe(self, df: pd.DataFrame, timestamp: int) -> Union[np.array, None]:
         # backward cropping feature dataframe with timestamp and sequence length
         fdf = df[df.index < timestamp]
-        fdf = fdf.iloc[-self.sequence_length:]
+        fdf = fdf.iloc[-self.dim_sequence:]
         fdf = fdf[self.features]
 
-        if self.sequence_length != len(fdf):
+        if self.dim_sequence != len(fdf):
             return None
 
         # z-score standardization and min-max normalization (keep negative values)
