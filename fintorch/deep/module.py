@@ -6,7 +6,7 @@ import torch
 from .criterion import CE
 from .cross_validation import SlidingWindowCrossValidation
 from .data_loader import DataLoader
-from .dtype import Fold, SfDataset
+from .dtype import Dataset, Fold
 from .lr_scheduler import StepLR
 from .model import Model
 from .optimizer import Adam
@@ -14,8 +14,8 @@ from .trainer import Trainer
 
 
 class Module(ABC):
-    def __init__(self, dataset: SfDataset, model: Model):
-        self.__dataset: SfDataset = dataset
+    def __init__(self, dataset: Dataset, model: Model):
+        self.__dataset: Dataset = dataset
         self.__model: Model = model
 
         self.__last_train_timestamp: int = 0
@@ -30,7 +30,7 @@ class Module(ABC):
         )
 
     @property
-    def dataset(self) -> SfDataset:
+    def dataset(self) -> Dataset:
         return self.__dataset
 
     @property
@@ -63,5 +63,6 @@ class Module(ABC):
 
     def __str__(self):
         return "{} {} {} {} {}" \
-            .format(self.dataset.symbol, self.dataset.time_frame, self.dataset.feature_transform.short_name,
-                    self.dataset.label_transform.short_name, self.model.short_name)
+            .format(self.dataset.label_transform.symbol, self.dataset.label_transform.time_frame,
+                    self.dataset.feature_transform.short_name, self.dataset.label_transform.short_name,
+                    self.model.short_name)
