@@ -12,11 +12,13 @@ from rich.panel import Panel
 from torch import nn
 
 from examples.args import add_default_args_and_parse
+from fintorch.deep.dtype import Dataset
 from fintorch.deep.model import FeedForward, GRU, Hybrid, LSTM, Model, ResNet1D, Transformer
 from fintorch.deep.module import Module
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
 from fintorch.enum import TimeFrame
+from fintorch.utils.function import call_with_dict
 
 
 def target(module: Module, queue: Queue):
@@ -30,29 +32,8 @@ def target(module: Module, queue: Queue):
         queue.put(-1)
 
 
-def create_process(args, items: List, model_params: Dict):
-    for symbol, time_frame, feature_transform, label_transform, model_type in items:
-        # define dataset
-        dataset = SfDataset(
-            start_date=args.start_date,
-            stop_date=args.stop_date,
-            interval=args.interval,
-            symbol=symbol,
-            time_frame=time_frame,
-            sequence_length=args.dim_sequence,
-            feature_transform=feature_transform,
-            label_transform=label_transform
-        )
-
-        # define model
-        model = model_type(**model_params)
-
-        # define module
-        module = Module(
-            dataset=dataset,
-            model=model,
-        )
-
+def create_process(args, modules: List[Module]):
+    for module in modules:
         # create process
         process_args = (module, Queue())
         process = Process(target=target, args=process_args)
@@ -60,9 +41,7 @@ def create_process(args, items: List, model_params: Dict):
         yield process, process_args
 
 
-def run_multi_process(args, symbols: List[str], time_frames: List[TimeFrame],
-                      feature_transforms: List[FeatureTransform], label_transforms: List[LabelTransform],
-                      model_types: List[Type[Model]], model_params: Dict):
+def run_multi_process(args, modules: List[Module]):
     # create rich main layout
     rows, columns = 6, 4
     main_layout = Layout()
@@ -74,8 +53,7 @@ def run_multi_process(args, symbols: List[str], time_frames: List[TimeFrame],
         free_layouts.extend(layouts)
 
     # create process generator to avoid from too many open files issue
-    items = list(itertools.product(symbols, time_frames, feature_transforms, label_transforms, model_types))
-    process_generator = create_process(args, items, model_params)
+    process_generator = create_process(args, modules)
 
     # create terminal layout to track processes
     process_to_args = {}
@@ -83,7 +61,7 @@ def run_multi_process(args, symbols: List[str], time_frames: List[TimeFrame],
     running_process_set = set()
     done_process_set = set()
     with Live(main_layout, refresh_per_second=2):
-        while len(done_process_set) < len(items):
+        while len(done_process_set) < len(modules):
             # start process if there is free worker (processor)
             if len(running_process_set) < args.max_workers:
                 process, process_args = next(process_generator)
@@ -118,27 +96,37 @@ def main():
     parser = argparse.ArgumentParser()
     args = add_default_args_and_parse(parser)
 
-    # load symbols and time frames
+    # load config
     with open(args.config_path, "r") as file:
         config_dict = json.load(file)
 
+    # get symbols and time_frames fom config_dict
     symbols = config_dict["symbols"]
     time_frames = config_dict["time-frames"]
 
-    # define feature transforms
-    feature_transforms = [
-        RollingMeanStdTrRocFeatureTransform(sequence_length=args.dim_sequence),
-        StftTrRocFeatureTransform(sequence_length=args.dim_sequence),
+    # define feature and label transforms
+    feature_transform_types = [
+        RollingMeanStdTrRocFeatureTransform,
+        StftTrRocFeatureTransform
     ]
 
-    # define label transforms
-    label_transforms = [
-        ForwardBackwardMinimumLabelTransform(),
-        ForwardIchimokuLabelTransform(),
-        ForwardMiddleSmaLabelTransform(),
-        ForwardRocLabelTransform(),
-        NextFractalLabelTransform(),
-        UpDownLabelTransform()
+    label_transform_types = [
+        ForwardBackwardMinimumLabelTransform,
+        ForwardIchimokuLabelTransform,
+        ForwardMiddleSmaLabelTransform,
+        ForwardRocLabelTransform,
+        NextFractalLabelTransform,
+        UpDownLabelTransform
+    ]
+
+    # define model_types
+    model_types = [
+        FeedForward,
+        GRU,
+        Hybrid,
+        LSTM,
+        ResNet1D,
+        Transformer
     ]
 
     # define model params
@@ -152,19 +140,29 @@ def main():
         "activation_fn": nn.Softmax(dim=-1)
     }
 
-    # define model_types
-    model_types = [
-        FeedForward,
-        GRU,
-        Hybrid,
-        LSTM,
-        ResNet1D,
-        Transformer
-    ]
+    # define modules
+    modules = []
+    items = itertools.product(symbols, time_frames, feature_transform_types, label_transform_types, model_types)
+    for symbol, time_frame, ft_type, lt_type, model_type in items:
+        transform_param = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
+        feature_transform = call_with_dict(ft_type, transform_param)
+        label_transform = call_with_dict(lt_type, transform_param)
+        model = call_with_dict(model_type, model_params)
 
-    run_multi_process(args=args, symbols=symbols, time_frames=time_frames, feature_transforms=feature_transforms,
-                      label_transforms=label_transforms, model_types=model_types, model_params=model_params)
+        # define dataset
+        dataset = Dataset(
+            start_date=args.start_date,
+            stop_date=args.stop_date,
+            interval=args.interval,
+            feature_transform=feature_transform,
+            label_transform=label_transform
+        )
 
+        # define module
+        module = Module(dataset=dataset, model=model)
+        modules.append(module)
+
+    run_multi_process(args=args, modules=modules)
 
 if __name__ == '__main__':
     main()
