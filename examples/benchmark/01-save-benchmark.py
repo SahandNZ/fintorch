@@ -21,7 +21,7 @@ def main():
     marshal_file_path = os.path.join(tmp_directory, f"{file_name}.bin")
     numpy_file_path = os.path.join(tmp_directory, f"{file_name}.npy")
 
-    # save store with pickle
+    # save with pickle
     pickle_start_time = time.perf_counter()
     with open(pickle_file_path, "wb+") as file:
         pickle.dump(array, file)
