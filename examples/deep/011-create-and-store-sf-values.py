@@ -2,6 +2,7 @@ import argparse
 import atexit
 import itertools
 import json
+import time
 from multiprocessing import Process, Queue
 from typing import List
 
@@ -25,9 +26,12 @@ def terminate_processes(processes: List[Process]):
 def task_target(transform: Transform, timestamps: List[int], queue: Queue):
     data = load_data(symbols=[transform.symbol], time_frames=[transform.time_frame])
     sf_generator = transform.transform_sf(data, timestamps)
+
+    previous_time, previous_index = time.time(), 0
     for index, sf in enumerate(sf_generator):
-        if 0 == (index + 1) % 10:
-            queue.put(10)
+        if 1 < time.time() - previous_time:
+            queue.put(index - previous_index)
+            previous_time, previous_index = time.time(), index
 
     queue.put(-1)
 
