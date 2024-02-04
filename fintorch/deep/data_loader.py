@@ -70,12 +70,8 @@ class DataLoader:
         if self.index < self.batch_count:
             start_index = self.index * self.batch_size
             stop_index = start_index + self.batch_size
-
             batch_timestamps = self.timestamps[start_index: stop_index]
-            batch_samples = self.dataset[batch_timestamps]
-            batch_valid_samples = [sample for sample in batch_samples if sample is not None and sample.is_valid]
-            batch_x = torch.from_numpy(np.array([sample.feature for sample in batch_valid_samples])).float()
-            batch_y = torch.from_numpy(np.array([sample.label for sample in batch_valid_samples])).float()
+            batch_x, batch_y = self.dataset[batch_timestamps]
 
             if self.post_load_fn is not None:
                 batch_x, batch_y = self.post_load_fn(batch_x, batch_y)
