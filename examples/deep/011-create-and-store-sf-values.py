@@ -1,9 +1,7 @@
 import argparse
 import atexit
-import copy
 import itertools
 import json
-import time
 from multiprocessing import Process, Queue
 from typing import List
 
@@ -15,6 +13,7 @@ from fintorch.deep.transform import Transform
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
 from fintorch.setting import RICH_PROGRESS_COLUMNS
+from fintorch.utils.function import call_with_dict
 from fintorch.utils.timestamp import create_timestamps
 
 
@@ -23,35 +22,30 @@ def terminate_processes(processes: List[Process]):
         process.terminate()
 
 
-def task_target(transform_: Transform, symbol: str, time_frame: int, timestamps: List[int], queue: Queue):
-    # load candlestick data
-    data = load_data(symbols=[symbol], time_frames=[time_frame])
+def task_target(transform: Transform, timestamps: List[int], queue: Queue):
+    data = load_data(symbols=[transform.symbol], time_frames=[transform.time_frame])
+    sf_generator = transform.transform_sf(data, timestamps)
+    for index, sf in enumerate(sf_generator):
+        if 0 == (index + 1) % 10:
+            queue.put(10)
 
-    previous_message_time, previous_message_index = time.time(), 0
-    for index, timestamp in enumerate(timestamps):
-        transform_.load_or_transform_sf(data=data, timestamp=timestamp, symbol=symbol, time_frame=time_frame)
-        if 1 < time.time() - previous_message_time:
-            queue.put((index - previous_message_index + 1))
-            previous_message_time = time.time()
-            previous_message_index = index
-
-    queue.put((-1))
+    queue.put(-1)
 
 
-def run_multi_process(args, symbols: List[str], time_frames: List[int], transforms: List[Transform]):
+def run_multi_process(args, transforms: List[Transform]):
     # create timestamps
     timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
 
     # create processes
     process_to_args = {}
-    for transform, symbol, time_frame in itertools.product(transforms, symbols, time_frames):
+    for transform in transforms:
         queue = Queue()
-        process_args = (transform, symbol, time_frame, timestamps, queue)
+        process_args = (transform, timestamps, queue)
         process = Process(target=task_target, args=process_args)
-        process_to_args[process] = (transform, symbol, time_frame, queue)
+        process_to_args[process] = (transform, queue)
 
     # set at exit callback to terminate all processes
-    # atexit.register(terminate_processes, processes=list(process_to_args.keys()))
+    atexit.register(terminate_processes, processes=list(process_to_args.keys()))
 
     # start processes and update progress bars
     process_to_task = {}
@@ -59,8 +53,8 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int], transfor
     running_process_set = set()
     done_process_set = set()
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
-        total_items = len(transforms) * len(symbols) * len(time_frames) * len(timestamps)
-        total_task = progress.add_task(description="Total", total=total_items)
+        total_items = len(transforms) * len(timestamps)
+        overall_task = progress.add_task(description="Overall", total=total_items)
         while 0 < len(pending_process_set) or 0 < len(running_process_set):
             # start process if there is free worker (processor)
             for process in pending_process_set:
@@ -74,11 +68,9 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int], transfor
 
             # update progress bars
             for process in running_process_set:
-                transform, symbol, time_frame, queue = process_to_args[process]
-                # create progress bar
+                transform, queue = process_to_args[process]
                 if process not in process_to_task:
-                    description = "Creating and storing SF values of {:^12} for {}-{}" \
-                        .format(transform.short_name, symbol, time_frame)
+                    description = "Creating SF values of ({})".format(transform)
                     task = progress.add_task(description=description, total=len(timestamps))
                     process_to_task[process] = task
 
@@ -88,7 +80,7 @@ def run_multi_process(args, symbols: List[str], time_frames: List[int], transfor
                     task = process_to_task[process]
                     if 0 < advance:
                         progress.update(task, advance=advance)
-                        progress.update(total_task, advance=advance)
+                        progress.update(overall_task, advance=advance)
                     else:
                         progress.update(task, visible=False)
                         done_process_set.add(process)
@@ -115,19 +107,25 @@ def main():
     time_frames = config_dict["time-frames"]
 
     # define feature and label transforms
-    transforms = [
-        RollingMeanStdTrRocFeatureTransform(sequence_length=args.dim_sequence),
-        StftTrRocFeatureTransform(sequence_length=args.dim_sequence),
+    transform_types = [
+        RollingMeanStdTrRocFeatureTransform,
+        StftTrRocFeatureTransform,
 
-        ForwardBackwardMinimumLabelTransform(),
-        ForwardIchimokuLabelTransform(),
-        ForwardMiddleSmaLabelTransform(),
-        ForwardRocLabelTransform(),
-        NextFractalLabelTransform(),
-        UpDownLabelTransform()
+        ForwardBackwardMinimumLabelTransform,
+        ForwardIchimokuLabelTransform,
+        ForwardMiddleSmaLabelTransform,
+        ForwardRocLabelTransform,
+        NextFractalLabelTransform,
+        UpDownLabelTransform
     ]
 
-    run_multi_process(args=args, symbols=symbols, time_frames=time_frames, transforms=transforms)
+    transforms = []
+    for transform_type, symbol, time_frame in itertools.product(transform_types, symbols, time_frames):
+        kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
+        transform = call_with_dict(transform_type, kwargs)
+        transforms.append(transform)
+
+    run_multi_process(args=args, transforms=transforms)
 
 
 if __name__ == '__main__':

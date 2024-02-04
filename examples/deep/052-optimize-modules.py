@@ -12,7 +12,6 @@ from rich.panel import Panel
 from torch import nn
 
 from examples.args import add_default_args_and_parse
-from fintorch.deep.dtype import SfDataset
 from fintorch.deep.model import FeedForward, GRU, Hybrid, LSTM, Model, ResNet1D, Transformer
 from fintorch.deep.module import Module
 from fintorch.deep.transform.feature import *
