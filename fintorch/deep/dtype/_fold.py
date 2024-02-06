@@ -7,6 +7,7 @@ from . import Epoch
 class Fold:
     def __init__(self, index: int, train_timestamps: List[int], val_timestamps: List[int], test_timestamps: List[int]):
         self.__index: int = index
+        self.__done: bool = False
 
         self.__folds_count: int = 0
         self.__epochs_count: int = 0
@@ -19,6 +20,14 @@ class Fold:
     @property
     def index(self) -> int:
         return self.__index
+
+    @property
+    def done(self) -> bool:
+        return self.__done
+
+    @done.setter
+    def done(self, value: bool) -> None:
+        self.__done = value
 
     @property
     def folds_count(self) -> int:
@@ -132,12 +141,15 @@ class Fold:
 
         return ("Fold  ({}/{:<2}) ({} {} {})\n"
                 "Epoch ({}/{:<2}) ({} {} {})\n"
-                "Train    {:<6.4f}     {:<6.4f}    {}\n"
-                "Val      {:<6.4f}     {:<6.4f}    {}\n"
-                "Test     {:<6.4f}     {:<6.4f}    {}") \
+                "Train  {:<6.4f}  {:<6.4f}  {:<5.1f}%  {:<5.1f}%  {}\n"
+                "Val    {:<6.4f}  {:<6.4f}  {:<5.1f}%  {:<5.1f}%  {}\n"
+                "Test   {:<6.4f}  {:<6.4f}  {:<5.1f}%  {:<5.1f}%  {}") \
             .format(self.index, self.folds_count, fold_elapsed_time, fold_remaining_time, fold_total_time,
                     self.last_epoch.index, self.epochs_count, epoch_elapsed_time, epoch_remaining_time,
                     epoch_total_time,
-                    self.last_epoch.train_loss, self.best_train_epoch.train_loss, self.best_train_epoch.index,
-                    self.last_epoch.val_loss, self.best_val_epoch.val_loss, self.best_val_epoch.index,
-                    self.last_epoch.test_loss, self.best_test_epoch.test_loss, self.best_test_epoch.index)
+                    self.last_epoch.train_loss, self.best_train_epoch.train_loss, self.last_epoch.train_accuracy,
+                    self.best_train_epoch.train_accuracy, self.best_train_epoch.index,
+                    self.last_epoch.val_loss, self.best_val_epoch.val_loss, self.last_epoch.val_accuracy,
+                    self.best_val_epoch.val_accuracy, self.best_val_epoch.index,
+                    self.last_epoch.test_loss, self.best_test_epoch.test_loss, self.last_epoch.test_accuracy,
+                    self.best_test_epoch.test_accuracy, self.best_test_epoch.index)

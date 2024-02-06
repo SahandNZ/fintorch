@@ -2,7 +2,7 @@ import copy
 import gc
 import time
 import warnings
-from typing import Generator
+from typing import Generator, List, Tuple
 
 import torch
 
@@ -85,34 +85,46 @@ class Trainer:
         else:
             return torch.float32
 
-    def optimize(self, dataset: Dataset, model: Model) -> Generator[Fold, None, None]:
-        # move model to cuda if it's available
+    def optimize(self, dataset: Dataset, model: Model, timestamps: List[int]) -> Generator[Fold, None, None]:
         model.to(self.device)
 
-        for fold in self.cross_validation(dataset=dataset):
-            model.reset()
-            self.optimizer.reset(model=model)
-            self.lr_scheduler.reset(optimizer=self.optimizer)
-
-            fold.folds_count = self.cross_validation.folds_count
-            fold.epochs_count = self.epochs_count
-
-            for epoch_index in range(1, self.epochs_count + 1):
-                epoch = Epoch(index=epoch_index, criterion=self.criterion)
-                fold.epochs.append(epoch)
-
-                for _ in self.__epoch_train_step(dataset, model, fold, epoch):
-                    yield fold
-                for _ in self.__epoch_val_step(dataset, model, fold, epoch):
-                    yield fold
-                for _ in self.__epoch_test_step(dataset, model, fold, epoch):
-                    yield fold
-
-            yield fold
+        for fold in self.cross_validation(test_timestamps=timestamps):
+            for _ in self.__fold_step(dataset=dataset, model=model, fold=fold):
+                yield fold
 
         # move model back to cpu
         cpu = torch.device("cpu")
         model.to(cpu)
+
+    def optimize_fold(self, dataset: Dataset, model: Model, fold: Fold):
+        model.to(self.device)
+
+        for _ in self.__fold_step(dataset=dataset, model=model, fold=fold):
+            yield fold
+        cpu = torch.device("cpu")
+        model.to(cpu)
+
+    def __fold_step(self, dataset: Dataset, model: Model, fold: Fold) -> Generator[Fold, None, None]:
+        model.reset()
+        self.optimizer.reset(model=model)
+        self.lr_scheduler.reset(optimizer=self.optimizer)
+
+        fold.folds_count = self.cross_validation.folds_count
+        fold.epochs_count = self.epochs_count
+
+        for epoch_index in range(1, self.epochs_count + 1):
+            epoch = Epoch(index=epoch_index, criterion=self.criterion)
+            fold.epochs.append(epoch)
+
+            for _ in self.__epoch_train_step(dataset, model, fold, epoch):
+                yield fold
+            for _ in self.__epoch_val_step(dataset, model, fold, epoch):
+                yield fold
+            for _ in self.__epoch_test_step(dataset, model, fold, epoch):
+                yield fold
+
+        fold.done = True
+        yield fold
 
     def __epoch_train_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: Epoch) -> Generator:
         generator = self.___batched_common_step(dataset, model, fold, epoch, "train")
@@ -144,13 +156,17 @@ class Trainer:
             batch_x = batch_x.to(self.device)
             batch_y = batch_y.to(self.device)
 
-            loss = self.___common_step(model, batch_x, batch_y, optimize)
+            batch_loss, batch_y_hat = self.___common_step(model, batch_x, batch_y, optimize)
+            batch_actual = torch.argmax(batch_y, dim=-1)
+            batch_prediction = torch.argmax(batch_y_hat, dim=-1)
+            batch_accuracy = (batch_actual == batch_prediction).sum() / len(batch_y) * 100
 
             # remove batch_x, batch_y
-            del batch_x, batch_y
+            del batch_x, batch_y, batch_y_hat
 
-            getattr(epoch, f"{mode}_batch_losses").append(loss)
             getattr(epoch, f"{mode}_batch_times").append(time.time() - start_time)
+            getattr(epoch, f"{mode}_batch_losses").append(batch_loss.clone().cpu().item())
+            getattr(epoch, f"{mode}_batch_accuracies").append(batch_accuracy.cpu().item())
             yield
 
             start_time = time.time()
@@ -159,7 +175,8 @@ class Trainer:
         gc.collect()
         torch.cuda.empty_cache()
 
-    def ___common_step(self, model: Model, x: torch.Tensor, y: torch.Tensor, optimize: bool) -> torch.Tensor:
+    def ___common_step(self, model: Model, x: torch.Tensor, y: torch.Tensor, optimize: bool) \
+            -> Tuple[torch.Tensor, torch.Tensor]:
         if optimize:
             model.train()
 
@@ -182,4 +199,4 @@ class Trainer:
                 y_hat = model(x)
                 loss = self.criterion(y_hat, y)
 
-        return loss.detach().cpu().item()
+        return loss, y_hat

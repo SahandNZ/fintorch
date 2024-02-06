@@ -10,16 +10,19 @@ class Epoch:
         self.__criterion: Criterion = criterion
 
         self.train_batch_count: int = 0
-        self.train_batch_losses: List[float] = []
         self.train_batch_times: List[float] = []
+        self.train_batch_losses: List[float] = []
+        self.train_batch_accuracies: List[int] = []
 
         self.val_batch_count: int = 0
-        self.val_batch_losses: List[float] = []
         self.val_batch_times: List[float] = []
+        self.val_batch_losses: List[float] = []
+        self.val_batch_accuracies: List[int] = []
 
         self.test_batch_count: int = 0
-        self.test_batch_losses: List[float] = []
         self.test_batch_times: List[float] = []
+        self.test_batch_losses: List[float] = []
+        self.test_batch_accuracies: List[int] = []
 
         self.model_state_dict: Dict = None
 
@@ -30,14 +33,6 @@ class Epoch:
     @property
     def criterion(self) -> Criterion:
         return self.__criterion
-
-    # TODO Define worst case value in criterion to use it in such cases
-    @property
-    def train_loss(self) -> float:
-        if 0 < len(self.train_batch_losses):
-            return sum(self.train_batch_losses) / len(self.train_batch_losses)
-        else:
-            return math.inf
 
     @property
     def train_elapsed_time(self) -> float:
@@ -55,11 +50,19 @@ class Epoch:
         return self.train_total_time - self.train_elapsed_time
 
     @property
-    def val_loss(self) -> float:
-        if 0 < len(self.val_batch_losses):
-            return sum(self.val_batch_losses) / len(self.val_batch_losses)
+    def train_loss(self) -> float:
+        # TODO Define worst case value in criterion to use it in such cases
+        if 0 < len(self.train_batch_losses):
+            return sum(self.train_batch_losses) / len(self.train_batch_losses)
         else:
             return math.inf
+
+    @property
+    def train_accuracy(self) -> float:
+        if 0 < len(self.train_batch_accuracies):
+            return sum(self.train_batch_accuracies) / len(self.train_batch_accuracies)
+        else:
+            return 0
 
     @property
     def val_elapsed_time(self) -> float:
@@ -77,11 +80,18 @@ class Epoch:
         return self.val_total_time - self.val_elapsed_time
 
     @property
-    def test_loss(self) -> float:
-        if 0 < len(self.test_batch_losses):
-            return sum(self.test_batch_losses) / len(self.test_batch_losses)
+    def val_loss(self) -> float:
+        if 0 < len(self.val_batch_losses):
+            return sum(self.val_batch_losses) / len(self.val_batch_losses)
         else:
             return math.inf
+
+    @property
+    def val_accuracy(self) -> float:
+        if 0 < len(self.val_batch_accuracies):
+            return sum(self.val_batch_accuracies) / len(self.val_batch_accuracies)
+        else:
+            return 0
 
     @property
     def test_elapsed_time(self) -> float:
@@ -97,6 +107,20 @@ class Epoch:
     @property
     def test_remaining_time(self) -> float:
         return self.test_total_time - self.test_elapsed_time
+
+    @property
+    def test_loss(self) -> float:
+        if 0 < len(self.test_batch_losses):
+            return sum(self.test_batch_losses) / len(self.test_batch_losses)
+        else:
+            return math.inf
+
+    @property
+    def test_accuracy(self) -> float:
+        if 0 < len(self.test_batch_accuracies):
+            return sum(self.test_batch_accuracies) / len(self.test_batch_accuracies)
+        else:
+            return 0
 
     @property
     def elapsed_time(self) -> float:
