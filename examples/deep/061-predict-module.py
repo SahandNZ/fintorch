@@ -3,6 +3,7 @@ import argparse
 from torch import nn
 
 from examples.args import add_default_args_and_parse
+from fintorch.data import load_data
 from fintorch.deep.dtype import Dataset
 from fintorch.deep.model import FeedForward
 from fintorch.deep.module import Module
@@ -46,9 +47,11 @@ def main():
         model=model
     )
 
-    timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
-
-    y_hat = module.predict(timestamps=timestamps)
+    data = load_data(symbols=[args.symbol], time_frames=[args.time_frame])
+    timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)[:32]
+    y_hat = module.predict(data=data, timestamps=timestamps)
+    print(y_hat)
+    print(y_hat.shape)
 
 
 if __name__ == '__main__':

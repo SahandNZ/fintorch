@@ -10,6 +10,7 @@ from fintorch.deep.model import FeedForward
 from fintorch.deep.module import Module
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
+from fintorch.utils.timestamp import create_timestamps
 
 
 def main():
@@ -47,8 +48,10 @@ def main():
         model=model
     )
 
+    timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
+
     with Live(refresh_per_second=2) as live:
-        for fold in module.optimize_and_store():
+        for fold in module.optimize_and_store(timestamps=timestamps):
             live.update(Panel.fit(str(fold), title=f"[blue]{str(module)}"))
 
 
