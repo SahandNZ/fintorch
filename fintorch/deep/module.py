@@ -82,7 +82,7 @@ class Module(ABC):
             with open(self.path, "wb+") as file:
                 pickle.dump(timestamps_to_fold, file)
 
-    def predict(self, data: Data, timestamps: List[int]) -> List[Prediction]:
+    def predict(self, data: Data, timestamps: List[int]) -> torch.Tensor:
         try:
             with open(self.path, "rb") as file:
                 timestamps_to_fold: Dict[int, Fold] = pickle.load(file)
@@ -91,24 +91,16 @@ class Module(ABC):
             with open(self.path, "rb") as file:
                 timestamps_to_fold: Dict[int, Fold] = pickle.load(file)
 
-        predictions = []
+        y_hat = []
         for timestamp in timestamps:
             model_state_dict = timestamps_to_fold[timestamp].best_val_epoch.model_state_dict
             self.model.load_state_dict(model_state_dict)
             self.model.eval()
 
             feature = [item for item in self.dataset.feature_transform.transform_sf(data=data, timestamps=[timestamp])]
-            label = [item for item in self.dataset.label_transform.transform_sf(data=data, timestamps=[timestamp])]
 
             x = torch.from_numpy(np.array(feature))
-            y = torch.from_numpy(np.array(label))
             y_hat = self.model(x)
-
-            actual = torch.argmax(y, dim=-1)
-            prediction = torch.argmax(y_hat, dim=-1)
-
-            prediction = Prediction(timestamp=timestamp, actual=actual, prediction=prediction)
-            predictions.append(prediction)
 
         return torch.cat(y_hat, dim=0)
 
