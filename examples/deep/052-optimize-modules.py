@@ -68,8 +68,8 @@ def run_multi_process(args, modules: List[Module]):
         while len(done_process_set) < len(modules):
             # start process if there is free worker (processor)
             if len(running_process_set) < args.max_workers:
-                process, process_args = next(process_generator)
-                process_to_args[process] = process_args
+                process, (module, _, queue) = next(process_generator)
+                process_to_args[process] = (module, queue)
                 process_to_layout[process] = free_layouts.pop(0)
                 running_process_set.add(process)
                 process.start()
