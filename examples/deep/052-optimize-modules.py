@@ -6,6 +6,7 @@ import time
 from multiprocessing import Process, Queue
 from typing import Dict, List, Type
 
+from rich.console import Group
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
@@ -106,17 +107,10 @@ def main():
     overall_task = overall_progress.add_task(description="overall jobs", total=len(modules))
     progress_panel = Panel.fit(overall_progress, title="Overall progress")
 
-    table = Table.grid()
-    table.add_row(progress_panel)
-
     with Live(refresh_per_second=2) as live:
         for module in modules:
             for fold in module.optimize_and_store(timestamps=timestamps):
-                status_panel = Panel.fit(str(fold), title=str(module))
-
-                table = Table.grid()
-                table.add_column(status_panel, progress_panel)
-                live.update(table)
+                live.update(Group(Panel.fit(str(fold), title=str(module)), progress_panel))
 
             overall_progress.update(overall_task, advance=1)
 
