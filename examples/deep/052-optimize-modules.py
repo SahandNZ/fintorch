@@ -9,6 +9,8 @@ from typing import Dict, List, Type
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
+from rich.progress import Progress
+from rich.table import Table
 from torch import nn
 
 from examples.args import add_default_args_and_parse
@@ -18,82 +20,9 @@ from fintorch.deep.module import Module
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
 from fintorch.enum import TimeFrame
+from fintorch.setting import RICH_PROGRESS_COLUMNS
 from fintorch.utils.function import call_with_dict
 from fintorch.utils.timestamp import create_timestamps
-
-
-def target(module: Module, timestamps: List[int], queue: Queue):
-    try:
-        for fold in module.optimize_and_store(timestamps=timestamps):
-            queue.put(str(fold))
-        queue.put(-1)
-    except Exception as e:
-        queue.put(str(e))
-        time.sleep(10)
-        queue.put(-1)
-
-
-def create_process(modules: List[Module], timestamps: List[int]):
-    for module in modules:
-        # create process
-        process_args = (module, timestamps, Queue())
-        process = Process(target=target, args=process_args)
-
-        yield process, process_args
-
-
-def run_multi_process(args, modules: List[Module]):
-    # create rich main layout
-    rows, columns = 6, 4
-    main_layout = Layout()
-    main_layout.split_column(*[Layout(name=f"row-{i}") for i in range(rows)])
-    free_layouts: List[Layout] = []
-    for i in range(rows):
-        layouts = [Layout(Panel("Pending..."), name=f"col-{j}") for j in range(columns)]
-        main_layout[f"row-{i}"].split_row(*layouts)
-        free_layouts.extend(layouts)
-
-    # define timestamps
-    timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
-
-    # create process generator to avoid from too many open files issue
-    process_generator = create_process(modules=modules, timestamps=timestamps)
-
-    # create terminal layout to track processes
-    process_to_args = {}
-    process_to_layout = {}
-    running_process_set = set()
-    done_process_set = set()
-    with Live(main_layout, refresh_per_second=2):
-        while len(done_process_set) < len(modules):
-            # start process if there is free worker (processor)
-            if len(running_process_set) < args.max_workers:
-                process, (module, _, queue) = next(process_generator)
-                process_to_args[process] = (module, queue)
-                process_to_layout[process] = free_layouts.pop(0)
-                running_process_set.add(process)
-                process.start()
-
-            # update terminal live display
-            for process in running_process_set:
-                module, queue = process_to_args[process]
-                layout = process_to_layout[process]
-                if not queue.empty():
-                    message = queue.get()
-                    if isinstance(message, str):
-                        layout.update(Panel(message, title=f"[blue]{module}"))
-                    elif isinstance(message, int) and -1 == message:
-                        layout.update(Panel("Pending..."))
-                        free_layouts.append(layout)
-                        done_process_set.add(process)
-
-            # remove done processes from running set
-            running_process_set = running_process_set - done_process_set
-
-            # remove args of done processes
-            for process in done_process_set:
-                if process in process_to_args:
-                    del process_to_args[process]
 
 
 def main():
@@ -169,7 +98,27 @@ def main():
         module = Module(dataset=dataset, model=model)
         modules.append(module)
 
-    run_multi_process(args=args, modules=modules)
+    # define timestamps
+    timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
+
+    # optimize modules with rich panel
+    overall_progress = Progress(*RICH_PROGRESS_COLUMNS)
+    overall_task = overall_progress.add_task(description="overall jobs", total=len(modules))
+    progress_panel = Panel.fit(overall_progress, title="Overall progress")
+
+    table = Table.grid()
+    table.add_row(progress_panel)
+
+    with Live(refresh_per_second=2) as live:
+        for module in modules:
+            for fold in module.optimize_and_store(timestamps=timestamps):
+                status_panel = Panel.fit(str(fold), title=str(module))
+
+                table = Table.grid()
+                table.add_column(status_panel, progress_panel)
+                live.update(table)
+
+            overall_progress.update(overall_task, advance=1)
 
 
 if __name__ == '__main__':
