@@ -19,11 +19,12 @@ from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
 from fintorch.enum import TimeFrame
 from fintorch.utils.function import call_with_dict
+from fintorch.utils.timestamp import create_timestamps
 
 
-def target(module: Module, queue: Queue):
+def target(module: Module, timestamps: List[int], queue: Queue):
     try:
-        for fold in module.optimize_and_store():
+        for fold in module.optimize_and_store(timestamps=timestamps):
             queue.put(str(fold))
         queue.put(-1)
     except Exception as e:
@@ -32,10 +33,10 @@ def target(module: Module, queue: Queue):
         queue.put(-1)
 
 
-def create_process(args, modules: List[Module]):
+def create_process(modules: List[Module], timestamps: List[int]):
     for module in modules:
         # create process
-        process_args = (module, Queue())
+        process_args = (module, timestamps, Queue())
         process = Process(target=target, args=process_args)
 
         yield process, process_args
@@ -52,8 +53,11 @@ def run_multi_process(args, modules: List[Module]):
         main_layout[f"row-{i}"].split_row(*layouts)
         free_layouts.extend(layouts)
 
+    # define timestamps
+    timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
+
     # create process generator to avoid from too many open files issue
-    process_generator = create_process(args, modules)
+    process_generator = create_process(modules=modules, timestamps=timestamps)
 
     # create terminal layout to track processes
     process_to_args = {}
@@ -144,10 +148,10 @@ def main():
     modules = []
     items = itertools.product(symbols, time_frames, feature_transform_types, label_transform_types, model_types)
     for symbol, time_frame, ft_type, lt_type, model_type in items:
+        # define feature and label transforms
         transform_param = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
         feature_transform = call_with_dict(ft_type, transform_param)
         label_transform = call_with_dict(lt_type, transform_param)
-        model = call_with_dict(model_type, model_params)
 
         # define dataset
         dataset = Dataset(
@@ -157,6 +161,9 @@ def main():
             feature_transform=feature_transform,
             label_transform=label_transform
         )
+
+        # define model
+        model = call_with_dict(model_type, model_params)
 
         # define module
         module = Module(dataset=dataset, model=model)
