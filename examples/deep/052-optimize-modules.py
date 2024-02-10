@@ -74,41 +74,40 @@ def main():
         "activation_fn": nn.Softmax(dim=-1)
     }
 
-    # define modules
-    modules = []
-    items = itertools.product(symbols, time_frames, feature_transform_types, label_transform_types, model_types)
-    for symbol, time_frame, ft_type, lt_type, model_type in items:
-        # define feature and label transforms
-        transform_param = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
-        feature_transform = call_with_dict(ft_type, transform_param)
-        label_transform = call_with_dict(lt_type, transform_param)
-
-        # define dataset
-        dataset = Dataset(
-            start_date=args.start_date,
-            stop_date=args.stop_date,
-            interval=args.interval,
-            feature_transform=feature_transform,
-            label_transform=label_transform
-        )
-
-        # define model
-        model = call_with_dict(model_type, model_params)
-
-        # define module
-        module = Module(dataset=dataset, model=model)
-        modules.append(module)
-
     # define timestamps
     timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
 
+    # define modules params
+    items = list(itertools.product(symbols, time_frames, feature_transform_types, label_transform_types, model_types))
+
     # optimize modules with rich panel
     overall_progress = Progress(*RICH_PROGRESS_COLUMNS)
-    overall_task = overall_progress.add_task(description="overall jobs", total=len(modules))
+    overall_task = overall_progress.add_task(description="overall jobs", total=len(items))
     progress_panel = Panel.fit(overall_progress, title="Overall progress")
 
     with Live(refresh_per_second=2) as live:
-        for module in modules:
+        for symbol, time_frame, ft_type, lt_type, model_type in items:
+            # define feature and label transforms
+            transform_param = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
+            feature_transform = call_with_dict(ft_type, transform_param)
+            label_transform = call_with_dict(lt_type, transform_param)
+
+            # define dataset
+            dataset = Dataset(
+                start_date=args.start_date,
+                stop_date=args.stop_date,
+                interval=args.interval,
+                feature_transform=feature_transform,
+                label_transform=label_transform
+            )
+
+            # define model
+            model = call_with_dict(model_type, model_params)
+
+            # define module
+            module = Module(dataset=dataset, model=model)
+
+            # optimize module
             for fold in module.optimize_and_store(timestamps=timestamps):
                 live.update(Group(Panel.fit(str(fold), title=str(module)), progress_panel))
 
