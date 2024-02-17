@@ -1,4 +1,5 @@
 import argparse
+import time
 
 from torch import nn
 
@@ -22,36 +23,30 @@ def main():
     label_transform = ForwardMiddleSmaLabelTransform(symbol=args.symbol, time_frame=args.time_frame)
 
     # define dataset
-    dataset = Dataset(
-        start_date=args.start_date,
-        stop_date=args.stop_date,
-        interval=args.interval,
-        feature_transform=feature_transform,
-        label_transform=label_transform
-    )
+    dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=args.interval)
 
-    # define model
-    model = FeedForward(
-        dim_sequence=args.dim_sequence,
-        dim_feature=4,
-        dim_output=2,
-        num_hidden_layers=args.num_hidden_layers,
-        batch_norm=args.no_batch_norm,
-        dropout=args.dropout,
-        activation_fn=nn.Softmax(dim=-1)
-    )
+    # define model type and kwargs
+    model_type = FeedForward
+    model_kwargs = {
+        "dim_sequence": args.dim_sequence,
+        "dim_feature": 4,
+        "dim_output": 2,
+        "num_hidden_layers": args.num_hidden_layers,
+        "batch_norm": args.no_batch_norm,
+        "dropout": args.dropout,
+        "activation_fn": nn.Softmax(dim=-1)
+    }
 
     # define module
-    module = Module(
-        dataset=dataset,
-        model=model
-    )
+    module = Module(dataset=dataset, model_type=model_type, model_kwargs=model_kwargs)
 
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
-    timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)[:32]
-    y_hat = module.predict(dc=dc, timestamps=timestamps)
-    print(y_hat)
-    print(y_hat.shape)
+    timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
+
+    start_time = time.time()
+    y_hat_dict = module.predict(dc=dc, timestamps=timestamps)
+    elapsed_time_ms = (time.time() - start_time) * 1000
+    print("Loading predictions takes: {:.3f} ms".format(elapsed_time_ms))
 
 
 if __name__ == '__main__':
