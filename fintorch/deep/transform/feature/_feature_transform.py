@@ -14,26 +14,30 @@ from ....setting import NUMPY_FEATURE_DTYPE
 
 class FeatureTransform(Transform, ABC):
     def __init__(self, name: str, short_name: str, symbol: str, time_frame: TimeFrame, dim_sequence: int,
-                 look_back: int, features: List[str]):
+                 backward: int, features: List[str]):
         super().__init__(name=name, short_name=short_name, description="", symbol=symbol, time_frame=time_frame,
                          dim_sequence=dim_sequence)
-        self.__look_back: int = look_back
+        self.__backward_length: int = backward
         self.__features: List[str] = features
 
     @property
-    def look_back(self) -> int:
-        return self.__look_back
+    def backward_length(self) -> int:
+        return self.__backward_length
 
     @property
     def features(self) -> List[str]:
         return self.__features
+
+    @property
+    def look_back(self):
+        return (self.dim_sequence + self.backward_length) * 2
 
     def _shift_timestamp(self, timestamp: int) -> int:
         return math.floor(timestamp / self.time_frame) * self.time_frame
 
     def _can_not_be_none(self, dc: DataCollection, timestamp: int) -> bool:
         symbol_info = dc.get_symbol_info(symbol=self.symbol)
-        first_timestamp = symbol_info.on_board_timestamp + int(self.time_frame) * self.look_back * 2
+        first_timestamp = symbol_info.on_board_timestamp + int(self.time_frame) * self.look_back
         last_timestamp = datetime.now().timestamp() // int(self.time_frame) * int(self.time_frame)
 
         return first_timestamp <= timestamp <= last_timestamp

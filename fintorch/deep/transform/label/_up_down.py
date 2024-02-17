@@ -14,12 +14,12 @@ class UpDownLabelTransform(LabelTransform):
             symbol=symbol,
             time_frame=time_frame,
             dim_sequence=1,
-            look_ahead=1,
+            forward=0,
             classes=["UP", "DOWN"]
         )
 
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["up"] = df.close < df.close.shift(-self.look_ahead)
+        df["up"] = df.close < df.close.shift(-self.forward)
         df["label"] = df.up.astype(int)
         df.dropna(inplace=True)
 

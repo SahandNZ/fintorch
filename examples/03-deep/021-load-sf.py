@@ -30,7 +30,8 @@ def main():
         task = progress.add_task(description="Loading dataset samples", total=len(timestamps))
         dataset.prepare(dc=dc, timestamps=timestamps)
         for timestamp in timestamps:
-            _, _ = dataset[timestamp]
+            x, y = dataset[timestamp]
+            print(x, y)
             progress.update(task, advance=1)
 
 

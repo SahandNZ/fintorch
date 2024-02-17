@@ -5,7 +5,7 @@ from ._label_transform import LabelTransform
 
 
 class ForwardBackwardMinimumLabelTransform(LabelTransform):
-    def __init__(self,  symbol: str, time_frame: TimeFrame, look_ahead: int = 10, look_back: int = 10):
+    def __init__(self, symbol: str, time_frame: TimeFrame, forward: int = 10, look_back: int = 10):
         super().__init__(
             name="Forward Backward Min",
             short_name="F.B-Min",
@@ -14,7 +14,7 @@ class ForwardBackwardMinimumLabelTransform(LabelTransform):
             symbol=symbol,
             time_frame=time_frame,
             dim_sequence=1,
-            look_ahead=look_ahead,
+            forward=forward,
             classes=["UP", "DOWN"]
         )
         self.__look_back: int = look_back
@@ -25,7 +25,7 @@ class ForwardBackwardMinimumLabelTransform(LabelTransform):
 
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["bmin"] = df.close.rolling(self.look_back).min()
-        df["fmin"] = df.close.rolling(self.look_ahead).min().shift(-self.look_ahead + 1)
+        df["fmin"] = df.close.rolling(self.forward).min().shift(-self.forward + 1)
         df.dropna(inplace=True)
 
         df["up"] = df.bmin <= df.fmin

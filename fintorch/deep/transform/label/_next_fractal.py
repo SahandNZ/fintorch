@@ -6,7 +6,7 @@ from ._label_transform import LabelTransform
 
 
 class NextFractalLabelTransform(LabelTransform):
-    def __init__(self, symbol: str, time_frame: TimeFrame, look_back: int = 10, look_ahead: int = 10):
+    def __init__(self, symbol: str, time_frame: TimeFrame, look_back: int = 10, forward: int = 10):
         super().__init__(
             name="Next Fractal",
             short_name="N-Fractal",
@@ -15,7 +15,7 @@ class NextFractalLabelTransform(LabelTransform):
             symbol=symbol,
             time_frame=time_frame,
             dim_sequence=1,
-            look_ahead=look_ahead,
+            forward=forward,
             classes=["UP", "DOWN"]
         )
         self.__look_back: int = look_back
@@ -27,8 +27,8 @@ class NextFractalLabelTransform(LabelTransform):
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["bmin"] = df.low.rolling(self.look_back).min()
         df["bmax"] = df.high.rolling(self.look_back).max()
-        df["fmin"] = df.low.rolling(self.look_ahead).min().shift(-self.look_ahead + 1)
-        df["fmax"] = df.high.rolling(self.look_ahead).max().shift(-self.look_ahead + 1)
+        df["fmin"] = df.low.rolling(self.forward).min().shift(-self.forward + 1)
+        df["fmax"] = df.high.rolling(self.forward).max().shift(-self.forward + 1)
 
         df['isfl'] = (df.low == df.fmin) & (df.low == df.bmin)
         df["isfh"] = (df.high == df.fmax) & (df.high == df.bmax)

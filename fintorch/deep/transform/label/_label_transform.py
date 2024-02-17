@@ -14,15 +14,15 @@ from ....setting import NUMPY_LABEL_DTYPE
 
 class LabelTransform(Transform, ABC):
     def __init__(self, name: str, short_name: str, description: str, symbol: str, time_frame: TimeFrame,
-                 dim_sequence: int, look_ahead: int, classes: List[str]):
+                 dim_sequence: int, forward: int, classes: List[str]):
         super().__init__(name=name, short_name=short_name, description=description, symbol=symbol,
                          time_frame=time_frame, dim_sequence=dim_sequence)
-        self.__look_ahead: int = look_ahead
+        self.__forward: int = forward
         self.__classes: List[str] = classes
 
     @property
-    def look_ahead(self) -> int:
-        return self.__look_ahead
+    def forward(self) -> int:
+        return self.__forward
 
     @property
     def classes(self) -> List[str]:
@@ -32,6 +32,10 @@ class LabelTransform(Transform, ABC):
     def num_classes(self) -> int:
         return len(self.classes)
 
+    @property
+    def look_ahead(self) -> int:
+        return (self.forward * self.dim_sequence) * 2
+
     def _shift_timestamp(self, timestamp: int) -> int:
         return math.ceil(timestamp / self.time_frame) * self.time_frame
 
@@ -39,7 +43,8 @@ class LabelTransform(Transform, ABC):
         symbol_info = dc.get_symbol_info(symbol=self.symbol)
         current_open_timestamp = datetime.now().timestamp() // int(self.time_frame)
         first_timestamp = symbol_info.on_board_timestamp // int(self.time_frame) * self.time_frame
-        last_timestamp = current_open_timestamp - int(self.time_frame) * self.look_ahead * 2
+        true_look_ahead = 2 * self.forward + self.dim_sequence
+        last_timestamp = current_open_timestamp - int(self.time_frame) * self.look_ahead
 
         return first_timestamp <= timestamp <= last_timestamp
 

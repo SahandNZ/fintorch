@@ -60,6 +60,7 @@ class Transform(Component):
         for timestamp in timestamps:
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
             sf = timestamp_to_sf.get(shifted_timestamp, None)
+
             yield sf
 
     def transform_sf(self, dc: DataCollection, timestamps: List[int]) -> Generator:

@@ -6,7 +6,7 @@ from ._label_transform import LabelTransform
 
 class ForwardIchimokuLabelTransform(LabelTransform):
     def __init__(self, symbol: str, time_frame: TimeFrame, base_length: int = 5, conversion_length: int = 20,
-                 look_ahead: int = 12):
+                 forward: int = 12):
         super().__init__(
             name="Forward Ichimoku",
             short_name="F-Ichimoku",
@@ -16,7 +16,7 @@ class ForwardIchimokuLabelTransform(LabelTransform):
             symbol=symbol,
             time_frame=time_frame,
             dim_sequence=1,
-            look_ahead=look_ahead,
+            forward=forward,
             classes=["UP", "DOWN"]
         )
         self.__base_length: int = base_length
@@ -39,7 +39,7 @@ class ForwardIchimokuLabelTransform(LabelTransform):
         df["conversion"] = self.donchian(df, length=self.conversion_length)
 
         df["up"] = df.conversion < df.base
-        df["f-up"] = df.up.shift(-self.look_ahead)
+        df["f-up"] = df.up.shift(-self.forward)
         df.dropna(inplace=True)
 
         df["label"] = df["f-up"].astype(int)

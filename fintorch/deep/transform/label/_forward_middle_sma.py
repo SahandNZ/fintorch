@@ -5,7 +5,7 @@ from ._label_transform import LabelTransform
 
 
 class ForwardMiddleSmaLabelTransform(LabelTransform):
-    def __init__(self, symbol: str, time_frame: TimeFrame, length: int = 51, look_ahead: int = 12):
+    def __init__(self, symbol: str, time_frame: TimeFrame, length: int = 51, forward: int = 12):
         super().__init__(
             name="Forward Middle Simple Moving Average",
             short_name="F.M-SMA",
@@ -15,7 +15,7 @@ class ForwardMiddleSmaLabelTransform(LabelTransform):
             symbol=symbol,
             time_frame=time_frame,
             dim_sequence=1,
-            look_ahead=look_ahead,
+            forward=forward,
             classes=["UP", "DOWN"]
         )
         self.__length: int = length
@@ -26,7 +26,7 @@ class ForwardMiddleSmaLabelTransform(LabelTransform):
 
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["msma"] = df.close.rolling(self.length).mean().shift(-self.length // 2)
-        df["f-msma"] = df.msma.shift(-self.look_ahead)
+        df["f-msma"] = df.msma.shift(-self.forward)
         df.dropna(inplace=True)
 
         df["up"] = df.msma < df["f-msma"]
