@@ -25,7 +25,7 @@ def terminate_processes(processes: List[Process]):
 
 def task_target(transform: Transform, timestamps: List[int], queue: Queue):
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[transform.symbol], time_frames=[transform.time_frame])
-    sf_generator = transform.load_or_transform_sf(dc=dc, timestamps=timestamps)
+    sf_generator = transform.transform_sf(dc=dc, timestamps=timestamps)
 
     previous_time, previous_index = time.time(), 0
     for index, sf in enumerate(sf_generator):

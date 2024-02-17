@@ -23,7 +23,7 @@ def main():
 
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
         task = progress.add_task(description="Creating SF values of {}".format(str(transform)), total=len(timestamps))
-        for _ in transform.load_or_transform_sf(dc=dc, timestamps=timestamps):
+        for _ in transform.transform_sf(dc=dc, timestamps=timestamps):
             progress.update(task, advance=1)
 
 
