@@ -26,22 +26,20 @@ def main():
     # define dataset
     dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=args.interval)
 
-    # define model
-    model = FeedForward(
-        dim_sequence=args.dim_sequence,
-        dim_feature=4,
-        dim_output=2,
-        num_hidden_layers=args.num_hidden_layers,
-        batch_norm=args.no_batch_norm,
-        dropout=args.dropout,
-        activation_fn=nn.Softmax(dim=-1)
-    )
+    # define model type and kwargs
+    model_type = FeedForward
+    model_kwargs = {
+        "dim_sequence": args.dim_sequence,
+        "dim_feature": 4,
+        "dim_output": 2,
+        "num_hidden_layers": args.num_hidden_layers,
+        "batch_norm": args.no_batch_norm,
+        "dropout": args.dropout,
+        "activation_fn": nn.Softmax(dim=-1)
+    }
 
     # define module
-    module = Module(
-        dataset=dataset,
-        model=model
-    )
+    module = Module(dataset=dataset, model_type=model_type, model_kwargs=model_kwargs)
 
     # load data collection
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])

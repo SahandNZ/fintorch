@@ -135,7 +135,7 @@ def main():
     ]
 
     # define model params
-    model_params = {
+    model_args = {
         "dim_sequence": args.dim_sequence,
         "dim_feature": 4,
         "dim_output": 2,
@@ -157,11 +157,8 @@ def main():
         # define dataset
         dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=args.interval)
 
-        # define model
-        model = call_with_dict(model_type, model_params)
-
         # define module
-        module = Module(dataset=dataset, model=model)
+        module = Module(dataset=dataset, model_type=model_type, model_kwargs=model_args)
         modules.append(module)
 
     run_multi_process(args=args, modules=modules)
