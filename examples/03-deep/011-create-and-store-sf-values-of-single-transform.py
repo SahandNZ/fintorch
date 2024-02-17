@@ -12,7 +12,7 @@ def main():
     parser = argparse.ArgumentParser()
     args = add_default_args_and_parse(parser)
 
-    transform = StftTrRocFeatureTransform(
+    transform = RollingMeanStdTrRocFeatureTransform(
         symbol=args.symbol,
         time_frame=args.time_frame,
         dim_sequence=args.dim_sequence
