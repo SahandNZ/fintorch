@@ -60,7 +60,8 @@ class CrossValidation:
         return self.__index
 
     def __call__(self, on_board_timestamp: int) -> Iterator:
-        start_timestamp = on_board_timestamp + (self.train_length + self.val_length) * self.interval
+        on_board_open_timestamp = on_board_timestamp // int(self.interval) * int(self.interval)
+        start_timestamp = on_board_open_timestamp + (self.train_length + self.val_length) * self.interval
         start_datetime = datetime.fromtimestamp(start_timestamp)
         rounded_start_datetime = start_datetime.replace(month=(start_datetime.month + 1) % 12, day=1)
         self.__start_timestamp = rounded_start_datetime.timestamp()
