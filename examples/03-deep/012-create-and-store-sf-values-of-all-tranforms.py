@@ -27,13 +27,10 @@ def task_target(transform: Transform, timestamps: List[int], queue: Queue):
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[transform.symbol], time_frames=[transform.time_frame])
     sf_generator = transform.transform_sf(dc=dc, timestamps=timestamps)
 
-    previous_time, previous_index = time.time(), 0
-    for index, sf in enumerate(sf_generator):
-        if 1 < time.time() - previous_time:
-            queue.put(index - previous_index)
-            previous_time, previous_index = time.time(), index
+    for _ in sf_generator:
+        pass
 
-    queue.put(-1)
+    queue.put(1)
 
 
 def run_multi_process(args, transforms: List[Transform]):
@@ -41,28 +38,27 @@ def run_multi_process(args, transforms: List[Transform]):
     timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
 
     # create processes
-    process_to_args = {}
+    process_to_queue = {}
     for transform in transforms:
         queue = Queue()
         process_args = (transform, timestamps, queue)
         process = Process(target=task_target, args=process_args)
-        process_to_args[process] = (transform, queue)
+        process_to_queue[process] = queue
 
     # set at exit callback to terminate all processes
-    atexit.register(terminate_processes, processes=list(process_to_args.keys()))
+    atexit.register(terminate_processes, processes=list(process_to_queue.keys()))
 
     # start processes and update progress bars
-    process_to_task = {}
-    pending_process_set = set(process_to_args.keys())
+    pending_process_set = set(process_to_queue.keys())
     running_process_set = set()
     done_process_set = set()
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
-        total_items = len(transforms) * len(timestamps)
+        total_items = len(transforms)
         overall_task = progress.add_task(description="Overall", total=total_items)
         while 0 < len(pending_process_set) or 0 < len(running_process_set):
             # start process if there is free worker (processor)
             for process in pending_process_set:
-                alive_process_count = sum(process.is_alive() for process in process_to_args.keys())
+                alive_process_count = sum(process.is_alive() for process in process_to_queue.keys())
                 if alive_process_count < args.max_workers:
                     running_process_set.add(process)
                     process.start()
@@ -72,30 +68,21 @@ def run_multi_process(args, transforms: List[Transform]):
 
             # update progress bars
             for process in running_process_set:
-                transform, queue = process_to_args[process]
-                if process not in process_to_task:
-                    description = "Creating SF values of ({})".format(transform)
-                    task = progress.add_task(description=description, total=len(timestamps))
-                    process_to_task[process] = task
+                queue = process_to_queue[process]
 
                 # update progress bar
                 if not queue.empty():
                     advance = queue.get()
-                    task = process_to_task[process]
-                    if 0 < advance:
-                        progress.update(task, advance=advance)
-                        progress.update(overall_task, advance=advance)
-                    else:
-                        progress.update(task, visible=False)
-                        done_process_set.add(process)
+                    progress.update(overall_task, advance=advance)
+                    done_process_set.add(process)
 
             # remove done processes from running set
             running_process_set = running_process_set - done_process_set
 
             # remove args of done processes
             for process in done_process_set:
-                if process in process_to_args:
-                    del process_to_args[process]
+                if process in process_to_queue:
+                    del process_to_queue[process]
 
 
 def main():
