@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Callable, List, Dict
+from typing import Callable, List, Dict, Union
 
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -11,7 +11,7 @@ from ._job import Job
 class JobQueue:
     def __init__(self, context: Context):
         self.__context: Context = context
-        self.__scheduler: BlockingScheduler = None
+        self.__scheduler = BlockingScheduler(executors={'default': ThreadPoolExecutor(max_workers=8)})
 
     @property
     def context(self) -> Context:
@@ -19,30 +19,30 @@ class JobQueue:
 
     @property
     def scheduler(self) -> BlockingScheduler:
-        if self.__scheduler is None:
-            executors = {'default': ThreadPoolExecutor(max_workers=8)}
-            self.__scheduler = BlockingScheduler(executors=executors)
         return self.__scheduler
 
-    def start(self):
-        if not self.scheduler.running:
-            self.scheduler.start()
-
-    def _cast_args(self, args: List) -> List:
+    @staticmethod
+    def _cast_args(args: List) -> List:
         if args is None:
             return []
         else:
             return list(args)
 
-    def _cast_kwargs(self, kwargs):
+    @staticmethod
+    def _cast_kwargs(kwargs):
         return kwargs if kwargs is not None else {}
 
-    def _cast_when(self, interval: int, when: str) -> datetime:
+    @staticmethod
+    def _cast_when(interval: int, when: str) -> Union[datetime, None]:
         if 'any' == when:
             return None
         elif 'open' == when:
             next_timestamp = datetime.now().timestamp() // interval * interval + interval
             return datetime.fromtimestamp(next_timestamp)
+
+    def start(self):
+        if not self.scheduler.running:
+            self.scheduler.start()
 
     def run_once(self, callback: Callable, args: List = None, kwargs: Dict = None) -> Job:
         args = self._cast_args(args)

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Callable, Dict
+from typing import Callable, Dict, Union
 from typing import List
 
 from apscheduler.job import Job as APSJob
@@ -11,7 +11,7 @@ class Job:
     def __init__(self, callback: Callable):
         self.__callback: callback = callback
 
-        self.__aps_job: APSJob = None
+        self.__aps_job: Union[APSJob, None] = None
         self.__removed: bool = False
         self.__enabled: bool = False
 
@@ -24,7 +24,7 @@ class Job:
         return self.__callback
 
     @property
-    def aps_job(self) -> APSJob:
+    def aps_job(self) -> Union[APSJob, None]:
         return self.__aps_job
 
     @aps_job.setter

@@ -1,22 +1,39 @@
 import itertools
+from datetime import datetime
 from typing import List, Tuple
 
-from ..data import LiveData
-from ..enum import TimeFrame
-from ..exchange import Exchange
+from ..enum import MarketType, TimeFrame
+from ..exchange import OnlineData, OnlineExchange
 
 
 class Context:
-    def __init__(self, exchange: Exchange, symbols: List[str], time_frames: List[TimeFrame]):
-        self.__exchange: Exchange = exchange
+    def __init__(
+            self,
+            online_exchange: OnlineExchange,
+            market_type: MarketType,
+            symbols: List[str],
+            time_frames: List[TimeFrame]
+    ):
+        self.__online_exchange: OnlineExchange = online_exchange
+        self.__market_type: MarketType = market_type
         self.__symbols: List[str] = symbols
         self.__time_frames: List[TimeFrame] = time_frames
         self.__pairs: List[Tuple[str, TimeFrame]] = list(itertools.product(self.symbols, self.time_frames))
-        self.__data: LiveData = LiveData(exchange=exchange, symbols=symbols, time_frames=time_frames)
+
+        self.__online_data: OnlineData = getattr(self.online_exchange, str(market_type)).data
+        self.online_exchange.prepare(symbols=self.symbols, time_frames=self.time_frames)
 
     @property
-    def exchange(self) -> Exchange:
-        return self.__exchange
+    def online_exchange(self) -> OnlineExchange:
+        return self.__online_exchange
+
+    @property
+    def market_type(self) -> MarketType:
+        return self.__market_type
+
+    @property
+    def online_data(self) -> OnlineData:
+        return self.__online_data
 
     @property
     def symbols(self) -> List[str]:
@@ -30,9 +47,7 @@ class Context:
     def pairs(self) -> List[Tuple[str, TimeFrame]]:
         return self.__pairs
 
-    @property
-    def data(self) -> LiveData:
-        return self.__data
-
     def refresh(self):
-        self.__data.refresh()
+        minimum_time_frame = min([int(tf) for tf in self.time_frames])
+        current_open_timestamp = int(datetime.now().timestamp() // minimum_time_frame * minimum_time_frame)
+        self.online_data.next(timestamp=current_open_timestamp)
