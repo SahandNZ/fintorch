@@ -1,86 +1,55 @@
-from typing import List
+from typing import Dict, List
 
-from .decorator import *
-from ..._exchange import Https, Wss, Trade
+from ._network.decorator import *
+from ._network.https import BinanceFutureHttps
+from ._network.wss import BinanceFutureWss
+from ..._online import OnlineTrade
 from ....dtype import Balance, Order, Position
+from ....enum import MarketType, TimeFrame
 
 
-class BinanceFutureTrade(Trade):
-    def __init__(self, https: Https, wss: Wss):
-        super().__init__(https, wss)
-
-    def get_balance(self) -> Balance:
-        endpoint = "/fapi/v2/balance"
-        response = self._https.get(endpoint=endpoint, sign=True)
-        response = [item for item in response if 'USDT' == item['asset']][0]
-        balance = Balance.from_binance(response)
-        return balance
+class BinanceFutureTrade(OnlineTrade):
+    def __init__(self, exchange_name: str, market_type: MarketType, interval: TimeFrame, key: str = None,
+                 secret_key: str = None, proxies: Dict = None):
+        https = BinanceFutureHttps(key=key, secret_key=secret_key, proxies=proxies)
+        # wss = BinanceFutureWss(key=key, secret_key=secret_key, proxies=proxies)
+        super().__init__(exchange_name=exchange_name, market_type=market_type, interval=interval, https=https, wss=None)
 
     def get_leverage(self, symbol: str) -> int:
-        endpoint = "/fapi/v2/positionRisk"
-        params = {"symbol": symbol}
-        response = self._https.get(endpoint=endpoint, params=params, sign=True)
-        leverage = response[0]['leverage']
-        return leverage
+        raise NotImplementedError()
 
-    def set_leverage(self, symbol: str, leverage: int) -> bool:
-        endpoint = "/fapi/v1/leverage"
-        params = {"symbol": symbol, "leverage": leverage}
-        response = self._https.post(endpoint=endpoint, params=params, sign=True)
-        leverage = response['leverage']
-        return leverage
+    def set_leverage(self, symbol: str, leverage: int) -> None:
+        raise NotImplementedError()
 
     def get_order(self, symbol: str, order_id: str) -> Order:
-        endpoint = "/fapi/v1/openOrders"
-        params = {"symbol": symbol, "orderId": order_id}
-        response = self._https.get(endpoint=endpoint, params=params, sign=True)
-        orders = Order.from_binance(response)
-        return orders
+        raise NotImplementedError()
 
     def get_open_orders(self, symbol: str) -> List[Order]:
-        endpoint = "/fapi/v1/openOrders"
-        params = {"symbol": symbol}
-        response = self._https.get(endpoint=endpoint, params=params, sign=True)
-        orders = [Order.from_binance(item) for item in response]
-        return orders
+        raise NotImplementedError()
 
-    def set_market_order(self, symbol: str, side: OrderSide, volume: float) -> str:
-        endpoint = "/fapi/v1/order"
-        params = {"symbol": symbol, "side": side, "type": "MARKET", "quantity": volume}
-        response = self._https.post(endpoint=endpoint, params=params, sign=True)
-        order_id = response["orderId"]
-        return order_id
+    def get_orders_history(self, symbol: str) -> List[Order]:
+        raise NotImplementedError()
 
-    def set_limit_order(self, symbol: str, side: OrderSide, volume: float, price: float) -> str:
-        endpoint = "/fapi/v1/order"
-        params = {"symbol": symbol, "side": side, "type": "LIMIT", "quantity": volume, "price": price,
-                  "timeInForce": "GTC"}
-        response = self._https.post(endpoint=endpoint, params=params, sign=True)
-        order_id = response["orderId"]
-        return order_id
+    def _set_market_order(self, order: Order) -> str:
+        raise NotImplementedError()
 
-    def set_stop_market_order(self, symbol: str, side: OrderSide, volume: float, stop_price: float) -> str:
-        endpoint = "/fapi/v1/order"
-        params = {"symbol": symbol, "side": side, "type": "LIMIT", "quantity": volume, "stopPrice": stop_price}
-        response = self._https.post(endpoint=endpoint, params=params, sign=True)
-        order_id = response["orderId"]
-        return order_id
+    def _set_limit_order(self, order: Order) -> Order:
+        raise NotImplementedError()
 
-    def cancel_order(self, symbol: str, order_id: str) -> bool:
-        endpoint = "/fapi/v1/order"
-        params = {"symbol": symbol, "orderId": order_id}
-        response = self._https.delete(endpoint=endpoint, params=params, sign=True)
-        return True
+    def _set_stop_market_order(self, order: Order) -> Order:
+        raise NotImplementedError()
 
-    def cancel_all_orders(self, symbol: str) -> bool:
-        endpoint = "/fapi/v1/allOpenOrders"
-        params = {"symbol": symbol}
-        response = self._https.delete(endpoint=endpoint, params=params, sign=True)
-        return True
+    def _set_stop_limit_order(self, order: Order) -> Order:
+        raise NotImplementedError()
 
-    def get_open_position(self, symbol: str) -> Position:
-        endpoint = "/fapi/v2/positionRisk"
-        params = {"symbol": symbol}
-        response = self._https.get(endpoint=endpoint, params=params, sign=True)
-        position = Position.from_binance(response[0])
-        return position
+    def cancel_order(self, symbol: str, order_id: str) -> None:
+        raise NotImplementedError()
+
+    def cancel_all_orders(self, symbol: str) -> None:
+        raise NotImplementedError()
+
+    def get_position(self, symbol: str) -> Position:
+        raise NotImplementedError()
+
+    def get_positions_history(self, symbol: str) -> List[Position]:
+        raise NotImplementedError()

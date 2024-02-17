@@ -1,7 +1,5 @@
-import copy
-from typing import Dict, List
+from typing import List
 
-import numpy as np
 import torch
 from .criterion import Criterion
 from torch import nn

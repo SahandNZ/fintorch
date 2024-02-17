@@ -1,4 +1,5 @@
 from ._hedge_mode import HedgeMode
+from ._market_type import MarketType
 from ._order_side import OrderSide
 from ._order_status import OrderStatus
 from ._order_type import OrderType

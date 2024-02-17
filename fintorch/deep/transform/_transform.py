@@ -1,5 +1,6 @@
 import os
 import pickle
+import time
 from abc import abstractmethod
 from datetime import datetime
 from typing import Generator, Union, List
@@ -8,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from ...component import Component
-from ...dtype import Data
+from ...dtype import DataCollection
 from ...enum import TimeFrame
 from ...setting import TRANSFORM_DIR
 from ...utils.directory import create_directory
@@ -22,7 +23,7 @@ class Transform(Component):
         self.__time_frame: TimeFrame = time_frame
         self.__dim_sequence: int = dim_sequence
 
-        self.__preprocessed_dataframe: pd.DataFrame = None
+        self.__processed_df: pd.DataFrame = pd.DataFrame()
 
     @property
     def symbol(self) -> str:
@@ -37,8 +38,8 @@ class Transform(Component):
         return self.__dim_sequence
 
     @property
-    def processed_dataframe(self) -> pd.DataFrame:
-        return self.__preprocessed_dataframe
+    def processed_df(self) -> pd.DataFrame:
+        return self.__processed_df
 
     @property
     def directory(self) -> str:
@@ -48,87 +49,71 @@ class Transform(Component):
     def path(self) -> str:
         return os.path.join(self.directory, f"sequence-length-{self.dim_sequence}.pkl")
 
-    def load_sf(self, timestamps: List[int]) -> List[Union[np.array, None]]:
-        # load timestamp_to_sf
+    def load_sf(self, timestamps: List[int]) -> Generator:
+        # safe load timestamp_to_sf
         try:
             with open(self.path, "rb") as file:
                 timestamp_to_sf = pickle.load(file)
-        except (FileNotFoundError, EOFError) as e:
+        except (FileNotFoundError, EOFError):
             timestamp_to_sf = {}
 
-        sf_values = []
         for timestamp in timestamps:
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
             sf = timestamp_to_sf.get(shifted_timestamp, None)
-            sf_values.append(sf)
+            yield sf
 
-        return sf_values
-
-    def transform_sf(self, data: Data, timestamps: List[int]) -> Generator[Union[np.array, None], None, None]:
-        # load timestamp_to_sf
+    def transform_sf(self, dc: DataCollection, timestamps: List[int]) -> Generator:
+        # safe load timestamp_to_sf
         try:
             with open(self.path, "rb") as file:
                 timestamp_to_sf = pickle.load(file)
-        except (FileNotFoundError, EOFError) as e:
+        except (FileNotFoundError, EOFError):
             timestamp_to_sf = {}
 
         # update sf values if needed
-        overwrite_file = False
         for timestamp in timestamps:
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
 
-            # load sf value and update it if needed
-            if timestamp in timestamp_to_sf:
-                sf = timestamp_to_sf[shifted_timestamp]
-                if sf is None and not self._can_be_none(timestamp=shifted_timestamp):
-                    sf = self._transform_sf(data=data, timestamp=shifted_timestamp)
-                    timestamp_to_sf[shifted_timestamp] = sf
-                    overwrite_file = True
-            else:
-                sf = self._transform_sf(data=data, timestamp=shifted_timestamp)
+            # load or transform sf
+            sf = timestamp_to_sf.get(shifted_timestamp, None)
+            if sf is None and self._can_not_be_none(dc=dc, timestamp=shifted_timestamp):
+                sf = self.__transform_sf(dc=dc, timestamp=shifted_timestamp)
                 timestamp_to_sf[shifted_timestamp] = sf
-                overwrite_file = True
 
             yield sf
 
-        # dump timestamp_to_sf if needed
+        # dump timestamp_to_sf
         create_directory(self.directory)
-        if overwrite_file:
-            with open(self.path, "wb+") as file:
-                pickle.dump(timestamp_to_sf, file)
+        with open(self.path, "wb+") as file:
+            pickle.dump(timestamp_to_sf, file)
 
-    def _transform_sf(self, data: Data, timestamp: int) -> Union[np.array, None]:
-        df = self._preprocess_sf(data=data, timestamp=timestamp)
-        sf = self._transform_dataframe(df=df, timestamp=timestamp)
+    def __transform_sf(self, dc: DataCollection, timestamp: int) -> Union[np.array, None]:
+        df = self.__transform_dc_to_df(dc=dc, timestamp=timestamp)
+        sf = self._transform_df_to_sf(df=df, timestamp=timestamp)
 
         return sf
 
-    def _preprocess_sf(self, data: Data, timestamp: int) -> pd.DataFrame:
-        if self.processed_dataframe is None or timestamp not in self.processed_dataframe.index:
-            current_open_timestamp = datetime.now().timestamp() // int(self.time_frame) * int(self.time_frame)
-            if timestamp not in data[self.symbol, self.time_frame].index and timestamp <= current_open_timestamp:
-                raise ValueError("Data has missing value at in {}-{} at {}."
-                                 .format(self.symbol, self.time_frame, datetime.fromtimestamp(timestamp)))
+    def __transform_dc_to_df(self, dc: DataCollection, timestamp: int) -> pd.DataFrame:
+        if 0 == len(self.processed_df) or timestamp not in self.processed_df.index:
+            df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
+            self.__processed_df = self._process_df(df.copy())
 
-            df = data[self.symbol, self.time_frame].copy()
-            self.__preprocessed_dataframe = self._preprocess_dataframe(df)
-
-        return self.__preprocessed_dataframe
+        return self.processed_df
 
     @abstractmethod
     def _shift_timestamp(self, timestamp: int) -> int:
         raise NotImplementedError()
 
     @abstractmethod
-    def _can_be_none(self, timestamp: int) -> bool:
+    def _can_not_be_none(self, dc: DataCollection, timestamp: int) -> bool:
         raise NotImplementedError()
 
     @abstractmethod
-    def _preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError()
 
     @abstractmethod
-    def _transform_dataframe(self, df: pd.DataFrame, timestamp: int) -> Union[np.array, None]:
+    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> Union[np.array, None]:
         raise NotImplementedError()
 
     def __str__(self) -> str:

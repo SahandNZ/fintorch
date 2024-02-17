@@ -1,30 +1,17 @@
-from typing import Dict
+from abc import ABC
+from typing import List
 
-from .future import Future
-from .spot import Spot
+from .market import Market
 from .wallet import Wallet
-from ...utils.function import call_with_dict, import_class
+from ...enum import TimeFrame
 
 
-class Exchange:
-    def __init__(self, name: str, wallet: Wallet, spot: Spot, future: Future):
+class Exchange(ABC):
+    def __init__(self, name: str, wallet: Wallet, spot: Market, future: Market):
         self.__name: str = name
         self.__wallet: Wallet = wallet
-        self.__spot: Spot = spot
-        self.__future: Future = future
-
-    @staticmethod
-    def from_name(name: str, proxies: Dict[str, str] = None):
-        dct = {"name": name, "proxies": proxies}
-        exchange = Exchange.from_dict(dct=dct)
-
-        return exchange
-
-    @staticmethod
-    def from_dict(dct: Dict):
-        name = dct["name"]
-        exchange_cls = import_class(module=f"fintorch.exchange.{name}", contains=f"{name}exchange")
-        return call_with_dict(exchange_cls, dct)
+        self.__spot: Market = spot
+        self.__future: Market = future
 
     @property
     def name(self) -> str:
@@ -35,9 +22,17 @@ class Exchange:
         return self.__wallet
 
     @property
-    def spot(self) -> Spot:
+    def spot(self) -> Market:
         return self.__spot
 
     @property
-    def future(self) -> Future:
+    def future(self) -> Market:
         return self.__future
+
+    def prepare(self, symbols: List[str], time_frames: List[TimeFrame]) -> None:
+        # self.spot.prepare(symbols=symbols, time_frames=time_frames)
+        self.future.prepare(symbols=symbols, time_frames=time_frames)
+
+    def next(self, timestamp: int) -> None:
+        # self.spot.next(timestamp=timestamp)
+        self.future.next(timestamp=timestamp)

@@ -49,7 +49,7 @@ class DataLoader:
     def index(self) -> int:
         return self._index
 
-    def __call__(self, dataset: Dataset, timestamps: List[int], shuffle: bool = True) -> Iterator:
+    def __call__(self, dataset: Dataset, timestamps: List[int], shuffle: bool) -> Iterator:
         self.__dataset = dataset
         self.__timestamps = copy.deepcopy(timestamps)
         self.__batch_count = math.ceil(len(timestamps) / self.batch_size)
@@ -73,13 +73,14 @@ class DataLoader:
             batch_timestamps = self.timestamps[start_index: stop_index]
             batch_x, batch_y = self.dataset[batch_timestamps]
 
-            if self.post_load_fn is not None:
-                batch_x, batch_y = self.post_load_fn(batch_x, batch_y)
+            if 0 < len(batch_x) and 0 < len(batch_y):
+                if self.post_load_fn is not None:
+                    batch_x, batch_y = self.post_load_fn(batch_x, batch_y)
 
-            if torch.isnan(batch_x).max().item() or torch.isnan(batch_y).max().item():
-                raise RuntimeError("NaN in batch")
-            if torch.isinf(batch_x).max().item() or torch.isinf(batch_y).max().item():
-                raise RuntimeError("INF in batch")
+                if torch.isnan(batch_x).max().item() or torch.isnan(batch_y).max().item():
+                    raise RuntimeError("NaN in batch")
+                if torch.isinf(batch_x).max().item() or torch.isinf(batch_y).max().item():
+                    raise RuntimeError("INF in batch")
 
             return batch_x, batch_y
         else:

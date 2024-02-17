@@ -1,30 +1,31 @@
 import math
-from abc import ABC
-from datetime import datetime
-from typing import Iterator, List
+from datetime import datetime, timedelta
+from typing import Iterator
 
-from fintorch.deep.dtype import Dataset, Fold
+from fintorch.deep.dtype import Fold
 from fintorch.enum import TimeFrame
 
 
-class CrossValidation(ABC):
-    def __init__(self, dataset: Dataset, train_length: int = 25920, val_length: int = 8640, test_length: int = 17280):
-        self.__dataset: Dataset = dataset
+class CrossValidation:
+    def __init__(
+            self,
+            interval: TimeFrame,
+            train_length: int = 25920,
+            val_length: int = 8640,
+            test_length: int = 17280
+    ):
+        self.__interval: TimeFrame = interval
         self.__train_length: int = train_length
         self.__val_length: int = val_length
         self.__test_length: int = test_length
 
-        self.__test_timestamps: List[int] = None
-        self.__folds_count: int = None
-        self.__index: int = None
-
-    @property
-    def dataset(self) -> Dataset:
-        return self.__dataset
+        self.__start_timestamp: int = -1
+        self.__folds_count = -1
+        self.__index: int = -1
 
     @property
     def interval(self) -> TimeFrame:
-        return self.dataset.interval
+        return self.__interval
 
     @property
     def train_length(self) -> int:
@@ -39,6 +40,18 @@ class CrossValidation(ABC):
         return self.__test_length
 
     @property
+    def fold_length(self) -> int:
+        return self.train_length + self.val_length + self.test_length
+
+    @property
+    def start_timestamp(self) -> int:
+        return self.__start_timestamp
+
+    @property
+    def start_datetime(self) -> datetime:
+        return datetime.fromtimestamp(self.__start_timestamp)
+
+    @property
     def folds_count(self) -> int:
         return self.__folds_count
 
@@ -46,33 +59,45 @@ class CrossValidation(ABC):
     def index(self) -> int:
         return self.__index
 
-    def __call__(self, test_timestamps: List[int]) -> Iterator:
-        self.__test_timestamps = test_timestamps
+    def __call__(self, on_board_timestamp: int) -> Iterator:
+        start_timestamp = on_board_timestamp + (self.train_length + self.val_length) * self.interval
+        start_datetime = datetime.fromtimestamp(start_timestamp)
+        rounded_start_datetime = start_datetime.replace(month=(start_datetime.month + 1) % 12, day=1)
+        self.__start_timestamp = rounded_start_datetime.timestamp()
+
         return self.__iter__()
 
     def __iter__(self):
-        self.__folds_count = math.ceil(len(self.__test_timestamps) / self.__test_length)
+        current_open_timestamp = datetime.now().timestamp() // int(self.interval) * int(self.interval)
+        samples_count = (current_open_timestamp - self.start_timestamp) // int(self.interval)
+        folds_count = math.ceil(samples_count / self.test_length)
+
+        self.__folds_count = folds_count
         self.__index = -1
+
         return self
 
     def __next__(self) -> Fold:
         self.__index += 1
         if self.index < self.folds_count:
-            test_start_index = self.index * self.test_length
-            test_stop_index = test_start_index + self.test_length
-            test_timestamps = self.__test_timestamps[test_start_index: test_stop_index]
+            test_start_timestamp = int(self.start_timestamp + self.index * self.test_length * self.interval)
+            test_stop_timestamp = int(test_start_timestamp + self.test_length * self.interval)
+            test_timestamps = list(range(test_start_timestamp, test_stop_timestamp, int(self.interval)))
 
-            val_stop_timestamp = test_timestamps[0]
-            val_start_timestamp = val_stop_timestamp - self.val_length * self.interval
-            val_timestamps = list(range(val_start_timestamp, test_timestamps[0], self.interval))
+            val_stop_timestamp = test_start_timestamp
+            val_start_timestamp = int(val_stop_timestamp - self.val_length * self.interval)
+            val_timestamps = list(range(val_start_timestamp, val_stop_timestamp, int(self.interval)))
 
             train_stop_timestamp = val_start_timestamp
-            train_start_timestamp = train_stop_timestamp - self.train_length * self.interval
-            train_timestamps = list(range(train_start_timestamp, train_stop_timestamp, self.interval))
+            train_start_timestamp = int(train_stop_timestamp - self.train_length * self.interval)
+            train_timestamps = list(range(train_start_timestamp, train_stop_timestamp, int(self.interval)))
 
-            fold = Fold(index=self.index, train_timestamps=train_timestamps, val_timestamps=val_timestamps,
-                        test_timestamps=test_timestamps)
+            fold = Fold(
+                train_timestamps=train_timestamps,
+                val_timestamps=val_timestamps,
+                test_timestamps=test_timestamps
+            )
+
             return fold
-
         else:
             raise StopIteration

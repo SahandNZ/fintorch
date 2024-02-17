@@ -1,10 +1,10 @@
-from ._exchange import Exchange
-from ._exchange import Future
-from ._exchange import Market
-from ._exchange import Spot
-from ._exchange import Trade
-from ._exchange import Wallet
+from ._exchange import *
+from ._local import *
+from ._online import *
+from ..setting import EXCHANGE_NAME, PROXIES, TRADING_INTERVAL
 
-from ..setting import EXCHANGE_NAME, PROXIES
-
-EXCHANGE = Exchange.from_name(name=EXCHANGE_NAME, proxies=PROXIES)
+ONLINE_EXCHANGE: OnlineExchange = OnlineExchange.from_name(
+    name=EXCHANGE_NAME,
+    interval=TRADING_INTERVAL,
+    proxies=PROXIES
+)

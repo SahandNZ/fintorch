@@ -1,8 +1,8 @@
 import pandas as pd
 
 
-def resample_time_frame(tohlcv: pd.DataFrame, source_timeframe: int, destination_timeframe: int) -> pd.DataFrame:
-    df = tohlcv.copy()
+def resample_df(base_df: pd.DataFrame, source_timeframe: int, destination_timeframe: int) -> pd.DataFrame:
+    df = base_df.copy()
     step = destination_timeframe // source_timeframe
 
     df['is_first'] = 0 == (df.index.to_series() % destination_timeframe)

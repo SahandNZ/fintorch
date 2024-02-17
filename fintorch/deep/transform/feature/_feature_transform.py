@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from .._transform import Transform
+from ....dtype import DataCollection
 from ....enum import TimeFrame
 from ....setting import NUMPY_FEATURE_DTYPE
 
@@ -30,14 +31,18 @@ class FeatureTransform(Transform, ABC):
     def _shift_timestamp(self, timestamp: int) -> int:
         return math.floor(timestamp / self.time_frame) * self.time_frame
 
-    def _can_be_none(self, timestamp: int) -> bool:
-        return timestamp < datetime.strptime("2020-01-01", "%Y-%m-%d").timestamp()
+    def _can_not_be_none(self, dc: DataCollection, timestamp: int) -> bool:
+        symbol_info = dc.get_symbol_info(symbol=self.symbol)
+        first_timestamp = symbol_info.on_board_timestamp + int(self.time_frame) * self.look_back * 2
+        last_timestamp = datetime.now().timestamp() // int(self.time_frame) * int(self.time_frame)
+
+        return first_timestamp <= timestamp <= last_timestamp
 
     @abstractmethod
-    def _preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError()
 
-    def _transform_dataframe(self, df: pd.DataFrame, timestamp: int) -> Union[np.array, None]:
+    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> Union[np.array, None]:
         # backward cropping feature dataframe with timestamp and sequence length
         fdf = df[df.index < timestamp]
         fdf = fdf.iloc[-self.dim_sequence:]

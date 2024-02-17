@@ -5,45 +5,13 @@ from . import Epoch
 
 
 class Fold:
-    def __init__(self, index: int, train_timestamps: List[int], val_timestamps: List[int], test_timestamps: List[int]):
-        self.__index: int = index
-        self.__done: bool = False
-
-        self.__folds_count: int = 0
-        self.__epochs_count: int = 0
+    def __init__(self, train_timestamps: List[int], val_timestamps: List[int], test_timestamps: List[int]):
+        self.epochs_count: int = 0
         self.__epochs: List[Epoch] = []
 
         self.__train_timestamps: List[int] = train_timestamps
         self.__val_timestamps: List[int] = val_timestamps
         self.__test_timestamp: List[int] = test_timestamps
-
-    @property
-    def index(self) -> int:
-        return self.__index
-
-    @property
-    def done(self) -> bool:
-        return self.__done
-
-    @done.setter
-    def done(self, value: bool) -> None:
-        self.__done = value
-
-    @property
-    def folds_count(self) -> int:
-        return self.__folds_count
-
-    @folds_count.setter
-    def folds_count(self, value: int) -> None:
-        self.__folds_count = value
-
-    @property
-    def epochs_count(self) -> int:
-        return self.__epochs_count
-
-    @epochs_count.setter
-    def epochs_count(self, value: int) -> None:
-        self.__epochs_count = value
 
     @property
     def epochs(self) -> List[Epoch]:
@@ -91,6 +59,10 @@ class Fold:
         return self.__test_timestamp
 
     @property
+    def timestamps(self) -> List[int]:
+        return self.train_timestamps + self.val_timestamps + self.test_timestamps
+
+    @property
     def train_start_datetime(self) -> datetime:
         return datetime.fromtimestamp(self.train_timestamps[0])
 
@@ -103,8 +75,16 @@ class Fold:
         return datetime.fromtimestamp(self.test_timestamps[0])
 
     @property
+    def test_start_timestamp(self) -> int:
+        return self.test_timestamps[0]
+
+    @property
     def test_stop_datetime(self) -> datetime:
         return datetime.fromtimestamp(self.test_timestamps[-1])
+
+    @property
+    def test_stop_timestamp(self) -> int:
+        return self.test_timestamps[-1]
 
     @property
     def best_train_epoch(self) -> Epoch:
@@ -130,22 +110,19 @@ class Fold:
 
         return best_epoch
 
-    def __str__(self):
-        fold_elapsed_time = datetime.strftime(datetime.utcfromtimestamp(self.elapsed_time), '%H:%M:%S')
-        fold_remaining_time = datetime.strftime(datetime.utcfromtimestamp(self.remaining_time), '%H:%M:%S')
-        fold_total_time = datetime.strftime(datetime.utcfromtimestamp(self.total_time), '%H:%M:%S')
+    def __eq__(self, other):
+        return self.test_timestamps == other.test_timestamp
 
+    def __str__(self):
         epoch_elapsed_time = datetime.strftime(datetime.utcfromtimestamp(self.last_epoch.elapsed_time), '%H:%M:%S')
         epoch_remaining_time = datetime.strftime(datetime.utcfromtimestamp(self.last_epoch.remaining_time), '%H:%M:%S')
         epoch_total_time = datetime.strftime(datetime.utcfromtimestamp(self.last_epoch.total_time), '%H:%M:%S')
 
-        return ("Fold  ({}/{:<2}) ({} {} {})\n"
-                "Epoch ({}/{:<2}) ({} {} {})\n"
+        return ("Epoch ({}/{:<2}) ({} {} {})\n"
                 "Train  {:<6.4f}  {:<6.4f}  {:<5.1f}%  {:<5.1f}%  {}\n"
                 "Val    {:<6.4f}  {:<6.4f}  {:<5.1f}%  {:<5.1f}%  {}\n"
                 "Test   {:<6.4f}  {:<6.4f}  {:<5.1f}%  {:<5.1f}%  {}") \
-            .format(self.index, self.folds_count, fold_elapsed_time, fold_remaining_time, fold_total_time,
-                    self.last_epoch.index, self.epochs_count, epoch_elapsed_time, epoch_remaining_time,
+            .format(self.last_epoch.index, self.epochs_count, epoch_elapsed_time, epoch_remaining_time,
                     epoch_total_time,
                     self.last_epoch.train_loss, self.best_train_epoch.train_loss, self.last_epoch.train_accuracy,
                     self.best_train_epoch.train_accuracy, self.best_train_epoch.index,

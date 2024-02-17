@@ -1,27 +1,21 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import List
 
-from .https import Https
-from .network import Network
-from .wss import Wss
-from ...dtype import Balance, Order, Position
-from ...enum import OrderSide
+from .element import Element
+from ...dtype import Order, Position
+from ...enum import MarketType, TimeFrame
 
 
-class Trade(Network):
-    def __init__(self, https: Https, wss: Wss):
-        super().__init__(https, wss)
-
-    @abstractmethod
-    def get_balance(self) -> Balance:
-        raise NotImplementedError()
+class Trade(Element, ABC):
+    def __init__(self, exchange_name: str, market_type: MarketType, interval: TimeFrame) -> None:
+        super().__init__(exchange_name=exchange_name, market_type=market_type, interval=interval)
 
     @abstractmethod
     def get_leverage(self, symbol: str) -> int:
         raise NotImplementedError()
 
     @abstractmethod
-    def set_leverage(self, symbol: str, leverage: int) -> bool:
+    def set_leverage(self, symbol: str, leverage: int) -> None:
         raise NotImplementedError()
 
     @abstractmethod
@@ -33,25 +27,25 @@ class Trade(Network):
         raise NotImplementedError()
 
     @abstractmethod
-    def set_market_order(self, symbol: str, side: OrderSide, volume: float) -> str:
+    def get_orders_history(self, symbol: str) -> List[Order]:
         raise NotImplementedError()
 
     @abstractmethod
-    def set_limit_order(self, symbol: str, side: OrderSide, volume: float, price: float) -> str:
+    def set_order(self, order: Order) -> Order:
         raise NotImplementedError()
 
     @abstractmethod
-    def set_stop_market_order(self, symbol: str, side: OrderSide, volume: float, stop_price: float) -> str:
+    def cancel_order(self, symbol: str, order_id: str) -> None:
         raise NotImplementedError()
 
     @abstractmethod
-    def cancel_order(self, symbol: str, order_id: str) -> bool:
+    def cancel_all_orders(self, symbol: str) -> None:
         raise NotImplementedError()
 
     @abstractmethod
-    def cancel_all_orders(self, symbol: str) -> bool:
+    def get_position(self, symbol: str) -> Position:
         raise NotImplementedError()
 
     @abstractmethod
-    def get_open_position(self, symbol: str) -> Position:
+    def get_positions_history(self, symbol: str) -> List[Position]:
         raise NotImplementedError()

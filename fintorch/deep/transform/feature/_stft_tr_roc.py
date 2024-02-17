@@ -13,12 +13,12 @@ class StftTrRocFeatureTransform(FeatureTransform):
             symbol=symbol,
             time_frame=time_frame,
             dim_sequence=dim_sequence,
-            look_back=-1,
+            look_back=1,
             features=["tr", "roc", "clean-tr", "clean-roc"],
         )
         self.dfft = DFFT(muting_percentage=muting_percentage)
 
-    def _preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["tr"] = df.high / df.low - 1
         df["roc"] = df.close / df.open - 1
         df["clean-tr"] = self.dfft.transform(df.tr)

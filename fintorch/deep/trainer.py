@@ -9,23 +9,30 @@ import torch
 from .cross_validation import CrossValidation
 from .data_loader import DataLoader
 from .dtype import Dataset, Epoch, Fold
-from .lr_scheduler import LRScheduler
+from .lr_scheduler import LrScheduler
 from .model import Model
 from .optimizer import Optimizer
 from .criterion import Criterion
 
 
 class Trainer:
-    def __init__(self, epochs_count: int, cross_validation: CrossValidation, data_loader: DataLoader,
-                 criterion: Criterion, optimizer: Optimizer, lr_scheduler: LRScheduler,
-                 gradient_clipping_threshold: float = None, auto_cuda: bool = True,
-                 half_precision: bool = True) -> None:
+    def __init__(
+            self,
+            epochs_count: int,
+            data_loader: DataLoader,
+            criterion: Criterion,
+            optimizer: Optimizer,
+            lr_scheduler: LrScheduler,
+            gradient_clipping_threshold: float = None,
+            auto_cuda: bool = True,
+            half_precision: bool = True
+    ) -> None:
+
         self.__epochs_count: int = epochs_count
-        self.__cross_validation = cross_validation
         self.__data_loader: DataLoader = data_loader
         self.__criterion: Criterion = criterion
         self.__optimizer: Optimizer = optimizer
-        self.__lr_scheduler: LRScheduler = lr_scheduler
+        self.__lr_scheduler: LrScheduler = lr_scheduler
         self.__gradient_clipping_threshold: float = gradient_clipping_threshold
 
         self.__auto_cuda: bool = auto_cuda
@@ -34,10 +41,6 @@ class Trainer:
     @property
     def epochs_count(self) -> int:
         return self.__epochs_count
-
-    @property
-    def cross_validation(self) -> CrossValidation:
-        return self.__cross_validation
 
     @property
     def data_loader(self) -> DataLoader:
@@ -52,7 +55,7 @@ class Trainer:
         return self.__optimizer
 
     @property
-    def lr_scheduler(self) -> LRScheduler:
+    def lr_scheduler(self) -> LrScheduler:
         return self.__lr_scheduler
 
     @property
@@ -85,51 +88,40 @@ class Trainer:
         else:
             return torch.float32
 
-    def optimize(self, dataset: Dataset, model: Model, timestamps: List[int]) -> Generator[Fold, None, None]:
+    def optimize_fold(self, dataset: Dataset, model: Model, fold: Fold) -> Generator[None, None, None]:
+        # move model to cuda device if it's available
         model.to(self.device)
 
-        for fold in self.cross_validation(test_timestamps=timestamps):
-            for _ in self.__fold_step(dataset=dataset, model=model, fold=fold):
-                yield fold
+        for _ in self.__fold_step(dataset=dataset, model=model, fold=fold):
+            yield
 
         # move model back to cpu
         cpu = torch.device("cpu")
         model.to(cpu)
 
-    def optimize_fold(self, dataset: Dataset, model: Model, fold: Fold):
-        model.to(self.device)
-
-        for _ in self.__fold_step(dataset=dataset, model=model, fold=fold):
-            yield fold
-        cpu = torch.device("cpu")
-        model.to(cpu)
-
-    def __fold_step(self, dataset: Dataset, model: Model, fold: Fold) -> Generator[Fold, None, None]:
+    def __fold_step(self, dataset: Dataset, model: Model, fold: Fold) -> Generator[None, None, None]:
+        # reset model and optimizer and lr scheduler
         model.reset()
         self.optimizer.reset(model=model)
         self.lr_scheduler.reset(optimizer=self.optimizer)
 
-        fold.folds_count = self.cross_validation.folds_count
+        # epoch loop
         fold.epochs_count = self.epochs_count
-
         for epoch_index in range(1, self.epochs_count + 1):
             epoch = Epoch(index=epoch_index, criterion=self.criterion)
             fold.epochs.append(epoch)
 
             for _ in self.__epoch_train_step(dataset, model, fold, epoch):
-                yield fold
+                yield
             for _ in self.__epoch_val_step(dataset, model, fold, epoch):
-                yield fold
+                yield
             for _ in self.__epoch_test_step(dataset, model, fold, epoch):
-                yield fold
-
-        fold.done = True
-        yield fold
+                yield
 
     def __epoch_train_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: Epoch) -> Generator:
         generator = self.___batched_common_step(dataset, model, fold, epoch, "train")
         for _ in generator:
-            yield epoch
+            yield
 
         epoch.model_state_dict = {k: v.cpu() for k, v in copy.deepcopy(model.state_dict()).items()}
 
@@ -156,12 +148,15 @@ class Trainer:
             batch_x = batch_x.to(self.device)
             batch_y = batch_y.to(self.device)
 
+            if 0 == len(batch_x) or 0 == len(batch_y):
+                continue
+
             batch_loss, batch_y_hat = self.___common_step(model, batch_x, batch_y, optimize)
             batch_actual = torch.argmax(batch_y, dim=-1)
             batch_prediction = torch.argmax(batch_y_hat, dim=-1)
             batch_accuracy = (batch_actual == batch_prediction).sum() / len(batch_y) * 100
 
-            # remove batch_x, batch_y
+            # remove batch_x, batch_y, batch_y_hat
             del batch_x, batch_y, batch_y_hat
 
             getattr(epoch, f"{mode}_batch_times").append(time.time() - start_time)

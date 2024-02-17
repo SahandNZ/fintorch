@@ -1,43 +1,44 @@
-from abc import abstractmethod
-from typing import List
+from abc import ABC, abstractmethod
 
 import pandas as pd
-from fintorch.cross_validation.fold import Fold
-from fintorch.position import Position
 
-from fintorch.component import Component
+from ..component import Component
+from ..enum import TimeFrame
+from ..exchange import Exchange
 
 
-class Strategy(Component):
-    def __init__(self, name: str, short_name: str, show_progress_bar: bool):
+class Strategy(Component, ABC):
+    def __init__(self, name: str, short_name: str, symbol: str, time_frame: TimeFrame):
         super().__init__(name=name, short_name=short_name, description="")
-        self.__show_progress_bar: bool = show_progress_bar
+        self.__symbol: str = symbol
+        self.__time_frame: TimeFrame = time_frame
+
+        self.__processed_df: pd.DataFrame = None
 
     @property
-    def show_progress_bar(self) -> bool:
-        return self.__show_progress_bar
+    def symbol(self) -> str:
+        return self.__symbol
+
+    @property
+    def time_frame(self) -> TimeFrame:
+        return self.__time_frame
+
+    @property
+    def processed_data(self) -> pd.DataFrame:
+        return self.__processed_df
 
     @abstractmethod
-    def prepare_dataframe(self, fold: Fold) -> pd.DataFrame:
-        raise NotImplemented()
+    def prepare(self, exchange: Exchange) -> None:
+        raise NotImplementedError()
 
     @abstractmethod
-    def backtest(self, fold: Fold) -> List[Position]:
-        raise NotImplemented()
+    def next(self, exchange: Exchange) -> None:
+        raise NotImplementedError()
 
-    @staticmethod
-    def _create_position(df: pd.DataFrame, entry_index: int, exit_index: int, exit_price: float) -> Position:
-        bars = exit_index - entry_index
-        entry_timestamp = df.timestamp.iloc[entry_index]
-        exit_timestamp = df.timestamp.iloc[exit_index]
-        side = df.side.iloc[entry_index]
-        entry_price = df.open.iloc[entry_index]
-        entry_percentage = 100
-        maximum_met_price = df.high.iloc[entry_index:exit_index].max()
-        minimum_met_price = df.low.iloc[entry_index:exit_index].min()
-        position = Position(bars=bars, entry_timestamp=entry_timestamp, exit_timestamp=exit_timestamp,
-                            side=side, entry_percentage=entry_percentage, entry_price=entry_price,
-                            exit_price=exit_price, maximum_met_price=maximum_met_price,
-                            minimum_met_price=minimum_met_price)
+    @abstractmethod
+    def process_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        raise NotImplementedError()
 
-        return position
+    @abstractmethod
+    def __str__(self):
+        raise NotImplementedError()

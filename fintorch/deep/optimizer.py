@@ -1,0 +1,30 @@
+from abc import ABC
+from typing import Dict, Type
+
+import torch
+from fintorch.deep.model import Model
+
+
+class Optimizer(ABC):
+    def __init__(self, torch_optimizer_type: Type[torch.optim.Optimizer], **kwargs):
+        self.__torch_optimizer_type: Type[torch.optim.Optimizer] = torch_optimizer_type
+        self.__kwargs: Dict = kwargs
+
+        self.__torch_optimizer: torch.optim.Optimizer = None
+
+    @property
+    def torch_optimizer(self) -> torch.optim.Optimizer:
+        return self.__torch_optimizer
+
+    @property
+    def lr(self) -> float:
+        return next(iter(self.torch_optimizer.param_groups))['lr']
+
+    def reset(self, model: Model):
+        self.__torch_optimizer = self.__torch_optimizer_type(params=model.parameters(), **self.__kwargs)
+
+    def step(self):
+        self.torch_optimizer.step()
+
+    def zero_grad(self):
+        self.torch_optimizer.zero_grad()

@@ -16,7 +16,7 @@ class RollingMeanStdTrRocFeatureTransform(FeatureTransform):
             features=["mean-tr", "mean-roc", "std-tr", "std-roc"],
         )
 
-    def _preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["tr"] = df.high / df.low - 1
         df["roc"] = df.close / df.open - 1
         df["mean-tr"] = df.tr.rolling(self.look_back).mean()

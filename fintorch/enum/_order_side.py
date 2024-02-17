@@ -5,6 +5,7 @@ class OrderSide(IntEnum):
     BUY = 1
     SELL = -1
 
+    @property
     def reverse(self):
         return OrderSide.SELL if 1 == self.value else OrderSide.BUY
 

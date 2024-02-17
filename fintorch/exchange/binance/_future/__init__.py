@@ -1,1 +1,2 @@
-from .future import BinanceFuture
+from .data import BinanceFutureData
+from .trade import BinanceFutureTrade
