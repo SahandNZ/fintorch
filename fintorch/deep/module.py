@@ -1,9 +1,9 @@
+import gc
 import os.path
 import pickle
 from abc import ABC
-from typing import Generator, List, Tuple
+from typing import Any, Dict, Generator, List, Tuple, Type, Union
 
-import numpy as np
 import torch
 
 from .criterion import CE
@@ -17,13 +17,16 @@ from .trainer import Trainer
 from ..dtype import DataCollection
 from ..setting import MODULE_DIR
 from ..utils.directory import create_directory
+from ..utils.function import call_with_dict
 
 
 class Module(ABC):
-    def __init__(self, dataset: Dataset, model: Model):
+    def __init__(self, dataset: Dataset, model_type: Type[Model], model_kwargs: Dict[str, Any]):
         self.__dataset: Dataset = dataset
-        self.__model: Model = model
+        self.__model_type: Type[Model] = model_type
+        self.__model_kwargs: Dict[str, Any] = model_kwargs
 
+        self.__model: Union[Model, None] = None
         self.__cross_validation = CrossValidation(interval=self.dataset.interval)
         self.__trainer: Trainer = Trainer(
             epochs_count=20,
@@ -40,7 +43,15 @@ class Module(ABC):
 
     @property
     def model(self) -> Model:
+        if self.__model is None:
+            self.__model = call_with_dict(self.__model_type, self.__model_kwargs)
+
         return self.__model
+
+    @model.deleter
+    def model(self):
+        self.__model = None
+        gc.collect()
 
     @property
     def cross_validation(self) -> CrossValidation:
@@ -87,6 +98,9 @@ class Module(ABC):
                 folds_dict[key] = fold
                 for _ in self.trainer.optimize_fold(dataset=self.dataset, model=self.model, fold=fold):
                     yield fold
+
+        # remove model from memory to reduce memory usage
+        del self.model
 
         # update folds_dict
         create_directory(self.directory)
