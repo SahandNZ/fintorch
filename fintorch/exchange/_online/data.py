@@ -1,3 +1,4 @@
+import itertools
 import math
 import os
 import pickle
@@ -24,11 +25,19 @@ class OnlineData(Data, Network, ABC):
 
         self.__symbols_info_dict: Dict[str, SymbolInfo] = {}
         self.__candles_df_dict: Dict[Tuple[str, TimeFrame], pd.DataFrame] = {}
+        self.__last_update_timestamp: Union[int, None] = None
+
+    def prepare(self, symbols: List[str], time_frames: List[TimeFrame]) -> None:
+        super().prepare(symbols=symbols, time_frames=time_frames)
+        self.__last_update_timestamp = math.inf
+        for symbol, time_frame in itertools.product(symbols, time_frames):
+            df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
+            self.__last_update_timestamp = min(self.__last_update_timestamp, df.index[-1])
 
     def next(self, timestamp: int) -> None:
         super().next(timestamp=timestamp)
-        current_open_timestamp = math.floor(datetime.now().timestamp() / int(self.interval)) * int(self.interval)
-        if current_open_timestamp <= timestamp:
+        if self.__last_update_timestamp < timestamp:
+            self.__last_update_timestamp = timestamp
             for symbol in self.symbols:
                 self.update_candles_dataframe(symbol=symbol, time_frame=BASE_TIME_FRAME)
 
@@ -80,10 +89,10 @@ class OnlineData(Data, Network, ABC):
             self.__save_symbols_info_dict(symbols_info_dict=self.__symbols_info_dict)
 
     def update_candles_dataframe(self, symbol: str, time_frame: TimeFrame, progress: Progress = None) -> pd.DataFrame:
-        local_df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
+        df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
 
         # assign value to start timestamp
-        if 0 == len(local_df):
+        if 0 == len(df):
             if CANDLE_COUNTS is None:
                 symbol_info = self.get_symbol_info(symbol=symbol)
                 start_timestamp = symbol_info.on_board_timestamp
@@ -91,10 +100,10 @@ class OnlineData(Data, Network, ABC):
                 current_open_timestamp = datetime.now().timestamp() // int(time_frame) * int(time_frame)
                 start_timestamp = current_open_timestamp - CANDLE_COUNTS * time_frame
         else:
-            start_timestamp = local_df.index[-1] + time_frame
+            start_timestamp = df.index[-1] + time_frame
 
         new_df = self.__send_get_candles_requests(symbol, time_frame, start_timestamp, progress=progress)
-        updated_df = pd.concat([local_df, new_df]) if 0 < len(local_df) else new_df
+        updated_df = pd.concat([df, new_df]) if 0 != len(new_df) and 0 != len(df) else (df if 0 != len(df) else new_df)
         corrected_df = self.__check_candles_dataframe(symbol=symbol, time_frame=time_frame, df=updated_df)
         self.__save_candles_dataframe(symbol=symbol, time_frame=time_frame, df=corrected_df)
 
