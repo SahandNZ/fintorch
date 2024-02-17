@@ -69,12 +69,17 @@ class Module(ABC):
             str(int(self.dataset.label_transform.time_frame)),
             self.dataset.feature_transform.short_name,
             self.dataset.label_transform.short_name,
-            self.model.short_name
+            self.model.short_name,
+            f"dim-sequence-{self.dataset.feature_transform.dim_sequence}"
         )
 
     @property
-    def path(self) -> str:
-        return os.path.join(self.directory, f"dim-sequence-{self.dataset.feature_transform.dim_sequence}.pkl")
+    def folds_dict_path(self) -> str:
+        return os.path.join(self.directory, "folds-dict.pkl")
+
+    @property
+    def y_hats_dict_path(self) -> str:
+        return os.path.join(self.directory, "y-hats-dict.pkl")
 
     @staticmethod
     def _post_load_fn(x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -84,7 +89,7 @@ class Module(ABC):
     def optimize(self, dc: DataCollection) -> Generator[Fold, None, None]:
         # safe load folds_dict
         try:
-            with open(self.path, "rb") as file:
+            with open(self.folds_dict_path, "rb") as file:
                 folds_dict = pickle.load(file)
         except (FileNotFoundError, EOFError):
             folds_dict = {}
@@ -104,11 +109,51 @@ class Module(ABC):
 
         # update folds_dict
         create_directory(self.directory)
-        with open(self.path, "wb+") as file:
+        with open(self.folds_dict_path, "wb+") as file:
             pickle.dump(folds_dict, file)
 
-    def predict(self, dc: DataCollection, timestamps: List[int]) -> torch.Tensor:
-        pass
+    def predict(self, dc: DataCollection, timestamps: List[int]) -> Dict[int, List[float]]:
+        # safe load y_hat_dict
+        try:
+            with open(self.y_hats_dict_path, "rb") as file:
+                y_hats_dict = pickle.load(file)
+        except (FileNotFoundError, EOFError):
+            y_hats_dict = {}
+
+        # predict and store missed timestamps
+        missed_timestamps = [ts for ts in timestamps if ts not in y_hats_dict]
+        if 0 < len(missed_timestamps):
+            # safe load folds_dict
+            try:
+                with open(self.folds_dict_path, "rb") as file:
+                    folds_dict = pickle.load(file)
+            except (FileNotFoundError, EOFError):
+                folds_dict = {}
+
+            # predict missed timestamps
+            self.model.eval()
+            with torch.no_grad():
+                for key, fold in folds_dict.items():
+                    self.model.load_state_dict(fold.best_val_epoch.model_state_dict)
+                    fold_timestamps = [ts for ts in missed_timestamps if key[0] <= ts < key[1]]
+                    if 0 < len(fold_timestamps):
+                        x = self.dataset.preprocess(dc=dc, timestamps=fold_timestamps)
+                        y_hats = self.model(x).tolist()
+                        y_hats_dict.update({ts: y_hats[index] for index, ts in enumerate(fold_timestamps)})
+
+            # remove model to reduce memory usage
+            del self.model
+
+            # set missed timestamps to None
+            missed_timestamps = [ts for ts in timestamps if ts not in y_hats_dict]
+            y_hats_dict.update({ts: None for ts in missed_timestamps})
+
+            # update y_hats_dict
+            create_directory(self.directory)
+            with open(self.y_hats_dict_path, "wb+") as file:
+                pickle.dump(y_hats_dict, file)
+
+        return {ts: y_hats_dict[ts] for ts in timestamps}
 
     def __str__(self):
         return "{} {} {} {} {}" \
