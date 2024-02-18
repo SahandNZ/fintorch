@@ -95,8 +95,7 @@ class Module(ABC):
             folds_dict = {}
 
         # optimize new folds
-        symbol_info = dc.get_symbol_info(symbol=self.dataset.label_transform.symbol)
-        for fold in self.cross_validation(on_board_timestamp=symbol_info.on_board_timestamp):
+        for fold in self.cross_validation(start_timestamp=self.dataset.feature_transform.get_start_timestamp(dc=dc)):
             self.dataset.prepare(dc=dc, timestamps=fold.timestamps)
             key = (fold.test_start_timestamp, fold.test_stop_timestamp)
             if key not in folds_dict:

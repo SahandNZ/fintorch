@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import Iterator
 
 from fintorch.deep.dtype import Fold
+from fintorch.dtype import DataCollection
 from fintorch.enum import TimeFrame
 
 
@@ -59,12 +60,9 @@ class CrossValidation:
     def index(self) -> int:
         return self.__index
 
-    def __call__(self, on_board_timestamp: int) -> Iterator:
-        on_board_timestamp = on_board_timestamp // int(self.interval) * int(self.interval)
-        start_timestamp = on_board_timestamp + (self.train_length + self.val_length) * self.interval
-        start_datetime = datetime.fromtimestamp(start_timestamp)
-        rounded_start_datetime = start_datetime.replace(month=(start_datetime.month + 1) % 12, day=1)
-        self.__start_timestamp = rounded_start_datetime.timestamp()
+    def __call__(self, start_timestamp: int) -> Iterator:
+        start_timestamp = start_timestamp + (self.train_length + self.val_length) * self.interval
+        self.__start_timestamp = int(start_timestamp // int(self.interval) * int(self.interval))
 
         return self.__iter__()
 

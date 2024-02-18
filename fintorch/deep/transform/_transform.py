@@ -69,20 +69,30 @@ class Transform(Component):
     def path(self) -> str:
         return os.path.join(self.directory, f"sequence-length-{self.dim_sequence}.pkl")
 
-    def prepare_sf(self, dc: DataCollection, progress: Union[Progress, None] = None) -> None:
-        # create timestamps
+    def get_start_timestamp(self, dc: DataCollection) -> int:
+        # create on board timestamp
         symbol_info = dc.get_symbol_info(symbol=self.symbol)
         on_board_datetime = symbol_info.on_board_datetime
         on_board_timestamp = on_board_datetime.replace(month=(on_board_datetime.month + 1) % 12, day=1).timestamp()
         on_board_timestamp = on_board_timestamp // int(self.time_frame) * int(self.time_frame)
-        current_timestamp = datetime.now().timestamp() // int(self.time_frame) * int(self.time_frame)
 
+        # create first available timestamp (seems there is a issue in binance candles database)
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
         df_first_timestamp = df.index[0]
 
-        start_timestamp = int(max(on_board_timestamp, df_first_timestamp) + self.look_back * int(self.time_frame))
+        return int(max(on_board_timestamp, df_first_timestamp) + self.look_back * int(self.time_frame))
+
+    def get_valid_timestamps(self, dc: DataCollection) -> List[int]:
+        current_timestamp = datetime.now().timestamp() // int(self.time_frame) * int(self.time_frame)
+
+        start_timestamp = int(self.get_start_timestamp(dc=dc) + self.look_back * int(self.time_frame))
         stop_timestamp = int(current_timestamp - self.look_ahead * int(self.time_frame))
         timestamps = list(range(start_timestamp, stop_timestamp, int(self.time_frame)))
+
+        return timestamps
+
+    def prepare_sf(self, dc: DataCollection, progress: Union[Progress, None] = None) -> None:
+        timestamps = self.get_valid_timestamps(dc=dc)
 
         # create rich progress bar
         if progress is not None:
