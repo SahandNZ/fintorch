@@ -2,13 +2,13 @@ import os
 
 import numpy as np
 from rich.progress import *
+from torch import nn
 
 from fintorch.enum import TimeFrame
 
 # Directories
 HOME_DIR = os.path.expanduser("~")
 DATA_DIR = os.environ.get("FINTORCH_DATA_DIR", os.path.join(HOME_DIR, "Data"))
-CANDLE_DIR = os.path.join(DATA_DIR, "candle")
 TRANSFORM_DIR = os.path.join(DATA_DIR, "transform")
 MODULE_DIR = os.path.join(DATA_DIR, "module")
 
@@ -47,3 +47,27 @@ RICH_PROGRESS_COLUMNS = [
     TimeElapsedColumn(),
     TimeRemainingColumn(),
 ]
+
+# Hyper parameters
+DIM_SEQUENCE = 32
+DIM_FEATURE = 4
+DIM_OUTPUT = 2
+NUM_HIDDEN_LAYERS = 2
+BATCH_NORM = True
+DROPOUT = 0.5
+
+# Transform kwargs
+TRANSFORM_KWARGS = {
+    "dim_sequence": DIM_SEQUENCE
+}
+
+# Model kwargs
+MODEL_KWARGS = {
+    "dim_sequence": DIM_SEQUENCE,
+    "dim_feature": DIM_FEATURE,
+    "dim_output": DIM_OUTPUT,
+    "num_hidden_layers": NUM_HIDDEN_LAYERS,
+    "batch_norm": BATCH_NORM,
+    "dropout": DROPOUT,
+    "activation_fn": nn.Softmax(dim=-1)
+}

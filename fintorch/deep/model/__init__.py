@@ -6,3 +6,12 @@ from ._hybrid import Hybrid
 from ._resnet1d import ResNet1D
 from ._transformer import Transformer
 from ._auto_encoder import AutoEncoder
+
+MODEL_TYPES = [
+    FeedForward,
+    GRU,
+    LSTM,
+    Hybrid,
+    ResNet1D,
+    Transformer
+]

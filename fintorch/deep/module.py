@@ -1,4 +1,6 @@
+import copy
 import gc
+import itertools
 import os.path
 import pickle
 from abc import ABC
@@ -11,11 +13,14 @@ from .cross_validation import CrossValidation
 from .data_loader import DataLoader
 from .dtype import Dataset, Fold
 from .lr_scheduler import LrScheduler
-from .model import Model
+from .model import MODEL_TYPES, Model
 from .optimizer import Optimizer
 from .trainer import Trainer
+from .transform.feature import FEATURE_TRANSFORM_TYPES, FeatureTransform
+from .transform.label import LABEL_TRANSFORM_TYPES, LabelTransform
 from ..dtype import DataCollection
-from ..setting import MODULE_DIR
+from ..enum import TimeFrame
+from ..setting import SAMPLING_INTERVAL, MODEL_KWARGS, MODULE_DIR, TRANSFORM_KWARGS
 from ..utils.directory import create_directory
 from ..utils.function import call_with_dict
 
@@ -163,3 +168,42 @@ class Module(ABC):
             self.dataset.label_transform.short_name,
             self.model.short_name
         )
+
+
+def create_module(
+        feature_transform_type: Type[FeatureTransform],
+        label_transform_type: Type[LabelTransform],
+        transform_kwargs: Dict[str, Any],
+        model_type: Type[Model],
+        model_kwargs: Dict[str, Any],
+        interval: TimeFrame
+) -> Module:
+    # create feature and label transforms
+    feature_transform = call_with_dict(feature_transform_type, transform_kwargs)
+    label_transform = call_with_dict(label_transform_type, transform_kwargs)
+
+    # create dataset
+    dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=interval)
+
+    # create module
+    return Module(dataset=dataset, model_type=model_type, model_kwargs=model_kwargs)
+
+
+def create_modules(symbols: List[str], time_frames: List[int]) -> List[Module]:
+    modules = []
+    items = itertools.product(symbols, time_frames, FEATURE_TRANSFORM_TYPES, LABEL_TRANSFORM_TYPES, MODEL_TYPES)
+    for symbol, time_frame, lt_type, ft_type, model_type in items:
+        transform_kwargs = copy.deepcopy(TRANSFORM_KWARGS)
+        transform_kwargs = transform_kwargs.update({"symbol": symbol, "time_frame": time_frame})
+        module = create_module(
+            feature_transform_type=ft_type,
+            label_transform_type=lt_type,
+            transform_kwargs=transform_kwargs,
+            model_type=model_type,
+            model_kwargs=MODEL_KWARGS,
+            interval=SAMPLING_INTERVAL
+        )
+
+        modules.append(module)
+
+    return modules

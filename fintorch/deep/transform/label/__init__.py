@@ -6,4 +6,11 @@ from ._label_transform import LabelTransform
 from ._next_fractal import NextFractalLabelTransform
 from ._up_down import UpDownLabelTransform
 
-LABEL_TRANSFORM_TYPES = []
+LABEL_TRANSFORM_TYPES = [
+    ForwardBackwardMinimumLabelTransform,
+    ForwardIchimokuLabelTransform,
+    ForwardMiddleSmaLabelTransform,
+    ForwardRocLabelTransform,
+    NextFractalLabelTransform,
+    UpDownLabelTransform
+]
