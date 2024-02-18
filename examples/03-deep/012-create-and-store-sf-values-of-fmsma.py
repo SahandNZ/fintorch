@@ -18,17 +18,9 @@ def main():
     # load data collection
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[transform.symbol], time_frames=[transform.time_frame])
 
-    # create timestamps
-    symbol_info = dc.get_symbol_info(symbol=args.symbol)
-    on_board_timestamp = symbol_info.on_board_timestamp
-    current_timestamp = int(datetime.now().timestamp() // args.interval * args.interval)
-    timestamps = list(range(on_board_timestamp, current_timestamp, args.interval))
-
     # create sf values
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
-        task = progress.add_task(description="Creating SF values of {}".format(str(transform)), total=len(timestamps))
-        for _ in transform.transform_sf(dc=dc, timestamps=timestamps):
-            progress.update(task, advance=1)
+        transform.prepare_sf(dc=dc, progress=progress)
 
 
 if __name__ == '__main__':

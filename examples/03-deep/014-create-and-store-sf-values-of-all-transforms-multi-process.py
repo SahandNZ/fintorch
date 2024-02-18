@@ -26,16 +26,8 @@ def task_target(transform: Transform):
     # load data collection
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[transform.symbol], time_frames=[transform.time_frame])
 
-    # create timestamps
-    symbol_info = dc.get_symbol_info(symbol=transform.symbol)
-    on_board_timestamp = symbol_info.on_board_timestamp
-    current_timestamp = int(datetime.now().timestamp() // int(transform.time_frame) * int(transform.time_frame))
-    timestamps = list(range(on_board_timestamp, current_timestamp, int(transform.time_frame)))
-
     # create sf values
-    sf_generator = transform.transform_sf(dc=dc, timestamps=timestamps)
-    for _ in sf_generator:
-        pass
+    transform.prepare_sf(dc=dc)
 
 
 def run_multi_process(args, transforms: List[Transform]):

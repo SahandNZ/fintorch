@@ -51,23 +51,10 @@ def main():
             kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
             transform = call_with_dict(transform_type, kwargs)
 
-            # create timestamps
-            symbol_info = dc.get_symbol_info(symbol=symbol)
-            on_board_timestamp = symbol_info.on_board_timestamp
-            current_timestamp = int(datetime.now().timestamp() // int(time_frame) * int(time_frame))
-            timestamps = list(range(on_board_timestamp, current_timestamp, int(time_frame)))
-
-            # create sub task
-            description = f"Creating sf values of {str(transform)} {symbol} {str(time_frame)}"
-            sub_task = progress.add_task(description=description, total=len(timestamps))
-
             # create sf values
-            sf_generator = transform.transform_sf(dc=dc, timestamps=timestamps)
-            for _ in sf_generator:
-                progress.update(task_id=sub_task, advance=1)
+            transform.prepare_sf(dc=dc, progress=progress)
 
             # update progress bar
-            progress.update(task_id=sub_task, visible=False)
             progress.update(task_id=overall_task, advance=1)
 
 
