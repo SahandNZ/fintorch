@@ -67,6 +67,14 @@ class Module(ABC):
         return self.__trainer
 
     @property
+    def symbol(self) -> str:
+        return self.dataset.label_transform.symbol
+
+    @property
+    def time_frame(self) -> TimeFrame:
+        return self.dataset.label_transform.time_frame
+
+    @property
     def directory(self) -> str:
         return os.path.join(
             MODULE_DIR,
