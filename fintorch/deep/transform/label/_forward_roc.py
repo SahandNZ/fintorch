@@ -15,13 +15,20 @@ class ForwardRocLabelTransform(LabelTransform):
             symbol=symbol,
             time_frame=time_frame,
             dim_sequence=1,
-            forward=forward,
+            look_back=0,
+            look_ahead=forward,
             classes=["UP", "DOWN"]
         )
 
+        self.__forward: int = forward
+
+    @property
+    def forward(self) -> int:
+        return self.__forward
+
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["roc"] = df.close / df.open - 1
-        df["f-roc"] = df.roc.rolling(self.forward).sum().shift(-self.forward)
+        df["f-roc"] = df.roc.rolling(self.forward).sum().shift(-self.forward + 1)
         df.dropna(inplace=True)
 
         df["up"] = 0 < df["f-roc"]

@@ -5,3 +5,5 @@ from ._forward_roc import ForwardRocLabelTransform
 from ._label_transform import LabelTransform
 from ._next_fractal import NextFractalLabelTransform
 from ._up_down import UpDownLabelTransform
+
+LABEL_TRANSFORM_TYPES = []

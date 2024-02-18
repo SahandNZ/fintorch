@@ -13,16 +13,29 @@ from ....setting import NUMPY_LABEL_DTYPE
 
 
 class LabelTransform(Transform, ABC):
-    def __init__(self, name: str, short_name: str, description: str, symbol: str, time_frame: TimeFrame,
-                 dim_sequence: int, forward: int, classes: List[str]):
-        super().__init__(name=name, short_name=short_name, description=description, symbol=symbol,
-                         time_frame=time_frame, dim_sequence=dim_sequence)
-        self.__forward: int = forward
+    def __init__(
+            self,
+            name: str,
+            short_name: str,
+            description: str,
+            symbol: str,
+            time_frame: TimeFrame,
+            dim_sequence: int,
+            look_back: int,
+            look_ahead: int,
+            classes: List[str]
+    ):
+        super().__init__(
+            name=name,
+            short_name=short_name,
+            description=description,
+            symbol=symbol,
+            time_frame=time_frame,
+            dim_sequence=dim_sequence,
+            look_back=look_back,
+            look_ahead=look_ahead
+        )
         self.__classes: List[str] = classes
-
-    @property
-    def forward(self) -> int:
-        return self.__forward
 
     @property
     def classes(self) -> List[str]:
@@ -31,10 +44,6 @@ class LabelTransform(Transform, ABC):
     @property
     def num_classes(self) -> int:
         return len(self.classes)
-
-    @property
-    def look_ahead(self) -> int:
-        return (self.forward + self.dim_sequence) * 2
 
     def _shift_timestamp(self, timestamp: int) -> int:
         return math.ceil(timestamp / self.time_frame) * self.time_frame

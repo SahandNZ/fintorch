@@ -5,8 +5,14 @@ from ._label_transform import LabelTransform
 
 
 class ForwardIchimokuLabelTransform(LabelTransform):
-    def __init__(self, symbol: str, time_frame: TimeFrame, base_length: int = 5, conversion_length: int = 20,
-                 forward: int = 12):
+    def __init__(
+            self,
+            symbol: str,
+            time_frame: TimeFrame,
+            forward: int = 12,
+            base_length: int = 5,
+            conversion_length: int = 20,
+    ):
         super().__init__(
             name="Forward Ichimoku",
             short_name="F-Ichimoku",
@@ -16,11 +22,17 @@ class ForwardIchimokuLabelTransform(LabelTransform):
             symbol=symbol,
             time_frame=time_frame,
             dim_sequence=1,
-            forward=forward,
+            look_back=max(base_length, conversion_length),
+            look_ahead=forward,
             classes=["UP", "DOWN"]
         )
+        self.__forward: int = forward
         self.__base_length: int = base_length
         self.__conversion_length: int = conversion_length
+
+    @property
+    def forward(self) -> int:
+        return self.__forward
 
     @property
     def base_length(self) -> int:

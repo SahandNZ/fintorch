@@ -14,23 +14,22 @@ from ....setting import NUMPY_FEATURE_DTYPE
 
 class FeatureTransform(Transform, ABC):
     def __init__(self, name: str, short_name: str, symbol: str, time_frame: TimeFrame, dim_sequence: int,
-                 backward: int, features: List[str]):
-        super().__init__(name=name, short_name=short_name, description="", symbol=symbol, time_frame=time_frame,
-                         dim_sequence=dim_sequence)
-        self.__backward_length: int = backward
+                 look_back: int, look_ahead: int, features: List[str]):
+        super().__init__(
+            name=name,
+            short_name=short_name,
+            description="",
+            symbol=symbol,
+            time_frame=time_frame,
+            dim_sequence=dim_sequence,
+            look_back=look_back,
+            look_ahead=look_ahead
+        )
         self.__features: List[str] = features
-
-    @property
-    def backward_length(self) -> int:
-        return self.__backward_length
 
     @property
     def features(self) -> List[str]:
         return self.__features
-
-    @property
-    def look_back(self):
-        return (self.dim_sequence + self.backward_length) * 2
 
     def _shift_timestamp(self, timestamp: int) -> int:
         return math.floor(timestamp / self.time_frame) * self.time_frame
