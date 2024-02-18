@@ -43,8 +43,8 @@ def main():
         interval=args.interval,
     )
 
-    # load data collection and create timestamps
-    dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
+    # load data collection
+    dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[module.symbol], time_frames=[module.time_frame])
     timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
 
     start_time = time.time()

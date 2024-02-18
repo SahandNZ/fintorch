@@ -20,8 +20,12 @@ from fintorch.dtype import DataCollection
 from fintorch.exchange import ONLINE_EXCHANGE
 
 
-def target(module: Module, dc: DataCollection, queue: Queue):
+def target(module: Module, queue: Queue):
     try:
+        # load data collection
+        dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[module.symbol], time_frames=[module.time_frame])
+
+        # optimize folds
         for fold in module.optimize(dc=dc):
             queue.put(str(fold))
         queue.put(-1)
@@ -31,10 +35,10 @@ def target(module: Module, dc: DataCollection, queue: Queue):
         queue.put(-1)
 
 
-def create_process(modules: List[Module], dc: DataCollection):
+def create_process(modules: List[Module]):
     for module in modules:
         # create process
-        process_args = (module, dc, Queue())
+        process_args = (module, Queue())
         process = Process(target=target, args=process_args)
 
         yield process, process_args
@@ -51,11 +55,8 @@ def run_multi_process(args, modules: List[Module]):
         main_layout[f"row-{i}"].split_row(*layouts)
         free_layouts.extend(layouts)
 
-    # load data collection
-    dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
-
     # create process generator to avoid from too many open files issue
-    process_generator = create_process(modules=modules, dc=dc)
+    process_generator = create_process(modules=modules)
 
     # create terminal layout to track processes
     process_to_args = {}
@@ -66,8 +67,8 @@ def run_multi_process(args, modules: List[Module]):
         while len(done_process_set) < len(modules):
             # start process if there is free worker (processor)
             if len(running_process_set) < args.max_workers:
-                process, (module, _, queue) = next(process_generator)
-                process_to_args[process] = (module, queue)
+                process, process_args = next(process_generator)
+                process_to_args[process] = process_args
                 process_to_layout[process] = free_layouts.pop(0)
                 running_process_set.add(process)
                 process.start()

@@ -61,8 +61,13 @@ def main():
                 interval=args.interval,
             )
 
-            # optimize module
-            dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
+            # load data collection
+            dc = ONLINE_EXCHANGE.future.data.get_data_collection(
+                symbols=[module.symbol],
+                time_frames=[module.time_frame]
+            )
+
+            # optimize folds
             for fold in module.optimize(dc=dc):
                 live.update(Group(Panel.fit(str(fold), title=str(module)), progress_panel))
 
