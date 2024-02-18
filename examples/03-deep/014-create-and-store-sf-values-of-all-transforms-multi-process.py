@@ -2,9 +2,8 @@ import argparse
 import atexit
 import itertools
 import json
-import time
 from datetime import datetime
-from multiprocessing import Process, Queue
+from multiprocessing import Process
 from typing import List
 
 from rich.progress import Progress
@@ -13,11 +12,9 @@ from examples.args import add_default_args_and_parse
 from fintorch.deep.transform import Transform
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
-from fintorch.enum import TimeFrame
 from fintorch.exchange import ONLINE_EXCHANGE
 from fintorch.setting import RICH_PROGRESS_COLUMNS
 from fintorch.utils.function import call_with_dict
-from fintorch.utils.timestamp import create_timestamps
 
 
 def terminate_processes(processes: List[Process]):
@@ -42,28 +39,27 @@ def task_target(transform: Transform):
 
 
 def run_multi_process(args, transforms: List[Transform]):
-    pending_process_set = set()
-    running_process_set = set()
-    done_process_set = set()
-
     # create processes
+    processes = []
     for transform in transforms:
-        process_args = (transform, )
+        process_args = (transform,)
         process = Process(target=task_target, args=process_args)
-        pending_process_set.add(process)
+        processes.append(process)
 
     # set at exit callback to terminate all processes
-    atexit.register(terminate_processes, processes=list(pending_process_set))
+    atexit.register(terminate_processes, processes=processes)
 
     # start processes and update progress bars
+    pending_process_set = set(processes)
+    running_process_set = set()
+    done_process_set = set()
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
         total_items = len(transforms)
         overall_task = progress.add_task(description="Overall", total=total_items)
-        while 0 < len(pending_process_set) or 0 < len(running_process_set):
+        while len(processes) != len(done_process_set):
             # start process if there is free worker (processor)
             for process in pending_process_set:
-                alive_process_count = sum(process.is_alive() for process in pending_process_set)
-                if alive_process_count < args.max_workers:
+                if len(running_process_set) < args.max_workers:
                     running_process_set.add(process)
                     process.start()
 
