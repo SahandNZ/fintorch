@@ -11,7 +11,6 @@ from fintorch.deep.transform.label import *
 from fintorch.exchange import ONLINE_EXCHANGE
 from fintorch.setting import RICH_PROGRESS_COLUMNS
 from fintorch.utils.function import call_with_dict
-from fintorch.utils.timestamp import create_timestamps
 
 
 def main():
