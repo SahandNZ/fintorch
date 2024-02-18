@@ -89,10 +89,6 @@ class Trainer:
             return torch.float32
 
     def optimize_fold(self, dataset: Dataset, model: Model, fold: Fold) -> Generator[None, None, None]:
-        print(fold.train_start_datetime)
-        print(fold.val_start_datetime)
-        print(fold.test_start_datetime)
-
         # move model to cuda device if it's available
         model.to(self.device)
 

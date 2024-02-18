@@ -7,7 +7,7 @@ from fintorch.enum import TimeFrame
 def add_default_args_and_parse(parser: argparse):
     # datetime args
     parser.add_argument("--stop-date", action="store", type=str, required=False, default="2024-01-01")
-    parser.add_argument("--start-date", action="store", type=str, required=False, default="2019-07-01")
+    parser.add_argument("--start-date", action="store", type=str, required=False, default="2019-01-01")
 
     # boolean args
     parser.add_argument("--no-batch-norm", action="store_false")

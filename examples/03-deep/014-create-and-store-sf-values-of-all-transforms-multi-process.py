@@ -3,6 +3,7 @@ import atexit
 import itertools
 import json
 import time
+from datetime import datetime
 from multiprocessing import Process, Queue
 from typing import List
 
@@ -12,6 +13,7 @@ from examples.args import add_default_args_and_parse
 from fintorch.deep.transform import Transform
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
+from fintorch.enum import TimeFrame
 from fintorch.exchange import ONLINE_EXCHANGE
 from fintorch.setting import RICH_PROGRESS_COLUMNS
 from fintorch.utils.function import call_with_dict
@@ -23,42 +25,44 @@ def terminate_processes(processes: List[Process]):
         process.terminate()
 
 
-def task_target(transform: Transform, timestamps: List[int], queue: Queue):
+def task_target(transform: Transform):
+    # load data collection
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[transform.symbol], time_frames=[transform.time_frame])
-    sf_generator = transform.transform_sf(dc=dc, timestamps=timestamps)
 
+    # create timestamps
+    symbol_info = dc.get_symbol_info(symbol=transform.symbol)
+    on_board_timestamp = symbol_info.on_board_timestamp
+    current_timestamp = int(datetime.now().timestamp() // int(transform.time_frame) * int(transform.time_frame))
+    timestamps = list(range(on_board_timestamp, current_timestamp, int(transform.time_frame)))
+
+    # create sf values
+    sf_generator = transform.transform_sf(dc=dc, timestamps=timestamps)
     for _ in sf_generator:
         pass
 
-    queue.put(1)
-
 
 def run_multi_process(args, transforms: List[Transform]):
-    # create timestamps
-    timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
-
-    # create processes
-    process_to_queue = {}
-    for transform in transforms:
-        queue = Queue()
-        process_args = (transform, timestamps, queue)
-        process = Process(target=task_target, args=process_args)
-        process_to_queue[process] = queue
-
-    # set at exit callback to terminate all processes
-    atexit.register(terminate_processes, processes=list(process_to_queue.keys()))
-
-    # start processes and update progress bars
-    pending_process_set = set(process_to_queue.keys())
+    pending_process_set = set()
     running_process_set = set()
     done_process_set = set()
+
+    # create processes
+    for transform in transforms:
+        process_args = (transform, )
+        process = Process(target=task_target, args=process_args)
+        pending_process_set.add(process)
+
+    # set at exit callback to terminate all processes
+    atexit.register(terminate_processes, processes=list(pending_process_set))
+
+    # start processes and update progress bars
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
         total_items = len(transforms)
         overall_task = progress.add_task(description="Overall", total=total_items)
         while 0 < len(pending_process_set) or 0 < len(running_process_set):
             # start process if there is free worker (processor)
             for process in pending_process_set:
-                alive_process_count = sum(process.is_alive() for process in process_to_queue.keys())
+                alive_process_count = sum(process.is_alive() for process in pending_process_set)
                 if alive_process_count < args.max_workers:
                     running_process_set.add(process)
                     process.start()
@@ -68,21 +72,12 @@ def run_multi_process(args, transforms: List[Transform]):
 
             # update progress bars
             for process in running_process_set:
-                queue = process_to_queue[process]
-
-                # update progress bar
-                if not queue.empty():
-                    advance = queue.get()
-                    progress.update(overall_task, advance=advance)
+                if not process.is_alive():
+                    progress.update(overall_task, advance=1)
                     done_process_set.add(process)
 
             # remove done processes from running set
             running_process_set = running_process_set - done_process_set
-
-            # remove args of done processes
-            for process in done_process_set:
-                if process in process_to_queue:
-                    del process_to_queue[process]
 
 
 def main():

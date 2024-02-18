@@ -1,4 +1,6 @@
 import argparse
+from datetime import datetime
+
 from rich.progress import Progress
 
 from examples.args import add_default_args_and_parse
@@ -18,8 +20,11 @@ def main():
         dim_sequence=args.dim_sequence
     )
 
-    timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[transform.symbol], time_frames=[transform.time_frame])
+    symbol_info = dc.get_symbol_info(symbol=args.symbol)
+    on_board_timestamp = symbol_info.on_board_timestamp
+    current_timestamp = int(datetime.now().timestamp() // args.interval * args.interval)
+    timestamps = list(range(on_board_timestamp, current_timestamp, args.interval))
 
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
         task = progress.add_task(description="Creating SF values of {}".format(str(transform)), total=len(timestamps))
