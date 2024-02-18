@@ -34,16 +34,15 @@ class LabelTransform(Transform, ABC):
 
     @property
     def look_ahead(self) -> int:
-        return (self.forward * self.dim_sequence) * 2
+        return (self.forward + self.dim_sequence) * 2
 
     def _shift_timestamp(self, timestamp: int) -> int:
         return math.ceil(timestamp / self.time_frame) * self.time_frame
 
     def _can_not_be_none(self, dc: DataCollection, timestamp: int) -> bool:
         symbol_info = dc.get_symbol_info(symbol=self.symbol)
-        current_open_timestamp = datetime.now().timestamp() // int(self.time_frame)
+        current_open_timestamp = datetime.now().timestamp() // int(self.time_frame) * int(self.time_frame)
         first_timestamp = symbol_info.on_board_timestamp // int(self.time_frame) * self.time_frame
-        true_look_ahead = 2 * self.forward + self.dim_sequence
         last_timestamp = current_open_timestamp - int(self.time_frame) * self.look_ahead
 
         return first_timestamp <= timestamp <= last_timestamp
