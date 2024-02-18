@@ -23,9 +23,11 @@ def main():
     # define dataset
     dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=args.interval)
 
+    # load data collection and create timestamps
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
-    timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
+    timestamps = feature_transform.get_valid_timestamps(dc=dc)
 
+    # prepare dataset
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
         task = progress.add_task(description="Loading dataset samples", total=len(timestamps))
         dataset.prepare(dc=dc, timestamps=timestamps)

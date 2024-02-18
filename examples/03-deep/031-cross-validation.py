@@ -13,16 +13,22 @@ def main():
     parser = argparse.ArgumentParser()
     args = add_default_args_and_parse(parser)
 
+    # define feature transform
+    feature_transform = RollingMeanStdTrRocFeatureTransform(
+        symbol=args.symbol,
+        time_frame=args.time_frame,
+        dim_sequence=args.dim_sequence
+    )
+
     # define sliding window cross validation
     cross_validation = CrossValidation(interval=args.interval)
 
     # load on board timestamp
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
-    symbol_info = dc.get_symbol_info(symbol=args.symbol)
-    on_board_timestamp = symbol_info.on_board_timestamp
+    start_timestamp = feature_transform.get_start_timestamp(dc=dc)
 
     # iterate over folds
-    for fold in cross_validation(on_board_timestamp=on_board_timestamp):
+    for fold in cross_validation(start_timestamp=start_timestamp):
         print("{:<32}: {}".format("Fold train start datetime", fold.train_start_datetime))
         print("{:<32}: {}".format("Fold validation start datetime", fold.val_start_datetime))
         print("{:<32}: {}".format("Fold test start datetime", fold.test_start_datetime))

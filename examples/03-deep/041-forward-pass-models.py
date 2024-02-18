@@ -30,14 +30,13 @@ def main():
         "dim_output": 16,
     }
 
-    # load on board timestamp
+    # load data collection and create timestamps
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
-    symbol_info = dc.get_symbol_info(symbol=args.symbol)
-    on_board_timestamp = symbol_info.on_board_timestamp
+    start_timestamp = feature_transform.get_start_timestamp(dc=dc)
 
     # define cross validation and generate single fold
     cross_validation = CrossValidation(interval=args.interval)
-    fold = next(iter(cross_validation(on_board_timestamp=on_board_timestamp)))
+    fold = next(iter(cross_validation(start_timestamp=start_timestamp)))
 
     # define exchange loader and load single batch
     data_loader = DataLoader(batch_size=1024)

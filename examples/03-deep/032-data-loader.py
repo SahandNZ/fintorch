@@ -22,14 +22,13 @@ def main():
     # define dataset
     dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=args.interval)
 
-    # load on board timestamp
+    # load data collection and create timestamps
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
-    symbol_info = dc.get_symbol_info(symbol=args.symbol)
-    on_board_timestamp = symbol_info.on_board_timestamp
+    start_timestamp = feature_transform.get_start_timestamp(dc=dc)
 
     # define cross validation
     cross_validation = CrossValidation(interval=args.interval)
-    for fold in cross_validation(on_board_timestamp=on_board_timestamp):
+    for fold in cross_validation(start_timestamp=start_timestamp):
         print("=" * 32)
         print(fold.train_start_datetime, fold.val_start_datetime, fold.test_start_datetime, fold.test_stop_datetime)
         data_loader = DataLoader(batch_size=1024)
