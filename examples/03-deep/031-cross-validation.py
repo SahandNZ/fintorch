@@ -2,11 +2,8 @@ import argparse
 
 from examples.args import add_default_args_and_parse
 from fintorch.deep.cross_validation import CrossValidation
-from fintorch.deep.dtype import Dataset
 from fintorch.deep.transform.feature import RollingMeanStdTrRocFeatureTransform
-from fintorch.deep.transform.label import ForwardMiddleSmaLabelTransform
 from fintorch.exchange import ONLINE_EXCHANGE
-from fintorch.utils.timestamp import create_timestamps
 
 
 def main():

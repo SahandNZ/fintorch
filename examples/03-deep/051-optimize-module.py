@@ -5,13 +5,11 @@ from rich.panel import Panel
 from torch import nn
 
 from examples.args import add_default_args_and_parse
-from fintorch.deep.dtype import Dataset
 from fintorch.deep.model import FeedForward
-from fintorch.deep.module import Module
+from fintorch.deep.module import create_module
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
 from fintorch.exchange import ONLINE_EXCHANGE
-from fintorch.utils.timestamp import create_timestamps
 
 
 def main():
@@ -19,12 +17,9 @@ def main():
     args = add_default_args_and_parse(parser)
 
     # define feature and label transforms
-    feature_transform = RollingMeanStdTrRocFeatureTransform(symbol=args.symbol, time_frame=args.time_frame,
-                                                            dim_sequence=args.dim_sequence)
-    label_transform = ForwardMiddleSmaLabelTransform(symbol=args.symbol, time_frame=args.time_frame)
-
-    # define dataset
-    dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=args.interval)
+    transform_kwargs = {"symbol": args.symbol, "time_frame": args.time_frame, "dim_sequence": args.dim_sequence}
+    feature_transform_type = RollingMeanStdTrRocFeatureTransform
+    label_transform_type = ForwardMiddleSmaLabelTransform
 
     # define model type and kwargs
     model_type = FeedForward
@@ -39,7 +34,14 @@ def main():
     }
 
     # define module
-    module = Module(dataset=dataset, model_type=model_type, model_kwargs=model_kwargs)
+    module = create_module(
+        feature_transform_type=feature_transform_type,
+        label_transform_type=label_transform_type,
+        transform_kwargs=transform_kwargs,
+        model_type=model_type,
+        model_kwargs=model_kwargs,
+        interval=args.interval,
+    )
 
     # load data collection
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])

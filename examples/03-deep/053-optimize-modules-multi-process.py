@@ -12,15 +12,12 @@ from rich.panel import Panel
 from torch import nn
 
 from examples.args import add_default_args_and_parse
-from fintorch.deep.dtype import Dataset
-from fintorch.deep.model import FeedForward, GRU, Hybrid, LSTM, ResNet1D, Transformer
-from fintorch.deep.module import Module
-from fintorch.deep.transform.feature import *
-from fintorch.deep.transform.label import *
+from fintorch.deep.model import MODEL_TYPES
+from fintorch.deep.module import Module, create_module
+from fintorch.deep.transform.feature import FEATURE_TRANSFORM_TYPES
+from fintorch.deep.transform.label import LABEL_TRANSFORM_TYPES
 from fintorch.dtype import DataCollection
 from fintorch.exchange import ONLINE_EXCHANGE
-from fintorch.utils.function import call_with_dict
-from fintorch.utils.timestamp import create_timestamps
 
 
 def target(module: Module, dc: DataCollection, queue: Queue):
@@ -109,32 +106,7 @@ def main():
     symbols = config_dict["symbols"]
     time_frames = config_dict["time-frames"]
 
-    # define feature and label transforms
-    feature_transform_types = [
-        RollingMeanStdTrRocFeatureTransform,
-        StftTrRocFeatureTransform
-    ]
-
-    label_transform_types = [
-        ForwardBackwardMinimumLabelTransform,
-        ForwardIchimokuLabelTransform,
-        ForwardMiddleSmaLabelTransform,
-        ForwardRocLabelTransform,
-        NextFractalLabelTransform,
-        UpDownLabelTransform
-    ]
-
-    # define model_types
-    model_types = [
-        FeedForward,
-        GRU,
-        Hybrid,
-        LSTM,
-        ResNet1D,
-        Transformer
-    ]
-
-    # define model params
+    # define model kwargs
     model_kwargs = {
         "dim_sequence": args.dim_sequence,
         "dim_feature": 4,
@@ -147,18 +119,19 @@ def main():
 
     # define modules
     modules = []
-    items = itertools.product(symbols, time_frames, feature_transform_types, label_transform_types, model_types)
+    items = list(itertools.product(symbols, time_frames, FEATURE_TRANSFORM_TYPES, LABEL_TRANSFORM_TYPES, MODEL_TYPES))
     for symbol, time_frame, ft_type, lt_type, model_type in items:
-        # define feature and label transforms
-        transform_param = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
-        feature_transform = call_with_dict(ft_type, transform_param)
-        label_transform = call_with_dict(lt_type, transform_param)
+        # create module
+        transform_kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
+        module = create_module(
+            feature_transform_type=ft_type,
+            label_transform_type=lt_type,
+            transform_kwargs=transform_kwargs,
+            model_type=model_type,
+            model_kwargs=model_kwargs,
+            interval=args.interval,
+        )
 
-        # define dataset
-        dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=args.interval)
-
-        # define module
-        module = Module(dataset=dataset, model_type=model_type, model_kwargs=model_kwargs)
         modules.append(module)
 
     run_multi_process(args=args, modules=modules)

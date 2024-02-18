@@ -7,7 +7,6 @@ from fintorch.deep.dtype import Dataset
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
 from fintorch.exchange import ONLINE_EXCHANGE
-from fintorch.utils.timestamp import create_timestamps
 
 
 def main():

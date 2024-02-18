@@ -26,17 +26,7 @@ def main():
     time_frames = config_dict["time-frames"]
 
     # define feature and label transforms
-    transform_types = [
-        RollingMeanStdTrRocFeatureTransform,
-        StftTrRocFeatureTransform,
-
-        ForwardBackwardMinimumLabelTransform,
-        ForwardIchimokuLabelTransform,
-        ForwardMiddleSmaLabelTransform,
-        ForwardRocLabelTransform,
-        NextFractalLabelTransform,
-        UpDownLabelTransform
-    ]
+    transform_types = FEATURE_TRANSFORM_TYPES + LABEL_TRANSFORM_TYPES
 
     # load data collection
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=symbols, time_frames=time_frames)
@@ -48,8 +38,8 @@ def main():
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
         overall_task = progress.add_task(description="Overall", total=len(items))
         for transform_type, symbol, time_frame in items:
-            kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
-            transform = call_with_dict(transform_type, kwargs)
+            transform_kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
+            transform = call_with_dict(transform_type, transform_kwargs)
 
             # create sf values
             transform.prepare_sf(dc=dc, progress=progress)

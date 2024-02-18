@@ -9,15 +9,12 @@ from rich.progress import Progress
 from torch import nn
 
 from examples.args import add_default_args_and_parse
-from fintorch.deep.dtype import Dataset
-from fintorch.deep.model import FeedForward, GRU, Hybrid, LSTM, ResNet1D, Transformer
-from fintorch.deep.module import Module
+from fintorch.deep.model import MODEL_TYPES
+from fintorch.deep.module import create_module
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
 from fintorch.exchange import ONLINE_EXCHANGE
 from fintorch.setting import RICH_PROGRESS_COLUMNS
-from fintorch.utils.function import call_with_dict
-from fintorch.utils.timestamp import create_timestamps
 
 
 def main():
@@ -32,33 +29,8 @@ def main():
     symbols = config_dict["symbols"]
     time_frames = config_dict["time-frames"]
 
-    # define feature and label transforms
-    feature_transform_types = [
-        RollingMeanStdTrRocFeatureTransform,
-        StftTrRocFeatureTransform
-    ]
-
-    label_transform_types = [
-        ForwardBackwardMinimumLabelTransform,
-        ForwardIchimokuLabelTransform,
-        ForwardMiddleSmaLabelTransform,
-        ForwardRocLabelTransform,
-        NextFractalLabelTransform,
-        UpDownLabelTransform
-    ]
-
-    # define model_types
-    model_types = [
-        FeedForward,
-        GRU,
-        Hybrid,
-        LSTM,
-        ResNet1D,
-        Transformer
-    ]
-
     # define model params
-    model_params = {
+    model_kwargs = {
         "dim_sequence": args.dim_sequence,
         "dim_feature": 4,
         "dim_output": 2,
@@ -68,11 +40,8 @@ def main():
         "activation_fn": nn.Softmax(dim=-1)
     }
 
-    # define timestamps
-    timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
-
     # define modules params
-    items = list(itertools.product(symbols, time_frames, feature_transform_types, label_transform_types, model_types))
+    items = list(itertools.product(symbols, time_frames, FEATURE_TRANSFORM_TYPES, LABEL_TRANSFORM_TYPES, MODEL_TYPES))
 
     # optimize modules with rich panel
     overall_progress = Progress(*RICH_PROGRESS_COLUMNS)
@@ -81,32 +50,19 @@ def main():
 
     with Live(refresh_per_second=2) as live:
         for symbol, time_frame, ft_type, lt_type, model_type in items:
-            # define feature and label transforms
-            transform_param = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
-            feature_transform = call_with_dict(ft_type, transform_param)
-            label_transform = call_with_dict(lt_type, transform_param)
-
-            # define dataset
-            dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform,
-                              interval=args.interval)
-
-            model_type = FeedForward
-            model_kwargs = {
-                "dim_sequence": args.dim_sequence,
-                "dim_feature": 4,
-                "dim_output": 2,
-                "num_hidden_layers": args.num_hidden_layers,
-                "batch_norm": args.no_batch_norm,
-                "dropout": args.dropout,
-                "activation_fn": nn.Softmax(dim=-1)
-            }
-
-            # define module
-            module = Module(dataset=dataset, model_type=model_type, model_kwargs=model_kwargs)
-
-            dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
+            # create module
+            transform_kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
+            module = create_module(
+                feature_transform_type=ft_type,
+                label_transform_type=lt_type,
+                transform_kwargs=transform_kwargs,
+                model_type=model_type,
+                model_kwargs=model_kwargs,
+                interval=args.interval,
+            )
 
             # optimize module
+            dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
             for fold in module.optimize(dc=dc):
                 live.update(Group(Panel.fit(str(fold), title=str(module)), progress_panel))
 

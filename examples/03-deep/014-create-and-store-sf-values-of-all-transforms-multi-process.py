@@ -2,7 +2,6 @@ import argparse
 import atexit
 import itertools
 import json
-from datetime import datetime
 from multiprocessing import Process
 from typing import List
 
@@ -81,22 +80,12 @@ def main():
     time_frames = config_dict["time-frames"]
 
     # define feature and label transforms
-    transform_types = [
-        RollingMeanStdTrRocFeatureTransform,
-        StftTrRocFeatureTransform,
-
-        ForwardBackwardMinimumLabelTransform,
-        ForwardIchimokuLabelTransform,
-        ForwardMiddleSmaLabelTransform,
-        ForwardRocLabelTransform,
-        NextFractalLabelTransform,
-        UpDownLabelTransform
-    ]
+    transform_types = FEATURE_TRANSFORM_TYPES + LABEL_TRANSFORM_TYPES
 
     transforms = []
     for transform_type, symbol, time_frame in itertools.product(transform_types, symbols, time_frames):
-        kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
-        transform = call_with_dict(transform_type, kwargs)
+        transform_kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
+        transform = call_with_dict(transform_type, transform_kwargs)
         transforms.append(transform)
 
     run_multi_process(args=args, transforms=transforms)
