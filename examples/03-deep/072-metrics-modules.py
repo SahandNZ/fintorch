@@ -61,7 +61,8 @@ def main():
         timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
 
         # create y and y_hat values
-        y_array = np.array([sf for sf in module.dataset.label_transform.transform_sf(dc=dc, timestamps=timestamps)])
+        sf_generator = module.dataset.label_transform.transform_sf(dc=dc, timestamps=timestamps)
+        y_array = np.concatenate([sf for sf in sf_generator])
         y_hat_dict = module.predict(dc=dc, timestamps=timestamps)
 
         # convert y and y_hat values to torch.Tensor
@@ -73,7 +74,8 @@ def main():
 
         print(module)
         print(y.shape, y_hat.shape)
-        print(metrics.objective, metrics.accuracy, metrics.precision(label=0), metrics.precision(label=1))
+        print(round(metrics.objective, 4), metrics.accuracy, metrics.precision(label=0), metrics.precision(label=1))
+        print()
 
 
 if __name__ == '__main__':
