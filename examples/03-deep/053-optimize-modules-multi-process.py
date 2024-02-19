@@ -16,7 +16,6 @@ from fintorch.deep.model import MODEL_TYPES
 from fintorch.deep.module import Module, create_module
 from fintorch.deep.transform.feature import FEATURE_TRANSFORM_TYPES
 from fintorch.deep.transform.label import LABEL_TRANSFORM_TYPES
-from fintorch.dtype import DataCollection
 from fintorch.exchange import ONLINE_EXCHANGE
 
 

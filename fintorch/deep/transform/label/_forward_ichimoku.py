@@ -1,4 +1,5 @@
 import pandas as pd
+from matplotlib import pyplot as plt
 
 from ....enum import TimeFrame
 from ._label_transform import LabelTransform
@@ -57,3 +58,7 @@ class ForwardIchimokuLabelTransform(LabelTransform):
         df["label"] = df["f-up"].astype(int)
 
         return df
+
+    def _draw_lines(self, ohlc_ax: plt.Axes, df: pd.DataFrame) -> None:
+        ohlc_ax.plot(df.base, label="Base Line")
+        ohlc_ax.plot(df.conversion, label="Conversion Line")

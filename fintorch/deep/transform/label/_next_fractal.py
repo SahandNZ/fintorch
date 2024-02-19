@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 
 from ....enum import TimeFrame
 from ._label_transform import LabelTransform
@@ -48,3 +49,6 @@ class NextFractalLabelTransform(LabelTransform):
         df["label"] = df.up.astype(int)
 
         return df
+
+    def _draw_lines(self, ohlc_ax: plt.Axes, df: pd.DataFrame) -> None:
+        pass

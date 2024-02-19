@@ -5,11 +5,14 @@ from typing import Union, List
 
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 
 from .._transform import Transform
 from ....dtype import DataCollection
 from ....enum import TimeFrame
 from ....setting import NUMPY_LABEL_DTYPE
+from ....utils.plot import draw_candlestick_plot, draw_labels
+from ....utils.timestamp import create_timestamps
 
 
 class LabelTransform(Transform, ABC):
@@ -78,3 +81,26 @@ class LabelTransform(Transform, ABC):
         sf = sf.reshape(self.dim_sequence, 2)
 
         return sf
+
+    def draw_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str) -> None:
+        timestamps = create_timestamps(start_date=start_date, stop_date=stop_date, interval=self.time_frame)
+        df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
+        df = self._process_df(df=df)
+        df = df.loc[timestamps]
+        df = df.reset_index()
+
+        fig, ohlc_ax = plt.subplots(nrows=1, ncols=1, figsize=(20, 10))
+        draw_labels(ax=ohlc_ax, df=df)
+        draw_candlestick_plot(ax=ohlc_ax, df=df)
+        self._draw_lines(ohlc_ax=ohlc_ax, df=df)
+
+        ohlc_ax.grid()
+        ohlc_ax.legend()
+
+        title = "{} - (from {} to {})".format(str(self), start_date, stop_date)
+        plt.title(title)
+        plt.show()
+
+    @abstractmethod
+    def _draw_lines(self, ohlc_ax: plt.Axes, df: pd.DataFrame) -> None:
+        raise NotImplementedError()

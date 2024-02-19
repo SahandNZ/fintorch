@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Tuple
 
 import matplotlib.pyplot as plt
 import mplfinance as mpf
@@ -13,7 +12,7 @@ from fintorch.enum import OrderSide, PositionSide
 
 def prepare_dataframe_for_mpf(df: pd.DataFrame) -> pd.DataFrame:
     pdf = df.copy()
-    pdf['datetime'] = [datetime.fromtimestamp(ts) for ts in df.index.tolist()]
+    pdf['datetime'] = [datetime.fromtimestamp(ts) for ts in df.timestamp]
     pdf.index = pd.DatetimeIndex(pdf['datetime'])
     pdf = pdf[['open', 'high', 'low', 'close', 'volume']]
 
@@ -49,23 +48,19 @@ def draw_rectangle(ax: plt.Axes, x1: int, y1: int, x2: int, y2: int, color: str 
     ax.add_patch(area)
 
 
-def draw_trend(ax: plt.Axes, df: pd.DataFrame):
-    label, start_index = -1, 0
+def draw_labels(ax: plt.Axes, df: pd.DataFrame):
+    label, start_index = None, 0
     for index in range(len(df)):
         if label != df.label.iloc[index] or index == len(df) - 1:
-            if 0 <= label:
-                # label
-                minimum_price = df.low.iloc[start_index: index].min()
-                maximum_price = df.high.iloc[start_index: index].max()
-                y1 = minimum_price if 1 == label else maximum_price
-                y2 = maximum_price if 1 == label else minimum_price
-                draw_rectangle(ax=ax, x1=start_index, y1=y1, x2=index, y2=y2)
-
-                # prediction
-                for i in range(start_index, index):
-                    if not np.isnan(df.prediction.iloc[i]):
-                        color = "r" if 0 == df.prediction.iloc[i] else "g"
-                        ax.scatter(i, minimum_price, s=8, marker='o', c=color)
+            minimum_price = df.low.iloc[start_index: index].min()
+            maximum_price = df.high.iloc[start_index: index].max()
+            y1 = minimum_price if 1 == label else maximum_price
+            y2 = maximum_price if 1 == label else minimum_price
+            draw_rectangle(ax=ax, x1=start_index, y1=y1, x2=index, y2=y2)
 
             label = df.label.iloc[index]
             start_index = index
+
+
+def draw_predictions(ax: plt.Axes, df: pd.DataFrame):
+    pass

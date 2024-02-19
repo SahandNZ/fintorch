@@ -1,4 +1,5 @@
 import pandas as pd
+from matplotlib import pyplot as plt
 
 from ....enum import TimeFrame
 from ._label_transform import LabelTransform
@@ -39,3 +40,7 @@ class ForwardBackwardMinimumLabelTransform(LabelTransform):
         df["label"] = df.up.astype(int)
 
         return df
+
+    def _draw_lines(self, ohlc_ax: plt.Axes, df: pd.DataFrame) -> None:
+        ohlc_ax.plot(df.bmin, label="Backward Min")
+        ohlc_ax.plot(df.fmin, label="Forward Min")

@@ -179,4 +179,4 @@ class Transform(Component):
         raise NotImplementedError()
 
     def __str__(self) -> str:
-        return "{} {} {}".format(self.symbol, self.time_frame, self.short_name)
+        return "{} - {} - {}".format(self.short_name, self.symbol, str(self.time_frame))
