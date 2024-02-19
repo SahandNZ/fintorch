@@ -6,9 +6,8 @@ from torch import nn
 
 
 class Metrics:
-    def __init__(self, criterion: Criterion, epoch: int, y: torch.Tensor, y_hat: torch.Tensor):
+    def __init__(self, criterion: Criterion, y: torch.Tensor, y_hat: torch.Tensor):
         self.__criterion: Criterion = criterion
-        self.__epoch: int = epoch
 
         self.__y: torch.Tensor = y.clone().detach().cpu()
         self.__y_hat: torch.Tensor = y_hat.clone().detach().cpu()
