@@ -147,7 +147,7 @@ class Module(ABC):
             with torch.no_grad():
                 for key, fold in folds_dict.items():
                     self.model.load_state_dict(fold.best_val_epoch.model_state_dict)
-                    fold_timestamps = [ts for ts in missed_timestamps if key[0] <= ts < key[1]]
+                    fold_timestamps = [ts for ts in missed_timestamps if key[0] <= ts <= key[1]]
                     if 0 < len(fold_timestamps):
                         x = self.dataset.preprocess(dc=dc, timestamps=fold_timestamps)
                         y_hats = self.model(x).tolist()
