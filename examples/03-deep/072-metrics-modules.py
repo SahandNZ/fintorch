@@ -1,18 +1,18 @@
 import argparse
 import itertools
 import json
-import time
 
-from rich.progress import Progress
+import numpy as np
+import torch
 from torch import nn
 
 from examples.args import add_default_args_and_parse
-from fintorch.deep.model import FeedForward, MODEL_TYPES
+from fintorch.deep.metrics import Metrics
+from fintorch.deep.model import MODEL_TYPES
 from fintorch.deep.module import create_module
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
 from fintorch.exchange import ONLINE_EXCHANGE
-from fintorch.setting import RICH_PROGRESS_COLUMNS
 from fintorch.utils.timestamp import create_timestamps
 
 
@@ -61,11 +61,19 @@ def main():
         timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
 
         # create y and y_hat values
-        y = [sf for sf in module.dataset.label_transform.transform_sf(dc=dc, timestamps=timestamps)]
+        y_array = np.array([sf for sf in module.dataset.label_transform.transform_sf(dc=dc, timestamps=timestamps)])
         y_hat_dict = module.predict(dc=dc, timestamps=timestamps)
-        y_hat = list(y_hat_dict.values())
 
-        print(len(y), len(y))
+        # convert y and y_hat values to torch.Tensor
+        y = torch.from_numpy(y_array)
+        y_hat = torch.from_numpy(np.array(list(y_hat_dict.values())))
+
+        # calculate metrics
+        metrics = Metrics(criterion=module.trainer.criterion, y=y, y_hat=y_hat)
+
+        print(module)
+        print(y.shape, y_hat.shape)
+        print(metrics.objective, metrics.accuracy, metrics.precision(label=0), metrics.precision(label=1))
 
 
 if __name__ == '__main__':
