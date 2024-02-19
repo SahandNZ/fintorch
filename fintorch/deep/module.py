@@ -133,7 +133,7 @@ class Module(ABC):
             y_hats_dict = {}
 
         # predict and store missed timestamps
-        missed_timestamps = [ts for ts in timestamps if ts not in y_hats_dict]
+        missed_timestamps = [ts for ts in timestamps if ts not in y_hats_dict or y_hats_dict[ts] is None]
         if 0 < len(missed_timestamps):
             # safe load folds_dict
             try:
