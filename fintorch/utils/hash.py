@@ -19,4 +19,4 @@ def static_list_hash(values: List) -> int:
     for value in values:
         hash_value = (hash_value * static_hash(value)) % (13 ** 8)
 
-    return hash_value
+    return int(hash_value)
