@@ -2,7 +2,6 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 import mplfinance as mpf
-import numpy as np
 import pandas as pd
 from matplotlib.patches import Rectangle
 
@@ -12,9 +11,9 @@ from fintorch.enum import OrderSide, PositionSide
 
 def prepare_dataframe_for_mpf(df: pd.DataFrame) -> pd.DataFrame:
     pdf = df.copy()
-    pdf['datetime'] = [datetime.fromtimestamp(ts) for ts in df.timestamp]
-    pdf.index = pd.DatetimeIndex(pdf['datetime'])
-    pdf = pdf[['open', 'high', 'low', 'close', 'volume']]
+    pdf['datetime'] = [datetime.fromtimestamp(ts) for ts in df.index.to_list()]
+    pdf = pdf[['datetime', 'open', 'high', 'low', 'close', 'volume']]
+    pdf.set_index("datetime", inplace=True)
 
     return pdf
 
@@ -48,19 +47,41 @@ def draw_rectangle(ax: plt.Axes, x1: int, y1: int, x2: int, y2: int, color: str 
     ax.add_patch(area)
 
 
-def draw_labels(ax: plt.Axes, df: pd.DataFrame):
-    label, start_index = None, 0
-    for index in range(len(df)):
-        if label != df.label.iloc[index] or index == len(df) - 1:
+def draw_labels(ohlc_ax: plt.Axes, df: pd.DataFrame):
+    label, start_index = df.label.iloc[0], 0
+    for index in range(1, len(df) + 1):
+        if len(df) == index or label != df.label.iloc[index]:
             minimum_price = df.low.iloc[start_index: index].min()
             maximum_price = df.high.iloc[start_index: index].max()
             y1 = minimum_price if 1 == label else maximum_price
             y2 = maximum_price if 1 == label else minimum_price
-            draw_rectangle(ax=ax, x1=start_index, y1=y1, x2=index, y2=y2)
+            draw_rectangle(ax=ohlc_ax, x1=start_index, y1=y1, x2=index, y2=y2)
 
-            label = df.label.iloc[index]
-            start_index = index
+            if index < len(df):
+                label = df.label.iloc[index]
+                start_index = index
 
 
-def draw_predictions(ax: plt.Axes, df: pd.DataFrame):
-    pass
+def draw_predictions(ohlc_ax: plt.Axes, df: pd.DataFrame):
+    label, start_index, y_values = df.label.iloc[0], 0, []
+    for index in range(1, len(df) + 1):
+        if len(df) == index or label != df.label.iloc[index]:
+            minimum_price = df.low.iloc[start_index: index].min()
+            maximum_price = df.high.iloc[start_index: index].max()
+
+            for j in range(start_index, index):
+                y_values.append(minimum_price if 1 == label else maximum_price)
+
+            if index < len(df):
+                label = df.label.iloc[index]
+                start_index = index
+
+    # create up and down data frames
+    df = df.copy()
+    df["y"] = y_values
+    udf = df[1 == df.prediction]
+    ddf = df[0 == df.prediction]
+
+    # draw scatters
+    ohlc_ax.scatter(x=udf.index.to_list(), y=udf.y, s=2, marker='o', c="g", label="Up Prediction")
+    ohlc_ax.scatter(x=ddf.index.to_list(), y=ddf.y, s=2, marker='o', c="r", label="Down Prediction")
