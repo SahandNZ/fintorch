@@ -1,7 +1,7 @@
 import math
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Union, List
+from typing import Tuple, Union, List
 
 import numpy as np
 import pandas as pd
@@ -82,23 +82,32 @@ class LabelTransform(Transform, ABC):
 
         return sf
 
-    def draw_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str) -> None:
+    def draw_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str) \
+            -> Tuple[plt.Figure, plt.Axes, pd.DataFrame]:
         timestamps = create_timestamps(start_date=start_date, stop_date=stop_date, interval=self.time_frame)
-        df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
+        df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame).copy()
         df = self._process_df(df=df)
         df = df.loc[timestamps]
-        df = df.reset_index()
 
+        # draw ohlc and backgrounds
         fig, ohlc_ax = plt.subplots(nrows=1, ncols=1, figsize=(20, 10))
-        draw_labels(ax=ohlc_ax, df=df)
         draw_candlestick_plot(ax=ohlc_ax, df=df)
+        draw_labels(ohlc_ax=ohlc_ax, df=df)
+
+        # draw line
+        df.reset_index(drop=False, inplace=True)
         self._draw_lines(ohlc_ax=ohlc_ax, df=df)
+        df.set_index("timestamp", inplace=True)
+
+        return fig, ohlc_ax, df
+
+    def show_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str) -> None:
+        _, ohlc_ax, _ = self.draw_ohlc_plot(dc=dc, start_date=start_date, stop_date=stop_date)
 
         ohlc_ax.grid()
         ohlc_ax.legend()
 
-        title = "{} - (from {} to {})".format(str(self), start_date, stop_date)
-        plt.title(title)
+        plt.title("{} (from {} to {})".format(str(self), start_date, stop_date))
         plt.show()
 
     @abstractmethod
