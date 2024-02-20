@@ -167,7 +167,7 @@ class Module(ABC):
 
         return y_hats_dict
 
-    def draw_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str) \
+    def draw_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str, mode: str = "val") \
             -> Tuple[plt.Figure, plt.Axes, pd.DataFrame]:
         # draw ohlc and labels
         fig, ohlc_ax, df = self.dataset.label_transform.draw_ohlc_plot(
@@ -187,7 +187,7 @@ class Module(ABC):
 
         return fig, ohlc_ax, df
 
-    def show_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str) -> None:
+    def show_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str, mode: str = "val") -> None:
         _, ohlc_ax, _ = self.draw_ohlc_plot(dc=dc, start_date=start_date, stop_date=stop_date)
 
         ohlc_ax.grid()
