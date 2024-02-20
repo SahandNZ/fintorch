@@ -96,8 +96,11 @@ class Module(ABC):
             # dataset properties
             self.dataset.label_transform.symbol,
             str(self.dataset.label_transform.time_frame),
-            self.dataset.feature_transform.short_name,
-            self.dataset.label_transform.short_name,
+            str(static_list_hash([
+                self.dataset.feature_transform.short_name,
+                self.dataset.label_transform.short_name,
+                self.dataset.interval
+            ])),
 
             # model properties
             self.model.short_name,
@@ -142,7 +145,7 @@ class Module(ABC):
         with open(self.folds_dict_path, "wb+") as file:
             pickle.dump(folds_dict, file)
 
-    def predict(self, dc: DataCollection, timestamps: List[int]) -> Dict[int, List[float]]:
+    def predict(self, dc: DataCollection, timestamps: List[int], mode="val") -> Dict[int, List[float]]:
         # safe load y_hat_dict
         try:
             with open(self.y_hats_dict_path, "rb") as file:
@@ -164,8 +167,7 @@ class Module(ABC):
             self.model.eval()
             with torch.no_grad():
                 for key, fold in folds_dict.items():
-                    print(fold.best_test_epoch.index)
-                    self.model.load_state_dict(fold.best_test_epoch.model_state_dict)
+                    self.model.load_state_dict(getattr(fold, "best_{}_epoch").model_state_dict)
                     fold_timestamps = [ts for ts in missed_timestamps if key[0] <= ts <= key[1]]
                     if 0 < len(fold_timestamps):
                         x = self.dataset.preprocess(dc=dc, timestamps=fold_timestamps)
