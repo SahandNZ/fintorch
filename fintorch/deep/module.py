@@ -23,6 +23,7 @@ from ..enum import TimeFrame
 from ..setting import SAMPLING_INTERVAL, MODEL_KWARGS, MODULE_DIR, TRANSFORM_KWARGS
 from ..utils.directory import create_directory
 from ..utils.function import call_with_dict
+from ..utils.hash import static_list_hash
 
 
 class Module(ABC):
@@ -78,12 +79,16 @@ class Module(ABC):
     def directory(self) -> str:
         return os.path.join(
             MODULE_DIR,
+
+            # dataset properties
             self.dataset.label_transform.symbol,
-            str(int(self.dataset.label_transform.time_frame)),
+            str(self.dataset.label_transform.time_frame),
             self.dataset.feature_transform.short_name,
             self.dataset.label_transform.short_name,
+
+            # model properties
             self.model.short_name,
-            f"dim-sequence-{self.dataset.feature_transform.dim_sequence}"
+            str(static_list_hash(list(self.__model_kwargs.values())))
         )
 
     @property

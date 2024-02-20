@@ -6,6 +6,8 @@ def static_hash(value: Union[str, int]) -> int:
         hash_value = int.from_bytes(value.encode(), byteorder="big") % (11 ** 8)
     elif isinstance(value, int):
         hash_value = value % (11 ** 8)
+    else:
+        hash_value = 1
 
     return hash_value
 
