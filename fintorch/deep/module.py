@@ -27,7 +27,16 @@ from ..utils.hash import static_list_hash
 
 
 class Module(ABC):
-    def __init__(self, dataset: Dataset, model_type: Type[Model], model_kwargs: Dict[str, Any]):
+    def __init__(
+            self,
+            dataset: Dataset,
+            model_type: Type[Model],
+            model_kwargs: Dict[str, Any],
+            epoch: int = 20,
+            batch_size: int = 1024,
+            lr: float = 1e-3,
+            weight_decay: float = 1e-2
+    ):
         self.__dataset: Dataset = dataset
         self.__model_type: Type[Model] = model_type
         self.__model_kwargs: Dict[str, Any] = model_kwargs
@@ -35,10 +44,10 @@ class Module(ABC):
         self.__model: Union[Model, None] = None
         self.__cross_validation = CrossValidation(interval=self.dataset.interval)
         self.__trainer: Trainer = Trainer(
-            epochs_count=20,
-            data_loader=DataLoader(batch_size=1024, post_load_fn=Module._post_load_fn),
+            epochs_count=epoch,
+            data_loader=DataLoader(batch_size=batch_size, post_load_fn=Module._post_load_fn),
             criterion=CE(),
-            optimizer=Optimizer(torch_optimizer_type=torch.optim.Adam, lr=1e-3, weight_decay=1e-2),
+            optimizer=Optimizer(torch_optimizer_type=torch.optim.Adam, lr=lr, weight_decay=weight_decay),
             lr_scheduler=LrScheduler(torch_lr_scheduler_type=torch.optim.lr_scheduler.StepLR, step_size=1, gamma=0.9),
             gradient_clipping_threshold=None,
         )
