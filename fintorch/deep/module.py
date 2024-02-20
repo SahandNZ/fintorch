@@ -138,47 +138,33 @@ class Module(ABC):
             pickle.dump(folds_dict, file)
 
     def predict(self, dc: DataCollection, timestamps: List[int], mode="val") -> Dict[int, List[float]]:
-        # safe load y_hat_dict
+        # safe load folds_dict
         try:
-            with open(self.y_hats_dict_path, "rb") as file:
-                y_hats_dict = pickle.load(file)
+            with open(self.folds_dict_path, "rb") as file:
+                folds_dict = pickle.load(file)
         except (FileNotFoundError, EOFError):
-            y_hats_dict = {}
+            folds_dict = {}
 
-        # predict and store missed timestamps
-        missed_timestamps = [ts for ts in timestamps if ts not in y_hats_dict or y_hats_dict[ts] is None]
-        if 0 < len(missed_timestamps):
-            # safe load folds_dict
-            try:
-                with open(self.folds_dict_path, "rb") as file:
-                    folds_dict = pickle.load(file)
-            except (FileNotFoundError, EOFError):
-                folds_dict = {}
+        # predict timestamps
+        y_hats_dict = {}
+        self.model.eval()
+        with torch.no_grad():
+            for key, fold in folds_dict.items():
+                self.model.load_state_dict(getattr(fold, f"best_{mode}_epoch").model_state_dict)
+                fold_timestamps = [ts for ts in timestamps if key[0] <= ts <= key[1]]
+                if 0 < len(fold_timestamps):
+                    x = self.dataset.preprocess(dc=dc, timestamps=fold_timestamps)
+                    y_hats = self.model(x).tolist()
+                    y_hats_dict.update({ts: y_hats[index] for index, ts in enumerate(fold_timestamps)})
 
-            # predict missed timestamps
-            self.model.eval()
-            with torch.no_grad():
-                for key, fold in folds_dict.items():
-                    self.model.load_state_dict(getattr(fold, f"best_{mode}_epoch").model_state_dict)
-                    fold_timestamps = [ts for ts in missed_timestamps if key[0] <= ts <= key[1]]
-                    if 0 < len(fold_timestamps):
-                        x = self.dataset.preprocess(dc=dc, timestamps=fold_timestamps)
-                        y_hats = self.model(x).tolist()
-                        y_hats_dict.update({ts: y_hats[index] for index, ts in enumerate(fold_timestamps)})
+        # remove model to reduce memory usage
+        del self.model
 
-            # remove model to reduce memory usage
-            del self.model
+        # set missed timestamps to None
+        missed_timestamps = [ts for ts in timestamps if ts not in y_hats_dict]
+        y_hats_dict.update({ts: None for ts in missed_timestamps})
 
-            # set missed timestamps to None
-            missed_timestamps = [ts for ts in timestamps if ts not in y_hats_dict]
-            y_hats_dict.update({ts: None for ts in missed_timestamps})
-
-            # update y_hats_dict
-            create_directory(self.directory)
-            with open(self.y_hats_dict_path, "wb+") as file:
-                pickle.dump(y_hats_dict, file)
-
-        return {ts: y_hats_dict[ts] for ts in timestamps}
+        return y_hats_dict
 
     def draw_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str) \
             -> Tuple[plt.Figure, plt.Axes, pd.DataFrame]:
