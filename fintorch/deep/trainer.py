@@ -118,7 +118,7 @@ class Trainer:
             for _ in self.__epoch_test_step(dataset, model, fold, epoch):
                 yield
 
-        epoch.completed = True
+            epoch.completed = True
 
     def __epoch_train_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: Epoch) -> Generator:
         generator = self.___batched_common_step(dataset, model, fold, epoch, "train")
