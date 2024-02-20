@@ -30,7 +30,7 @@ class Transform(Component):
     ):
         super().__init__(name=name, short_name=short_name, description=description)
         self.__symbol: str = symbol
-        self.__time_frame: TimeFrame = time_frame
+        self.__time_frame: TimeFrame = time_frame if isinstance(time_frame, TimeFrame) else TimeFrame(time_frame)
         self.__dim_sequence: int = dim_sequence
         self.__look_back: int = look_back
         self.__look_ahead: int = look_ahead
