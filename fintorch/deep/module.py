@@ -90,22 +90,7 @@ class Module(ABC):
 
     @property
     def directory(self) -> str:
-        return os.path.join(
-            MODULE_DIR,
-
-            # dataset properties
-            self.dataset.label_transform.symbol,
-            str(self.dataset.label_transform.time_frame),
-            str(static_list_hash([
-                self.dataset.feature_transform.short_name,
-                self.dataset.label_transform.short_name,
-                self.dataset.interval
-            ])),
-
-            # model properties
-            self.model.short_name,
-            str(static_list_hash(list(self.__model_kwargs.values())))
-        )
+        return os.path.join(MODULE_DIR, str(hash(self.dataset)), str(hash(self.model)))
 
     @property
     def folds_dict_path(self) -> str:

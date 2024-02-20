@@ -8,6 +8,7 @@ from fintorch.deep.transform.feature import FeatureTransform
 from fintorch.deep.transform.label import LabelTransform
 from fintorch.dtype import DataCollection
 from fintorch.enum import TimeFrame
+from fintorch.utils.hash import static_list_hash
 
 
 class Dataset(ABC):
@@ -64,3 +65,14 @@ class Dataset(ABC):
             return self._load_samples(timestamps=item)
         else:
             raise ValueError("item parameter must be int (single timestamp) or list of ints (multiple timestamps).")
+
+    def __hash__(self):
+        return static_list_hash(
+            [
+                self.feature_transform.short_name,
+                self.label_transform.short_name,
+                self.interval,
+                self.label_transform.symbol,
+                self.label_transform.time_frame
+            ]
+        )

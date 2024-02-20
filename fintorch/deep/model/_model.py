@@ -5,6 +5,7 @@ import torch
 from torch import nn
 
 from ...component import Component
+from ...utils.hash import static_list_hash
 
 
 class Model(nn.Module, Component, ABC):
@@ -74,3 +75,14 @@ class Model(nn.Module, Component, ABC):
     @abstractmethod
     def _forward(self, x: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError()
+
+    def __hash__(self):
+        return static_list_hash([
+            self.name,
+            self.dim_sequence,
+            self.dim_feature,
+            self.__dim_output,
+            self.num_hidden_layers,
+            self.batch_norm,
+            self.dropout,
+        ])
