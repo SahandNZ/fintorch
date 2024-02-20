@@ -13,6 +13,7 @@ from .lr_scheduler import LrScheduler
 from .model import Model
 from .optimizer import Optimizer
 from .criterion import Criterion
+from ..utils.hash import static_list_hash
 
 
 class Trainer:
@@ -197,3 +198,13 @@ class Trainer:
                 loss = self.criterion(y_hat, y)
 
         return loss, y_hat
+
+    def __hash__(self):
+        return static_list_hash([
+            self.epochs_count,
+            self.data_loader.batch_size,
+            self.criterion.name,
+            str(hash(self.optimizer)),
+            str(hash(self.lr_scheduler)),
+            self.gradient_clipping_threshold
+        ])

@@ -26,7 +26,6 @@ from ..enum import TimeFrame
 from ..setting import SAMPLING_INTERVAL, MODEL_KWARGS, MODULE_DIR, TRANSFORM_KWARGS
 from ..utils.directory import create_directory
 from ..utils.function import call_with_dict
-from ..utils.hash import static_list_hash
 from ..utils.plot import draw_predictions
 
 
@@ -42,10 +41,11 @@ class Module(ABC):
             weight_decay: float = 1e-2
     ):
         self.__dataset: Dataset = dataset
+
         self.__model_type: Type[Model] = model_type
         self.__model_kwargs: Dict[str, Any] = model_kwargs
-
         self.__model: Union[Model, None] = None
+
         self.__cross_validation = CrossValidation(interval=self.dataset.interval)
         self.__trainer: Trainer = Trainer(
             epochs_count=epoch,
@@ -54,6 +54,13 @@ class Module(ABC):
             optimizer=Optimizer(torch_optimizer_type=torch.optim.Adam, lr=lr, weight_decay=weight_decay),
             lr_scheduler=LrScheduler(torch_lr_scheduler_type=torch.optim.lr_scheduler.StepLR, step_size=1, gamma=0.9),
             gradient_clipping_threshold=None,
+        )
+
+        self.__directory = os.path.join(
+            MODULE_DIR,
+            str(hash(self.dataset)),
+            str(hash(self.model)),
+            str(hash(self.trainer))
         )
 
     @property
@@ -90,7 +97,7 @@ class Module(ABC):
 
     @property
     def directory(self) -> str:
-        return os.path.join(MODULE_DIR, str(hash(self.dataset)), str(hash(self.model)))
+        return self.__directory
 
     @property
     def folds_dict_path(self) -> str:

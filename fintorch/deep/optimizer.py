@@ -3,6 +3,7 @@ from typing import Dict, Type
 
 import torch
 from fintorch.deep.model import Model
+from fintorch.utils.hash import static_list_hash
 
 
 class Optimizer(ABC):
@@ -28,3 +29,12 @@ class Optimizer(ABC):
 
     def zero_grad(self):
         self.torch_optimizer.zero_grad()
+
+    def __hash__(self):
+        sorted_kwargs = [v for k, v in sorted(self.__kwargs.items(), key=lambda item: item[0])]
+        return static_list_hash(
+            [
+                self.__torch_optimizer_type.__name__,
+                *sorted_kwargs
+            ]
+        )

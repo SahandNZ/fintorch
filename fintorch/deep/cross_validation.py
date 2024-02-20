@@ -5,6 +5,7 @@ from typing import Iterator
 from fintorch.deep.dtype import Fold
 from fintorch.dtype import DataCollection
 from fintorch.enum import TimeFrame
+from fintorch.utils.hash import static_list_hash
 
 
 class CrossValidation:
@@ -100,3 +101,13 @@ class CrossValidation:
             return fold
         else:
             raise StopIteration
+
+    def __hash__(self):
+        return static_list_hash(
+            [
+                int(self.interval),
+                self.train_length,
+                self.val_length,
+                self.test_length
+            ]
+        )

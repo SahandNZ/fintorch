@@ -81,7 +81,7 @@ class Model(nn.Module, Component, ABC):
             self.name,
             self.dim_sequence,
             self.dim_feature,
-            self.__dim_output,
+            self.dim_output,
             self.num_hidden_layers,
             self.batch_norm,
             self.dropout,

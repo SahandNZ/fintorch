@@ -69,10 +69,10 @@ class Dataset(ABC):
     def __hash__(self):
         return static_list_hash(
             [
-                self.feature_transform.short_name,
-                self.label_transform.short_name,
-                self.interval,
+                int(self.interval),
                 self.label_transform.symbol,
-                self.label_transform.time_frame
+                self.label_transform.time_frame,
+                self.feature_transform.short_name,
+                self.label_transform.short_name
             ]
         )
