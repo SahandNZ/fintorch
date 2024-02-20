@@ -15,7 +15,7 @@ def main():
 
     # draw ohlc plot
     transform = NextFractalLabelTransform(symbol=args.symbol, time_frame=TimeFrame(args.time_frame))
-    transform.draw_ohlc_plot(dc=dc, start_date=args.start_date, stop_date=args.stop_date)
+    transform.show_ohlc_plot(dc=dc, start_date=args.start_date, stop_date=args.stop_date)
 
 
 if __name__ == '__main__':
