@@ -25,6 +25,7 @@ class Epoch:
         self.test_batch_accuracies: List[int] = []
 
         self.model_state_dict: Dict = None
+        self.completed: bool = False
 
     @property
     def index(self) -> int:

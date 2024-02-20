@@ -105,7 +105,7 @@ class Fold:
     def __get_best_epoch(self, mode: str) -> Epoch:
         best_epoch = None
         for epoch in self.epochs:
-            if best_epoch is None or best_epoch.compare(epoch, mode=mode):
+            if best_epoch is None or best_epoch.compare(epoch, mode=mode) and epoch.completed:
                 best_epoch = epoch
 
         return best_epoch
