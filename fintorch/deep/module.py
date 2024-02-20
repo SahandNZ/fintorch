@@ -6,6 +6,9 @@ import pickle
 from abc import ABC
 from typing import Any, Dict, Generator, List, Tuple, Type, Union
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import torch
 
 from .criterion import CE
@@ -24,6 +27,7 @@ from ..setting import SAMPLING_INTERVAL, MODEL_KWARGS, MODULE_DIR, TRANSFORM_KWA
 from ..utils.directory import create_directory
 from ..utils.function import call_with_dict
 from ..utils.hash import static_list_hash
+from ..utils.plot import draw_predictions
 
 
 class Module(ABC):
@@ -160,7 +164,8 @@ class Module(ABC):
             self.model.eval()
             with torch.no_grad():
                 for key, fold in folds_dict.items():
-                    self.model.load_state_dict(fold.best_val_epoch.model_state_dict)
+                    print(fold.best_test_epoch.index)
+                    self.model.load_state_dict(fold.best_test_epoch.model_state_dict)
                     fold_timestamps = [ts for ts in missed_timestamps if key[0] <= ts <= key[1]]
                     if 0 < len(fold_timestamps):
                         x = self.dataset.preprocess(dc=dc, timestamps=fold_timestamps)
@@ -180,6 +185,35 @@ class Module(ABC):
                 pickle.dump(y_hats_dict, file)
 
         return {ts: y_hats_dict[ts] for ts in timestamps}
+
+    def draw_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str) \
+            -> Tuple[plt.Figure, plt.Axes, pd.DataFrame]:
+        # draw ohlc and labels
+        fig, ohlc_ax, df = self.dataset.label_transform.draw_ohlc_plot(
+            dc=dc,
+            start_date=start_date,
+            stop_date=stop_date
+        )
+
+        # add prediction column to df
+        y_hats_dict = self.predict(dc=dc, timestamps=df.index.to_list())
+        df["prediction"] = [np.argmax(value) for value in y_hats_dict.values()]
+
+        # draw predictions
+        df.reset_index(drop=False, inplace=True)
+        draw_predictions(ohlc_ax=ohlc_ax, df=df)
+        df.set_index("timestamp", inplace=True)
+
+        return fig, ohlc_ax, df
+
+    def show_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str) -> None:
+        _, ohlc_ax, _ = self.draw_ohlc_plot(dc=dc, start_date=start_date, stop_date=stop_date)
+
+        ohlc_ax.grid()
+        ohlc_ax.legend()
+
+        plt.title("{} (from {} to {})".format(str(self), start_date, stop_date))
+        plt.show()
 
     def __str__(self):
         return "{} {} {} {} {}" \
