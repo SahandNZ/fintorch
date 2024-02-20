@@ -177,7 +177,7 @@ class Module(ABC):
         )
 
         # add prediction column to df
-        y_hats_dict = self.predict(dc=dc, timestamps=df.index.to_list())
+        y_hats_dict = self.predict(dc=dc, timestamps=df.index.to_list(), mode=mode)
         df["prediction"] = [np.argmax(value) for value in y_hats_dict.values()]
 
         # draw predictions
@@ -188,7 +188,7 @@ class Module(ABC):
         return fig, ohlc_ax, df
 
     def show_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str, mode: str = "val") -> None:
-        _, ohlc_ax, _ = self.draw_ohlc_plot(dc=dc, start_date=start_date, stop_date=stop_date)
+        _, ohlc_ax, _ = self.draw_ohlc_plot(dc=dc, start_date=start_date, stop_date=stop_date, mode=mode)
 
         ohlc_ax.grid()
         ohlc_ax.legend()

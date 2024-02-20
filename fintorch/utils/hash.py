@@ -1,11 +1,13 @@
 from typing import List, Union
 
 
-def static_hash(value: Union[str, int]) -> int:
+def static_hash(value: Union[str, int, float]) -> int:
     if isinstance(value, str):
         hash_value = int.from_bytes(value.encode(), byteorder="big") % (11 ** 8)
-    elif isinstance(value, int):
+    elif isinstance(value, int) or isinstance(value, float):
         hash_value = value % (11 ** 8)
+    elif isinstance(value, bool):
+        hash_value = int(value)
     else:
         hash_value = 1
 
