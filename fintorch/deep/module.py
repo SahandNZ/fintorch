@@ -107,18 +107,24 @@ class Module(ABC):
     def y_hats_dict_path(self) -> str:
         return os.path.join(self.directory, "y-hats-dict.pkl")
 
-    @staticmethod
-    def _post_load_fn(x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        y = y.squeeze(-2)
-        return x, y
-
-    def optimize(self, dc: DataCollection) -> Generator[Fold, None, None]:
+    @property
+    def folds_dict(self) -> Dict[Tuple[int, int], Fold]:
         # safe load folds_dict
         try:
             with open(self.folds_dict_path, "rb") as file:
                 folds_dict = pickle.load(file)
         except (FileNotFoundError, EOFError):
             folds_dict = {}
+
+        return folds_dict
+
+    @staticmethod
+    def _post_load_fn(x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        y = y.squeeze(-2)
+        return x, y
+
+    def optimize(self, dc: DataCollection) -> Generator[Fold, None, None]:
+        folds_dict = self.folds_dict
 
         # optimize new folds
         for fold in self.cross_validation(start_timestamp=self.dataset.feature_transform.get_start_timestamp(dc=dc)):
@@ -138,12 +144,7 @@ class Module(ABC):
             pickle.dump(folds_dict, file)
 
     def predict(self, dc: DataCollection, timestamps: List[int], mode="val") -> Dict[int, List[float]]:
-        # safe load folds_dict
-        try:
-            with open(self.folds_dict_path, "rb") as file:
-                folds_dict = pickle.load(file)
-        except (FileNotFoundError, EOFError):
-            folds_dict = {}
+        folds_dict = self.folds_dict
 
         # predict timestamps
         y_hats_dict = {}
