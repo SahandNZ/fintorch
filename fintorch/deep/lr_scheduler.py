@@ -26,7 +26,7 @@ class LrScheduler:
         sorted_kwargs = [v for k, v in sorted(self.__kwargs.items(), key=lambda item: item[0])]
         return static_list_hash(
             [
-                self.__torch_lr_scheduler.__name__,
+                self.__torch_lr_scheduler_type.__name__,
                 *sorted_kwargs
             ]
         )
