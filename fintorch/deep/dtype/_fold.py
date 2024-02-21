@@ -21,6 +21,9 @@ class Fold:
     def last_epoch(self) -> Epoch:
         return self.epochs[-1]
 
+    def completed(self) -> bool:
+        return all([epoch.completed for epoch in self.epochs])
+
     @property
     def elapsed_time(self) -> float:
         elapsed_time = 0
@@ -114,16 +117,15 @@ class Fold:
         return self.test_timestamps == other.test_timestamp
 
     def __str__(self):
-        epoch_elapsed_time = datetime.strftime(datetime.utcfromtimestamp(self.last_epoch.elapsed_time), '%H:%M:%S')
-        epoch_remaining_time = datetime.strftime(datetime.utcfromtimestamp(self.last_epoch.remaining_time), '%H:%M:%S')
-        epoch_total_time = datetime.strftime(datetime.utcfromtimestamp(self.last_epoch.total_time), '%H:%M:%S')
+        elapsed_time = datetime.strftime(datetime.utcfromtimestamp(self.last_epoch.elapsed_time), '%H:%M:%S')
+        remaining_time = datetime.strftime(datetime.utcfromtimestamp(self.last_epoch.remaining_time), '%H:%M:%S')
+        total_time = datetime.strftime(datetime.utcfromtimestamp(self.last_epoch.total_time), '%H:%M:%S')
 
         return ("Epoch ({}/{:<2}) ({} {} {})\n"
                 "Train  {:<6.4f}  {:<6.4f}  {:<5.1f}%  {:<5.1f}%  {}\n"
                 "Val    {:<6.4f}  {:<6.4f}  {:<5.1f}%  {:<5.1f}%  {}\n"
                 "Test   {:<6.4f}  {:<6.4f}  {:<5.1f}%  {:<5.1f}%  {}") \
-            .format(self.last_epoch.index, self.epochs_count, epoch_elapsed_time, epoch_remaining_time,
-                    epoch_total_time,
+            .format(self.last_epoch.index, self.epochs_count, elapsed_time, remaining_time, total_time,
                     self.last_epoch.train_loss, self.best_train_epoch.train_loss, self.last_epoch.train_accuracy,
                     self.best_train_epoch.train_accuracy, self.best_train_epoch.index,
                     self.last_epoch.val_loss, self.best_val_epoch.val_loss, self.last_epoch.val_accuracy,
