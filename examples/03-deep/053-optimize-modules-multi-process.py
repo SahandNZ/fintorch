@@ -25,8 +25,8 @@ def target(module: Module, queue: Queue):
         dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[module.symbol], time_frames=[module.time_frame])
 
         # optimize folds
-        for fold in module.optimize(dc=dc):
-            queue.put(str(fold))
+        for status in module.optimize(dc=dc):
+            queue.put(str(status))
         queue.put(-1)
     except Exception as e:
         queue.put(str(e))
@@ -79,7 +79,7 @@ def run_multi_process(args, modules: List[Module]):
                 if not queue.empty():
                     message = queue.get()
                     if isinstance(message, str):
-                        layout.update(Panel(message, title=f"[blue]{module}"))
+                        layout.update(Panel(message, title=f"{module}"))
                     elif isinstance(message, int) and -1 == message:
                         layout.update(Panel("Pending..."))
                         free_layouts.append(layout)

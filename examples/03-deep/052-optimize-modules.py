@@ -68,8 +68,8 @@ def main():
             )
 
             # optimize folds
-            for fold in module.optimize(dc=dc):
-                live.update(Group(Panel.fit(str(fold), title=str(module)), progress_panel))
+            for status in module.optimize(dc=dc):
+                live.update(Group(Panel.fit(str(status), title=str(module)), progress_panel))
 
             overall_progress.update(overall_task, advance=1)
 

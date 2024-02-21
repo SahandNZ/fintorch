@@ -48,8 +48,8 @@ def main():
 
     # optimize folds
     with Live(refresh_per_second=2) as live:
-        for fold in module.optimize(dc=dc):
-            live.update(Panel.fit(str(fold), title=f"[blue]{str(module)}"))
+        for status in module.optimize(dc=dc):
+            live.update(Panel.fit(str(status), title=f"{str(module)}"))
 
 
 if __name__ == '__main__':
