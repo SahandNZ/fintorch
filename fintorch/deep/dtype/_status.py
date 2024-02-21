@@ -22,9 +22,10 @@ class Status:
     @property
     def folds(self) -> List[Fold]:
         return self.__folds
+
     @property
     def completed_folds(self) -> List[Fold]:
-        return [fold for fold in self.folds if fold.completed]
+        return self.folds
 
     @property
     def last_fold(self) -> Fold:
