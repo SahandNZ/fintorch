@@ -21,6 +21,7 @@ class Fold:
     def last_epoch(self) -> Epoch:
         return self.epochs[-1]
 
+    @property
     def completed(self) -> bool:
         return all([epoch.completed for epoch in self.epochs])
 
