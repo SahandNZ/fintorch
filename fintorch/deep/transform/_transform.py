@@ -122,43 +122,17 @@ class Transform(Component):
                 yield sf
 
     def transform_sf(self, dc: DataCollection, timestamps: List[int]) -> Generator[List, None, None]:
-        # safe load timestamp_to_sf
-        try:
-            with open(self.path, "rb") as file:
-                timestamp_to_sf = pickle.load(file)
-        except (FileNotFoundError, EOFError):
-            timestamp_to_sf = {}
-
         with shelve.open(self.path.replace("pkl", "shelve")) as shelf:
             for timestamp in timestamps:
                 shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
 
                 # load or transform sf
-                sf = timestamp_to_sf.get(shifted_timestamp, None)
+                sf = shelf.get(key=str(shifted_timestamp), default=None)
                 if sf is None and self._can_not_be_none(dc=dc, timestamp=shifted_timestamp):
                     sf = self.__transform_sf(dc=dc, timestamp=shifted_timestamp)
-                    try:
-                        shelf[str(shifted_timestamp)] = sf.tolist()
-                    except Exception:
-                        shelf[str(shifted_timestamp)] = sf
+                    shelf[str(shifted_timestamp)] = sf
 
-
-        # update sf values if needed
-        for timestamp in timestamps:
-            shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
-
-            # load or transform sf
-            sf = timestamp_to_sf.get(shifted_timestamp, None)
-            if sf is None and self._can_not_be_none(dc=dc, timestamp=shifted_timestamp):
-                sf = self.__transform_sf(dc=dc, timestamp=shifted_timestamp)
-                timestamp_to_sf[shifted_timestamp] = sf
-
-            yield sf
-
-        # dump timestamp_to_sf
-        create_directory(self.directory)
-        with open(self.path, "wb+") as file:
-            pickle.dump(timestamp_to_sf, file)
+                    yield sf
 
     def __transform_sf(self, dc: DataCollection, timestamp: int) -> Union[List, None]:
         df = self.__transform_dc_to_df(dc=dc, timestamp=timestamp)
