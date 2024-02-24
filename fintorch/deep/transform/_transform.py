@@ -1,5 +1,6 @@
 import os
 import pickle
+import shelve
 import time
 from abc import abstractmethod
 from datetime import datetime
@@ -69,7 +70,7 @@ class Transform(Component):
     def path(self) -> str:
         return os.path.join(self.directory, f"sequence-length-{self.dim_sequence}.pkl")
 
-    def get_start_timestamp(self, dc: DataCollection) -> int:
+    def get_first_valid_timestamp(self, dc: DataCollection) -> int:
         # create on board timestamp
         symbol_info = dc.get_symbol_info(symbol=self.symbol)
         on_board_datetime = symbol_info.on_board_datetime
@@ -82,12 +83,14 @@ class Transform(Component):
 
         return int(max(on_board_timestamp, df_first_timestamp) + self.look_back * int(self.time_frame))
 
-    def get_valid_timestamps(self, dc: DataCollection) -> List[int]:
+    def get_last_valid_timestamp(self) -> int:
         current_timestamp = datetime.now().timestamp() // int(self.time_frame) * int(self.time_frame)
+        return int(current_timestamp - self.look_ahead * int(self.time_frame))
 
-        start_timestamp = int(self.get_start_timestamp(dc=dc) + self.look_back * int(self.time_frame))
-        stop_timestamp = int(current_timestamp - self.look_ahead * int(self.time_frame))
-        timestamps = list(range(start_timestamp, stop_timestamp, int(self.time_frame)))
+    def get_valid_timestamps(self, dc: DataCollection) -> List[int]:
+        first_valid_timestamp = self.get_first_valid_timestamp(dc=dc)
+        last_valid_timestamp = self.get_last_valid_timestamp()
+        timestamps = list(range(first_valid_timestamp, last_valid_timestamp, int(self.time_frame)))
 
         return timestamps
 
@@ -110,7 +113,15 @@ class Transform(Component):
         if progress is not None:
             progress.update(task_id=task, visible=False)
 
-    def load_sf(self, timestamps: List[int]) -> Generator:
+    def load_sf(self, timestamps: List[int]) -> Generator[List, None, None]:
+        with shelve.open(self.path.replace("pkl", "shelve")) as shelf:
+            for timestamp in timestamps:
+                shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
+                sf = shelf.get(key=str(shifted_timestamp), default=None)
+
+                yield sf
+
+    def transform_sf(self, dc: DataCollection, timestamps: List[int]) -> Generator[List, None, None]:
         # safe load timestamp_to_sf
         try:
             with open(self.path, "rb") as file:
@@ -118,19 +129,19 @@ class Transform(Component):
         except (FileNotFoundError, EOFError):
             timestamp_to_sf = {}
 
-        for timestamp in timestamps:
-            shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
-            sf = timestamp_to_sf.get(shifted_timestamp, None)
+        with shelve.open(self.path.replace("pkl", "shelve")) as shelf:
+            for timestamp in timestamps:
+                shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
 
-            yield sf
+                # load or transform sf
+                sf = timestamp_to_sf.get(shifted_timestamp, None)
+                if sf is None and self._can_not_be_none(dc=dc, timestamp=shifted_timestamp):
+                    sf = self.__transform_sf(dc=dc, timestamp=shifted_timestamp)
+                    try:
+                        shelf[str(shifted_timestamp)] = sf.tolist()
+                    except Exception:
+                        shelf[str(shifted_timestamp)] = sf
 
-    def transform_sf(self, dc: DataCollection, timestamps: List[int]) -> Generator:
-        # safe load timestamp_to_sf
-        try:
-            with open(self.path, "rb") as file:
-                timestamp_to_sf = pickle.load(file)
-        except (FileNotFoundError, EOFError):
-            timestamp_to_sf = {}
 
         # update sf values if needed
         for timestamp in timestamps:
@@ -149,7 +160,7 @@ class Transform(Component):
         with open(self.path, "wb+") as file:
             pickle.dump(timestamp_to_sf, file)
 
-    def __transform_sf(self, dc: DataCollection, timestamp: int) -> Union[np.array, None]:
+    def __transform_sf(self, dc: DataCollection, timestamp: int) -> Union[List, None]:
         df = self.__transform_dc_to_df(dc=dc, timestamp=timestamp)
         sf = self._transform_df_to_sf(df=df, timestamp=timestamp)
 
@@ -175,7 +186,7 @@ class Transform(Component):
         raise NotImplementedError()
 
     @abstractmethod
-    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> Union[np.array, None]:
+    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> Union[List, None]:
         raise NotImplementedError()
 
     def __str__(self) -> str:

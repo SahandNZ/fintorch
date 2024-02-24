@@ -31,11 +31,11 @@ def main():
 
     # load data collection and create timestamps
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
-    start_timestamp = feature_transform.get_start_timestamp(dc=dc)
+    first_valid_timestamp = feature_transform.get_first_valid_timestamp(dc=dc)
 
     # define cross validation and generate single fold
     cross_validation = CrossValidation(interval=args.interval)
-    fold = next(iter(cross_validation(start_timestamp=start_timestamp)))
+    fold = next(iter(cross_validation(first_valid_timestamp=first_valid_timestamp)))
 
     # define exchange loader and load single batch
     data_loader = DataLoader(batch_size=1024)

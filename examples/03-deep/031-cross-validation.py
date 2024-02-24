@@ -22,10 +22,10 @@ def main():
 
     # load on board timestamp
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
-    start_timestamp = feature_transform.get_start_timestamp(dc=dc)
+    first_valid_timestamp = feature_transform.get_first_valid_timestamp(dc=dc)
 
     # iterate over folds
-    for fold in cross_validation(start_timestamp=start_timestamp):
+    for fold in cross_validation(first_valid_timestamp=first_valid_timestamp):
         print("{:<32}: {}".format("Fold train start datetime", fold.train_start_datetime))
         print("{:<32}: {}".format("Fold validation start datetime", fold.val_start_datetime))
         print("{:<32}: {}".format("Fold test start datetime", fold.test_start_datetime))

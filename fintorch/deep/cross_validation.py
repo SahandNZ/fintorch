@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from typing import Iterator
 
 from fintorch.deep.dtype import Fold
-from fintorch.dtype import DataCollection
 from fintorch.enum import TimeFrame
 from fintorch.utils.hash import static_list_hash
 
@@ -21,7 +20,7 @@ class CrossValidation:
         self.__val_length: int = val_length
         self.__test_length: int = test_length
 
-        self.__start_timestamp: int = -1
+        self.__test_start_timestamp: int = -1
         self.__folds_count = -1
         self.__index: int = -1
 
@@ -46,12 +45,12 @@ class CrossValidation:
         return self.train_length + self.val_length + self.test_length
 
     @property
-    def start_timestamp(self) -> int:
-        return self.__start_timestamp
+    def test_start_timestamp(self) -> int:
+        return self.__test_start_timestamp
 
     @property
-    def start_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.__start_timestamp)
+    def test_start_datetime(self) -> datetime:
+        return datetime.fromtimestamp(self.__test_start_timestamp)
 
     @property
     def folds_count(self) -> int:
@@ -61,15 +60,15 @@ class CrossValidation:
     def index(self) -> int:
         return self.__index
 
-    def __call__(self, start_timestamp: int) -> Iterator:
-        start_timestamp = start_timestamp + (self.train_length + self.val_length) * self.interval
-        self.__start_timestamp = int(start_timestamp // int(self.interval) * int(self.interval))
+    def __call__(self, first_valid_timestamp: int) -> Iterator:
+        first_valid_timestamp = first_valid_timestamp + (self.train_length + self.val_length) * self.interval
+        self.__test_start_timestamp = int(first_valid_timestamp // int(self.interval) * int(self.interval))
 
         return self.__iter__()
 
     def __iter__(self):
         current_open_timestamp = datetime.now().timestamp() // int(self.interval) * int(self.interval)
-        samples_count = (current_open_timestamp - self.start_timestamp) // int(self.interval)
+        samples_count = (current_open_timestamp - self.test_start_timestamp) // int(self.interval)
         folds_count = math.ceil(samples_count / self.test_length)
 
         self.__folds_count = folds_count
@@ -80,7 +79,7 @@ class CrossValidation:
     def __next__(self) -> Fold:
         self.__index += 1
         if self.index < self.folds_count:
-            test_start_timestamp = int(self.start_timestamp + self.index * self.test_length * self.interval)
+            test_start_timestamp = int(self.test_start_timestamp + self.index * self.test_length * self.interval)
             test_stop_timestamp = int(test_start_timestamp + self.test_length * self.interval)
             test_timestamps = list(range(test_start_timestamp, test_stop_timestamp, int(self.interval)))
 

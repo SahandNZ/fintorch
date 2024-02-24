@@ -23,11 +23,11 @@ def main():
 
     # load data collection and create timestamps
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
-    start_timestamp = feature_transform.get_start_timestamp(dc=dc)
+    first_valid_timestamp = feature_transform.get_first_valid_timestamp(dc=dc)
 
     # define cross validation
     cross_validation = CrossValidation(interval=args.interval)
-    for fold in cross_validation(start_timestamp=start_timestamp):
+    for fold in cross_validation(first_valid_timestamp=first_valid_timestamp):
         print("=" * 32)
         print(fold.train_start_datetime, fold.val_start_datetime, fold.test_start_datetime, fold.test_stop_datetime)
         data_loader = DataLoader(batch_size=1024)

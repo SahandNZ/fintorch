@@ -45,7 +45,7 @@ class FeatureTransform(Transform, ABC):
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError()
 
-    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> Union[np.array, None]:
+    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> Union[List, None]:
         # backward cropping feature dataframe with timestamp and sequence length
         fdf = df[df.index < timestamp]
         fdf = fdf.iloc[-self.dim_sequence:]
@@ -59,4 +59,4 @@ class FeatureTransform(Transform, ABC):
         ndf = zdf / (zdf.max() - zdf.min())
         sf = ndf.to_numpy().astype(dtype=NUMPY_FEATURE_DTYPE)
 
-        return sf
+        return sf.tolist()

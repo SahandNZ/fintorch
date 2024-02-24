@@ -63,7 +63,7 @@ class LabelTransform(Transform, ABC):
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError()
 
-    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> Union[np.array, None]:
+    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> Union[List, None]:
         # forward cropping label dataframe with timestamp and sequence length
         ldf = df[timestamp <= df.index]
         ldf = ldf.iloc[:self.dim_sequence]
@@ -80,7 +80,7 @@ class LabelTransform(Transform, ABC):
         sf = one_hot.astype(dtype=NUMPY_LABEL_DTYPE)
         sf = sf.reshape(self.dim_sequence, 2)
 
-        return sf
+        return sf.tolist()
 
     def draw_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str) \
             -> Tuple[plt.Figure, plt.Axes, pd.DataFrame]:

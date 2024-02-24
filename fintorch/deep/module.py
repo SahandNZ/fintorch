@@ -119,11 +119,24 @@ class Module(ABC):
         y = y.squeeze(-2)
         return x, y
 
+    def get_test_start_timestamp(self, dc: DataCollection) -> int:
+        first_valid_timestamp = self.dataset.feature_transform.get_first_valid_timestamp(dc=dc)
+        self.cross_validation(first_valid_timestamp=first_valid_timestamp)
+        return self.cross_validation.test_start_timestamp
+
+    def get_test_timestamps(self, dc: DataCollection) -> List[int]:
+        valid_timestamps = self.dataset.feature_transform.get_valid_timestamps(dc=dc)
+        test_start_timestamps = self.get_test_start_timestamp(dc=dc)
+        test_timestamps = [test_start_timestamps <= ts for ts in valid_timestamps]
+
+        return test_timestamps
+
     def optimize(self, dc: DataCollection) -> Generator[Status, None, None]:
         folds_dict = self.__load_folds_dict()
 
         # optimize new folds
-        iterator = self.cross_validation(start_timestamp=self.dataset.feature_transform.get_start_timestamp(dc=dc))
+        iterator = self.cross_validation(
+            first_valid_timestamp=self.dataset.feature_transform.get_first_valid_timestamp(dc=dc))
         status = Status(folds_count=self.cross_validation.folds_count)
         for fold in iterator:
             status.append_fold(fold=fold)
@@ -247,10 +260,11 @@ def create_module(
 
 def create_modules(symbols: List[str], time_frames: List[int]) -> List[Module]:
     modules = []
-    items = itertools.product(symbols, time_frames, FEATURE_TRANSFORM_TYPES, LABEL_TRANSFORM_TYPES, MODEL_TYPES)
-    for symbol, time_frame, lt_type, ft_type, model_type in items:
+    items = itertools.product(FEATURE_TRANSFORM_TYPES, LABEL_TRANSFORM_TYPES, MODEL_TYPES, symbols, time_frames)
+    for ft_type, lt_type, model_type, symbol, time_frame in items:
         transform_kwargs = copy.deepcopy(TRANSFORM_KWARGS)
-        transform_kwargs = transform_kwargs.update({"symbol": symbol, "time_frame": time_frame})
+        transform_kwargs.update({"symbol": symbol, "time_frame": time_frame})
+
         module = create_module(
             feature_transform_type=ft_type,
             label_transform_type=lt_type,

@@ -119,8 +119,8 @@ def main():
 
     # define modules
     modules = []
-    items = list(itertools.product(symbols, time_frames, FEATURE_TRANSFORM_TYPES, LABEL_TRANSFORM_TYPES, MODEL_TYPES))
-    for symbol, time_frame, ft_type, lt_type, model_type in items:
+    items = list(itertools.product(FEATURE_TRANSFORM_TYPES, LABEL_TRANSFORM_TYPES, MODEL_TYPES, symbols, time_frames))
+    for ft_type, lt_type, model_type, symbol, time_frame in items:
         # create module
         transform_kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
         module = create_module(
