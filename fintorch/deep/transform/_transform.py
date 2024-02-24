@@ -114,25 +114,44 @@ class Transform(Component):
             progress.update(task_id=task, visible=False)
 
     def load_sf(self, timestamps: List[int]) -> Generator[List, None, None]:
-        with shelve.open(self.path.replace("pkl", "shelve")) as shelf:
-            for timestamp in timestamps:
-                shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
-                sf = shelf.get(key=str(shifted_timestamp), default=None)
+        # safe load timestamp_to_sf
+        try:
+            with open(self.path, "rb") as file:
+                timestamp_to_sf = pickle.load(file)
+        except (FileNotFoundError, EOFError):
+            timestamp_to_sf = {}
 
-                yield sf
+        for timestamp in timestamps:
+            shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
+            sf = timestamp_to_sf.get(shifted_timestamp, None)
+
+            yield sf
 
     def transform_sf(self, dc: DataCollection, timestamps: List[int]) -> Generator[List, None, None]:
-        with shelve.open(self.path.replace("pkl", "shelve")) as shelf:
-            for timestamp in timestamps:
-                shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
+        # safe load timestamp_to_sf
+        try:
+            with open(self.path, "rb") as file:
+                timestamp_to_sf = pickle.load(file)
+        except (FileNotFoundError, EOFError):
+            timestamp_to_sf = {}
 
-                # load or transform sf
-                sf = shelf.get(key=str(shifted_timestamp), default=None)
-                if sf is None and self._can_not_be_none(dc=dc, timestamp=shifted_timestamp):
-                    sf = self.__transform_sf(dc=dc, timestamp=shifted_timestamp)
-                    shelf[str(shifted_timestamp)] = sf
+        # update sf values if needed
+        for timestamp in timestamps:
+            shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
 
-                    yield sf
+            # load or transform sf
+            sf = timestamp_to_sf.get(shifted_timestamp, None)
+            if sf is None and self._can_not_be_none(dc=dc, timestamp=shifted_timestamp):
+                sf = self.__transform_sf(dc=dc, timestamp=shifted_timestamp)
+                timestamp_to_sf[shifted_timestamp] = sf
+
+
+            yield sf
+
+        # dump timestamp_to_sf
+        create_directory(self.directory)
+        with open(self.path, "wb+") as file:
+            pickle.dump(timestamp_to_sf, file)
 
     def __transform_sf(self, dc: DataCollection, timestamp: int) -> Union[List, None]:
         df = self.__transform_dc_to_df(dc=dc, timestamp=timestamp)
