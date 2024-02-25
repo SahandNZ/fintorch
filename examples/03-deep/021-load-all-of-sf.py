@@ -26,11 +26,10 @@ def main():
 
     # load batch
     start_time = time.perf_counter()
-    dataset.prepare(dc=dc, timestamps=timestamps)
-    x, y = dataset[timestamps[-1024:]]
+    with dataset:
+        _, _ = dataset[timestamps]
     elapsed_time_ms = (time.perf_counter() - start_time) * 1000
-    print("Loading samples takes:     {:.3f} ms".format(elapsed_time_ms))
-    print("Loading each sample takes: {:.3f} ms".format(elapsed_time_ms / len(timestamps)))
+    print("Loading batch takes:     {:.3f} ms".format(elapsed_time_ms))
 
 
 if __name__ == '__main__':

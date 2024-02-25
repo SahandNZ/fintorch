@@ -33,8 +33,6 @@ def main():
 
     # define transforms
     items = list(itertools.product(transform_types, symbols, time_frames))
-
-    # create sf values
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
         overall_task = progress.add_task(description="Overall", total=len(items))
         for transform_type, symbol, time_frame in items:
@@ -42,7 +40,8 @@ def main():
             transform = call_with_dict(transform_type, transform_kwargs)
 
             # create sf values
-            transform.prepare_sf(dc=dc, progress=progress)
+            with transform:
+                transform.prepare_valid_sf(dc=dc, progress=progress)
 
             # update progress bar
             progress.update(task_id=overall_task, advance=1)

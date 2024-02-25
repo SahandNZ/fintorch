@@ -58,6 +58,7 @@ class DataLoader:
         return self.__iter__()
 
     def __iter__(self):
+        self.dataset.open()
         self._index = -1
         if self.shuffle:
             random.shuffle(self.timestamps)
@@ -84,4 +85,5 @@ class DataLoader:
 
             return batch_x, batch_y
         else:
+            self.dataset.close()
             raise StopIteration

@@ -1,3 +1,4 @@
+import time
 from abc import ABC
 from typing import List, Tuple, Union
 from datetime import datetime
@@ -29,6 +30,14 @@ class Dataset(ABC):
     def interval(self) -> TimeFrame:
         return self.__interval
 
+    def open(self) -> None:
+        self.feature_transform.open()
+        self.label_transform.open()
+
+    def close(self) -> None:
+        self.feature_transform.close()
+        self.label_transform.close()
+
     def preprocess(self, dc: DataCollection, timestamps: List[int]) -> torch.Tensor:
         feature_generator = self.feature_transform.transform_sf(dc=dc, timestamps=timestamps)
         features = [feature for feature in feature_generator]
@@ -37,11 +46,8 @@ class Dataset(ABC):
         return x
 
     def prepare(self, dc: DataCollection, timestamps: List[int]) -> None:
-        features_generator = self.feature_transform.transform_sf(dc=dc, timestamps=timestamps)
-        labels_generators = self.label_transform.transform_sf(dc=dc, timestamps=timestamps)
-
-        for feature, label in zip(features_generator, labels_generators):
-            pass
+        self.feature_transform.prepare_sf(dc=dc, timestamps=timestamps)
+        self.label_transform.prepare_sf(dc=dc, timestamps=timestamps)
 
     def _load_samples(self, timestamps: List[int]) -> Tuple[torch.Tensor, torch.Tensor]:
         features_generator = self.feature_transform.load_sf(timestamps=timestamps)
@@ -57,6 +63,13 @@ class Dataset(ABC):
         y = torch.from_numpy(np.array(valid_labels)).float()
 
         return x, y
+
+    def __enter__(self):
+        self.open()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
     def __getitem__(self, item: Union[int, List[int]]) -> Tuple[torch.Tensor, torch.Tensor]:
         if isinstance(item, int):

@@ -1,13 +1,11 @@
 import argparse
-
-from rich.progress import Progress
+import time
 
 from examples.args import add_default_args_and_parse
 from fintorch.deep.dtype import Dataset
-from fintorch.exchange import ONLINE_EXCHANGE
-from fintorch.setting import RICH_PROGRESS_COLUMNS
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
+from fintorch.exchange import ONLINE_EXCHANGE
 
 
 def main():
@@ -26,14 +24,14 @@ def main():
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
     timestamps = feature_transform.get_valid_timestamps(dc=dc)
 
-    # prepare dataset
-    with Progress(*RICH_PROGRESS_COLUMNS) as progress:
-        task = progress.add_task(description="Loading dataset samples", total=len(timestamps))
-        dataset.prepare(dc=dc, timestamps=timestamps)
-        for timestamp in timestamps:
-            x, y = dataset[timestamp]
-            print(x, y)
-            progress.update(task, advance=1)
+    # load batch
+    with dataset:
+        for index in range(0, len(timestamps), args.batch_size):
+            start_time = time.perf_counter()
+            batch_timestamps = timestamps[index:index + args.batch_size]
+            _, _ = dataset[batch_timestamps]
+            elapsed_time_ms = (time.perf_counter() - start_time) * 1000
+            print("Loading batch takes:     {:.3f} ms".format(elapsed_time_ms))
 
 
 if __name__ == '__main__':

@@ -26,7 +26,8 @@ def task_target(transform: Transform):
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[transform.symbol], time_frames=[transform.time_frame])
 
     # create sf values
-    transform.prepare_sf(dc=dc)
+    with transform:
+        transform.prepare_valid_sf(dc=dc)
 
 
 def run_multi_process(args, transforms: List[Transform]):

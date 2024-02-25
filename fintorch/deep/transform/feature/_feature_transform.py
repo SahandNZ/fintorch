@@ -59,4 +59,4 @@ class FeatureTransform(Transform, ABC):
         ndf = zdf / (zdf.max() - zdf.min())
         sf = ndf.to_numpy().astype(dtype=NUMPY_FEATURE_DTYPE)
 
-        return sf.tolist()
+        return sf

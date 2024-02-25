@@ -4,7 +4,7 @@ import shelve
 import time
 from abc import abstractmethod
 from datetime import datetime
-from typing import Generator, Union, List
+from typing import Dict, Generator, Union, List
 
 import numpy as np
 import pandas as pd
@@ -36,6 +36,7 @@ class Transform(Component):
         self.__look_back: int = look_back
         self.__look_ahead: int = look_ahead
 
+        self.__timestamp_to_sf: Dict[int, List] = {}
         self.__processed_df: pd.DataFrame = pd.DataFrame()
 
     @property
@@ -59,6 +60,10 @@ class Transform(Component):
         return self.__look_ahead
 
     @property
+    def timestamp_to_sf(self) -> Dict[int, List]:
+        return self.__timestamp_to_sf
+
+    @property
     def processed_df(self) -> pd.DataFrame:
         return self.__processed_df
 
@@ -69,6 +74,20 @@ class Transform(Component):
     @property
     def path(self) -> str:
         return os.path.join(self.directory, f"sequence-length-{self.dim_sequence}.pkl")
+
+    def open(self) -> None:
+        # safe load timestamp_to_sf
+        try:
+            with open(self.path, "rb") as file:
+                self.__timestamp_to_sf = pickle.load(file)
+        except (FileNotFoundError, EOFError):
+            self.__timestamp_to_sf = {}
+
+    def close(self) -> None:
+        # dump timestamp_to_sf
+        create_directory(self.directory)
+        with open(self.path, "wb+") as file:
+            pickle.dump(self.timestamp_to_sf, file)
 
     def get_first_valid_timestamp(self, dc: DataCollection) -> int:
         # create on board timestamp
@@ -94,7 +113,7 @@ class Transform(Component):
 
         return timestamps
 
-    def prepare_sf(self, dc: DataCollection, progress: Union[Progress, None] = None) -> None:
+    def prepare_valid_sf(self, dc: DataCollection, progress: Union[Progress, None] = None) -> None:
         timestamps = self.get_valid_timestamps(dc=dc)
 
         # create rich progress bar
@@ -113,47 +132,31 @@ class Transform(Component):
         if progress is not None:
             progress.update(task_id=task, visible=False)
 
-    def load_sf(self, timestamps: List[int]) -> Generator[List, None, None]:
-        # safe load timestamp_to_sf
-        try:
-            with open(self.path, "rb") as file:
-                timestamp_to_sf = pickle.load(file)
-        except (FileNotFoundError, EOFError):
-            timestamp_to_sf = {}
+    def prepare_sf(self, dc: DataCollection, timestamps: List[int]) -> None:
+        for _ in self.transform_sf(dc=dc, timestamps=timestamps):
+            pass
 
+    def load_sf(self, timestamps: List[int]) -> Generator[Union[np.array, None], None, None]:
         for timestamp in timestamps:
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
-            sf = timestamp_to_sf.get(shifted_timestamp, None)
+            sf = self.timestamp_to_sf.get(shifted_timestamp, None)
 
             yield sf
 
-    def transform_sf(self, dc: DataCollection, timestamps: List[int]) -> Generator[List, None, None]:
-        # safe load timestamp_to_sf
-        try:
-            with open(self.path, "rb") as file:
-                timestamp_to_sf = pickle.load(file)
-        except (FileNotFoundError, EOFError):
-            timestamp_to_sf = {}
-
+    def transform_sf(self, dc: DataCollection, timestamps: List[int]) -> Generator[np.array, None, None]:
         # update sf values if needed
         for timestamp in timestamps:
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
 
             # load or transform sf
-            sf = timestamp_to_sf.get(shifted_timestamp, None)
+            sf = self.timestamp_to_sf.get(shifted_timestamp, None)
             if sf is None and self._can_not_be_none(dc=dc, timestamp=shifted_timestamp):
                 sf = self.__transform_sf(dc=dc, timestamp=shifted_timestamp)
-                timestamp_to_sf[shifted_timestamp] = sf
-
+                self.timestamp_to_sf[shifted_timestamp] = sf
 
             yield sf
 
-        # dump timestamp_to_sf
-        create_directory(self.directory)
-        with open(self.path, "wb+") as file:
-            pickle.dump(timestamp_to_sf, file)
-
-    def __transform_sf(self, dc: DataCollection, timestamp: int) -> Union[List, None]:
+    def __transform_sf(self, dc: DataCollection, timestamp: int) -> Union[np.array, None]:
         df = self.__transform_dc_to_df(dc=dc, timestamp=timestamp)
         sf = self._transform_df_to_sf(df=df, timestamp=timestamp)
 
@@ -181,6 +184,13 @@ class Transform(Component):
     @abstractmethod
     def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> Union[List, None]:
         raise NotImplementedError()
+
+    def __enter__(self):
+        self.open()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
     def __str__(self) -> str:
         return "{} - {} - {}".format(self.short_name, self.symbol, str(self.time_frame))

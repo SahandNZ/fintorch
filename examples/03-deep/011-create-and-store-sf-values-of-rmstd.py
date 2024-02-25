@@ -12,6 +12,7 @@ def main():
     parser = argparse.ArgumentParser()
     args = add_default_args_and_parse(parser)
 
+    # define transform
     transform = RollingMeanStdTrRocFeatureTransform(
         symbol=args.symbol,
         time_frame=args.time_frame,
@@ -22,8 +23,8 @@ def main():
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[transform.symbol], time_frames=[transform.time_frame])
 
     # create sf values
-    with Progress(*RICH_PROGRESS_COLUMNS) as progress:
-        transform.prepare_sf(dc=dc, progress=progress)
+    with Progress(*RICH_PROGRESS_COLUMNS) as progress, transform:
+        transform.prepare_valid_sf(dc=dc, progress=progress)
 
 
 if __name__ == '__main__':

@@ -27,7 +27,8 @@ def main():
 
     # preprocess single feature
     start_time = time.perf_counter()
-    feature = dataset.preprocess(dc=dc, timestamps=timestamps[-1024:])
+    with dataset:
+        feature = dataset.preprocess(dc=dc, timestamps=timestamps[-1024:])
     elapsed_ms = (time.perf_counter() - start_time) * 1000
     print("Preprocessing takes: {:.3f} ms".format(elapsed_ms))
     print("Feature.shape:", feature.shape)

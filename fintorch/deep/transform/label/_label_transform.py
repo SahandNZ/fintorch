@@ -80,7 +80,7 @@ class LabelTransform(Transform, ABC):
         sf = one_hot.astype(dtype=NUMPY_LABEL_DTYPE)
         sf = sf.reshape(self.dim_sequence, 2)
 
-        return sf.tolist()
+        return sf
 
     def draw_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str) \
             -> Tuple[plt.Figure, plt.Axes, pd.DataFrame]:
