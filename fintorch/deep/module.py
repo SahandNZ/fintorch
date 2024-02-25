@@ -135,21 +135,18 @@ class Module(ABC):
         folds_dict = self.__load_folds_dict()
 
         # optimize new folds
-        iterator = self.cross_validation(
-            first_valid_timestamp=self.dataset.feature_transform.get_first_valid_timestamp(dc=dc))
+        first_valid_timestamp = self.dataset.feature_transform.get_first_valid_timestamp(dc=dc)
+        iterator = self.cross_validation(first_valid_timestamp=first_valid_timestamp)
         status = Status(folds_count=self.cross_validation.folds_count)
         for fold in iterator:
             status.append_fold(fold=fold)
 
             start_time = time.time()
-            self.dataset.prepare(dc=dc, timestamps=fold.timestamps)
             key = (fold.test_start_timestamp, fold.test_stop_timestamp)
-
             if key in folds_dict:
                 elapsed_time = time.time() - start_time
                 status.update_elapsed_time(elapsed_time=elapsed_time)
                 yield status
-
             else:
                 folds_dict[key] = fold
                 for _ in self.trainer.optimize_fold(dataset=self.dataset, model=self.model, fold=fold):
