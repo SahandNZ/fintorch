@@ -50,7 +50,9 @@ def main():
 
     # show ohlc plot
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[module.symbol], time_frames=[module.time_frame])
-    module.show_ohlc_plot(dc=dc, start_date=args.start_date, stop_date=args.stop_date)
+
+    with module:
+        module.show_ohlc_plot(dc=dc, start_date=args.start_date, stop_date=args.stop_date)
 
 
 if __name__ == '__main__':

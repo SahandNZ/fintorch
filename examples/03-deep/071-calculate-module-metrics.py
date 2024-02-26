@@ -50,13 +50,14 @@ def main():
     timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
 
     # create y and y_hat values
-    sf_generator = module.dataset.label_transform.transform_sf(dc=dc, timestamps=timestamps)
-    y_array = np.concatenate([sf for sf in sf_generator])
-    y_hat_dict = module.predict(dc=dc, timestamps=timestamps)
+    with module:
+        sf_generator = module.dataset.label_transform.transform_sf(dc=dc, timestamps=timestamps)
+        y_array = np.concatenate([sf for sf in sf_generator])
+        y_hat_dict = module.predict(dc=dc, timestamps=timestamps)
 
-    # convert y and y_hat values to torch.Tensor
-    y = torch.from_numpy(y_array)
-    y_hat = torch.from_numpy(np.array(list(y_hat_dict.values())))
+        # convert y and y_hat values to torch.Tensor
+        y = torch.from_numpy(y_array)
+        y_hat = torch.from_numpy(np.array(list(y_hat_dict.values())))
 
     # calculate metrics
     metrics = Metrics(criterion=module.trainer.criterion, y=y, y_hat=y_hat)

@@ -64,6 +64,8 @@ class Module(ABC):
             str(hash(self.cross_validation)),
             str(hash(self.trainer))
         )
+        self.__folds_dict_path = os.path.join(self.directory, "folds-dict.pkl")
+        self.__folds_dict: Dict[Tuple[int, int], Fold] = None
 
     @property
     def dataset(self) -> Dataset:
@@ -71,15 +73,7 @@ class Module(ABC):
 
     @property
     def model(self) -> Model:
-        if self.__model is None:
-            self.__model = call_with_dict(self.__model_type, self.__model_kwargs)
-
         return self.__model
-
-    @model.deleter
-    def model(self):
-        self.__model = None
-        gc.collect()
 
     @property
     def cross_validation(self) -> CrossValidation:
@@ -103,21 +97,41 @@ class Module(ABC):
 
     @property
     def folds_dict_path(self) -> str:
-        return os.path.join(self.directory, "folds-dict.pkl")
+        return self.__folds_dict_path
 
     @property
-    def y_hats_dict_path(self) -> str:
-        return os.path.join(self.directory, "y-hats-dict.pkl")
-
-    @property
-    def folds(self) -> List[Fold]:
-        folds_dict = self.__load_folds_dict()
-        return list(folds_dict.values())
+    def folds_dict(self) -> Dict[Tuple[int, int], Fold]:
+        return self.__folds_dict
 
     @staticmethod
     def _post_load_fn(x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         y = y.squeeze(-2)
         return x, y
+
+    def open(self) -> None:
+        self.dataset.open()
+
+        # safe load self.folds_dict
+        try:
+            with open(self.folds_dict_path, "rb") as file:
+                self.__folds_dict = pickle.load(file)
+        except (FileNotFoundError, EOFError):
+            self.__folds_dict = {}
+
+        # create model
+        self.__model = call_with_dict(self.__model_type, self.__model_kwargs)
+
+    def close(self) -> None:
+        self.dataset.close()
+
+        # dump self.fold_dict
+        create_directory(self.directory)
+        with open(self.folds_dict_path, "wb+") as file:
+            pickle.dump(self.folds_dict, file)
+
+        # remove model
+        self.__model = None
+        gc.collect()
 
     def get_test_start_timestamp(self, dc: DataCollection) -> int:
         first_valid_timestamp = self.dataset.feature_transform.get_first_valid_timestamp(dc=dc)
@@ -132,8 +146,6 @@ class Module(ABC):
         return test_timestamps
 
     def optimize(self, dc: DataCollection) -> Generator[Status, None, None]:
-        folds_dict = self.__load_folds_dict()
-
         # optimize new folds
         first_valid_timestamp = self.dataset.feature_transform.get_first_valid_timestamp(dc=dc)
         iterator = self.cross_validation(first_valid_timestamp=first_valid_timestamp)
@@ -143,42 +155,29 @@ class Module(ABC):
 
             start_time = time.time()
             key = (fold.test_start_timestamp, fold.test_stop_timestamp)
-            if key in folds_dict:
+            if key in self.folds_dict:
                 elapsed_time = time.time() - start_time
                 status.update_elapsed_time(elapsed_time=elapsed_time)
                 yield status
             else:
-                folds_dict[key] = fold
+                self.folds_dict[key] = fold
                 for _ in self.trainer.optimize_fold(dataset=self.dataset, model=self.model, fold=fold):
                     elapsed_time = time.time() - start_time
                     status.update_elapsed_time(elapsed_time=elapsed_time)
                     yield status
 
-        # remove model from memory to reduce memory usage
-        del self.model
-
-        # update folds_dict
-        create_directory(self.directory)
-        with open(self.folds_dict_path, "wb+") as file:
-            pickle.dump(folds_dict, file)
-
     def predict(self, dc: DataCollection, timestamps: List[int], mode="val") -> Dict[int, List[float]]:
-        folds_dict = self.__load_folds_dict()
-
         # predict timestamps
         y_hats_dict = {}
         self.model.eval()
         with torch.no_grad():
-            for key, fold in folds_dict.items():
+            for key, fold in self.folds_dict.items():
                 self.model.load_state_dict(getattr(fold, f"best_{mode}_epoch").model_state_dict)
                 fold_timestamps = [ts for ts in timestamps if key[0] <= ts <= key[1]]
                 if 0 < len(fold_timestamps):
                     x = self.dataset.preprocess(dc=dc, timestamps=fold_timestamps)
                     y_hats = self.model(x).tolist()
                     y_hats_dict.update({ts: y_hats[index] for index, ts in enumerate(fold_timestamps)})
-
-        # remove model to reduce memory usage
-        del self.model
 
         # set missed timestamps to None
         missed_timestamps = [ts for ts in timestamps if ts not in y_hats_dict]
@@ -215,15 +214,12 @@ class Module(ABC):
         plt.title("{} (from {} to {})".format(str(self), start_date, stop_date))
         plt.show()
 
-    def __load_folds_dict(self) -> Dict[Tuple[int, int], Fold]:
-        # safe load folds_dict
-        try:
-            with open(self.folds_dict_path, "rb") as file:
-                folds_dict = pickle.load(file)
-        except (FileNotFoundError, EOFError):
-            folds_dict = {}
+    def __enter__(self):
+        self.open()
+        return self
 
-        return folds_dict
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
     def __str__(self):
         return "{} {} {} {} {}" \

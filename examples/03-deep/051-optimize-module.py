@@ -47,7 +47,7 @@ def main():
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[module.symbol], time_frames=[module.time_frame])
 
     # optimize folds
-    with Live(refresh_per_second=2) as live:
+    with Live(refresh_per_second=2) as live, module:
         for status in module.optimize(dc=dc):
             live.update(Panel.fit(str(status), title=f"{str(module)}"))
 

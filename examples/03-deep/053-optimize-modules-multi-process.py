@@ -25,8 +25,9 @@ def target(module: Module, queue: Queue):
         dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[module.symbol], time_frames=[module.time_frame])
 
         # optimize folds
-        for status in module.optimize(dc=dc):
-            queue.put(str(status))
+        with module:
+            for status in module.optimize(dc=dc):
+                queue.put(str(status))
         queue.put(-1)
     except Exception as e:
         queue.put(str(e))

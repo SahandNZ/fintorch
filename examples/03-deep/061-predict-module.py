@@ -48,7 +48,8 @@ def main():
     timestamps = create_timestamps(start_date=args.start_date, stop_date=args.stop_date, interval=args.interval)
 
     start_time = time.time()
-    y_hat_dict = module.predict(dc=dc, timestamps=timestamps)
+    with module:
+        y_hat_dict = module.predict(dc=dc, timestamps=timestamps)
     elapsed_time_ms = (time.time() - start_time) * 1000
     print("Loading predictions takes: {:.3f} ms".format(elapsed_time_ms))
 
