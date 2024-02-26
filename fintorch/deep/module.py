@@ -36,8 +36,8 @@ class Module(ABC):
             dataset: Dataset,
             model_type: Type[Model],
             model_kwargs: Dict[str, Any],
-            epoch: int = 20,
-            batch_size: int = 1024,
+            epoch: int = 10,
+            batch_size: int = 128,
             lr: float = 1e-3,
             weight_decay: float = 1e-2
     ):

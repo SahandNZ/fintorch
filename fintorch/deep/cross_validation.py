@@ -11,9 +11,9 @@ class CrossValidation:
     def __init__(
             self,
             interval: TimeFrame,
-            train_length: int = 25920,
-            val_length: int = 8640,
-            test_length: int = 17280
+            train_length: int = 8000,
+            val_length: int = 1000,
+            test_length: int = 1000
     ):
         self.__interval: TimeFrame = interval
         self.__train_length: int = train_length
