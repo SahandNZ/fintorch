@@ -31,10 +31,14 @@ class Optimizer(ABC):
         self.torch_optimizer.zero_grad()
 
     def __hash__(self):
-        sorted_kwargs = [v for k, v in sorted(self.__kwargs.items(), key=lambda item: item[0])]
+        sorted_kwargs = {k: v for k, v in sorted(self.__kwargs.items(), key=lambda item: item[0])}
+        lr = sorted_kwargs.pop("lr") / 1e-5
+        weight_decay = sorted_kwargs.pop("weight_decay") / 1e-5
         return static_list_hash(
             [
                 self.__torch_optimizer_type.__name__,
-                *sorted_kwargs
+                lr,
+                weight_decay,
+                *sorted_kwargs.values()
             ]
         )
