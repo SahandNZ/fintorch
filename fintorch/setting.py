@@ -1,7 +1,8 @@
 import os
 
 import numpy as np
-from rich.progress import *
+from rich.progress import SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, MofNCompleteColumn, \
+    TimeElapsedColumn, TimeRemainingColumn
 from torch import nn
 
 from fintorch.enum import TimeFrame
