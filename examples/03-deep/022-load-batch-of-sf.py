@@ -29,10 +29,12 @@ def main():
         for index in range(0, len(timestamps), args.batch_size):
             start_time = time.perf_counter()
             batch_timestamps = timestamps[index:index + args.batch_size]
-            _, _ = dataset[batch_timestamps]
+            batch_x, batch_y = dataset[batch_timestamps]
             elapsed_time_ms = (time.perf_counter() - start_time) * 1000
             print("Loading batch takes:     {:.3f} ms".format(elapsed_time_ms))
-
+            print("Batch x.shape:", batch_x.shape)
+            print("Batch y.shape:", batch_y.shape)
+            
 
 if __name__ == '__main__':
     main()
