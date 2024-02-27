@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Callable, List, Dict, Union
 
-from apscheduler.executors.pool import ThreadPoolExecutor
+from apscheduler.executors.pool import ProcessPoolExecutor
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 from ._context import Context
@@ -11,7 +11,7 @@ from ._job import Job
 class JobQueue:
     def __init__(self, context: Context):
         self.__context: Context = context
-        self.__scheduler = BlockingScheduler(executors={'default': ThreadPoolExecutor(max_workers=8)})
+        self.__scheduler = BlockingScheduler(executors={'default': ProcessPoolExecutor(max_workers=8)})
 
     @property
     def context(self) -> Context:
