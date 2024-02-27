@@ -1,7 +1,5 @@
 import os
 import pickle
-import shelve
-import time
 from abc import abstractmethod
 from datetime import datetime
 from typing import Dict, Generator, Union, List
@@ -11,10 +9,11 @@ import pandas as pd
 from rich.progress import Progress
 
 from ...component import Component
-from ...dtype import DataCollection, SymbolInfo
+from ...dtype import DataCollection
 from ...enum import TimeFrame
 from ...setting import TRANSFORM_DIR
 from ...utils.directory import create_directory
+from ...utils.hash import static_list_hash
 
 
 class Transform(Component):
@@ -191,6 +190,15 @@ class Transform(Component):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
+    def __hash__(self):
+        return static_list_hash([
+            self.short_name,
+            self.symbol,
+            self.time_frame,
+            self.look_back,
+            self.look_ahead
+        ])
 
     def __str__(self) -> str:
         return "{} - {} - {}".format(self.short_name, self.symbol, str(self.time_frame))

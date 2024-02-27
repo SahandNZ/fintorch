@@ -57,14 +57,8 @@ class Module(ABC):
             gradient_clipping_threshold=None,
         )
 
-        self.__directory = os.path.join(
-            MODULE_DIR,
-            str(hash(self.dataset)),
-            str(hash(self.model)),
-            str(hash(self.cross_validation)),
-            str(hash(self.trainer))
-        )
-        self.__folds_dict_path = os.path.join(self.directory, "folds-dict.pkl")
+        self.__directory: str = None
+        self.__folds_dict_path: str = None
         self.__folds_dict: Dict[Tuple[int, int], Fold] = None
 
     @property
@@ -109,17 +103,26 @@ class Module(ABC):
         return x, y
 
     def open(self) -> None:
+        # open dataset files from disk and create model
         self.dataset.open()
+        self.__model = call_with_dict(self.__model_type, self.__model_kwargs)
+
+        # assign values to directory and folds_dict_path
+        self.__directory = os.path.join(
+            MODULE_DIR,
+            str(hash(self.dataset)),
+            str(hash(self.model)),
+            str(hash(self.cross_validation)),
+            str(hash(self.trainer))
+        )
+        self.__folds_dict_path = os.path.join(self.directory, "folds-dict.pkl")
 
         # safe load self.folds_dict
         try:
             with open(self.folds_dict_path, "rb") as file:
                 self.__folds_dict = pickle.load(file)
-        except (FileNotFoundError, EOFError):
+        except (FileNotFoundError, EOFError, pickle.UnpicklingError):
             self.__folds_dict = {}
-
-        # create model
-        self.__model = call_with_dict(self.__model_type, self.__model_kwargs)
 
     def close(self) -> None:
         self.dataset.close()
@@ -127,7 +130,8 @@ class Module(ABC):
         # dump self.fold_dict
         create_directory(self.directory)
         with open(self.folds_dict_path, "wb+") as file:
-            pickle.dump(self.folds_dict, file)
+            completed_folds_dict = {k: v for k, v in  self.folds_dict.items() if v.epochs_count == len(v.epochs)}
+            pickle.dump(completed_folds_dict, file)
 
         # remove model
         self.__model = None
@@ -151,16 +155,17 @@ class Module(ABC):
         iterator = self.cross_validation(first_valid_timestamp=first_valid_timestamp)
         status = Status(folds_count=self.cross_validation.folds_count)
         for fold in iterator:
-            status.append_fold(fold=fold)
-
             start_time = time.time()
             key = (fold.test_start_timestamp, fold.test_stop_timestamp)
             if key in self.folds_dict:
+                fold = self.folds_dict[key]
+                status.append_fold(fold=fold)
                 elapsed_time = time.time() - start_time
                 status.update_elapsed_time(elapsed_time=elapsed_time)
                 yield status
             else:
                 self.folds_dict[key] = fold
+                status.append_fold(fold=fold)
                 for _ in self.trainer.optimize_fold(dataset=self.dataset, model=self.model, fold=fold):
                     elapsed_time = time.time() - start_time
                     status.update_elapsed_time(elapsed_time=elapsed_time)
@@ -228,7 +233,7 @@ class Module(ABC):
             self.dataset.label_transform.time_frame,
             self.dataset.feature_transform.short_name,
             self.dataset.label_transform.short_name,
-            self.model.short_name
+            self.__model_type.__name__
         )
 
 

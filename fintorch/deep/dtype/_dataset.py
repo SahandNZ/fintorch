@@ -1,15 +1,13 @@
-import time
 from abc import ABC
 from typing import List, Tuple, Union
-from datetime import datetime
 import numpy as np
 import torch
 
-from fintorch.deep.transform.feature import FeatureTransform
-from fintorch.deep.transform.label import LabelTransform
-from fintorch.dtype import DataCollection
-from fintorch.enum import TimeFrame
-from fintorch.utils.hash import static_list_hash
+from ...deep.transform.feature import FeatureTransform
+from ...deep.transform.label import LabelTransform
+from ...dtype import DataCollection
+from ...enum import TimeFrame
+from ...utils.hash import static_list_hash
 
 
 class Dataset(ABC):
@@ -83,9 +81,7 @@ class Dataset(ABC):
         return static_list_hash(
             [
                 int(self.interval),
-                self.label_transform.symbol,
-                self.label_transform.time_frame,
-                self.feature_transform.short_name,
-                self.label_transform.short_name
+                hash(self.feature_transform),
+                hash(self.label_transform)
             ]
         )
