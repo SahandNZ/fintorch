@@ -130,7 +130,7 @@ class Module(ABC):
         # dump self.fold_dict
         create_directory(self.directory)
         with open(self.folds_dict_path, "wb+") as file:
-            completed_folds_dict = {k: v for k, v in  self.folds_dict.items() if v.epochs_count == len(v.epochs)}
+            completed_folds_dict = {k: v for k, v in self.folds_dict.items() if v.epochs_count == len(v.epochs)}
             pickle.dump(completed_folds_dict, file)
 
         # remove model
@@ -149,12 +149,18 @@ class Module(ABC):
 
         return test_timestamps
 
-    def optimize(self, dc: DataCollection) -> Generator[Status, None, None]:
-        # optimize new folds
+    def optimize(self, dc: DataCollection, start_timestamp: Union[int, None] = None) -> Generator[Status, None, None]:
+        # setup cross validation
         first_valid_timestamp = self.dataset.feature_transform.get_first_valid_timestamp(dc=dc)
         iterator = self.cross_validation(first_valid_timestamp=first_valid_timestamp)
+
+        # optimize new folds
         status = Status(folds_count=self.cross_validation.folds_count)
         for fold in iterator:
+            # skip folds which are not include in start_timestamp
+            if start_timestamp is not None and fold.test_start_timestamp < start_timestamp:
+                continue
+
             start_time = time.time()
             key = (fold.test_start_timestamp, fold.test_stop_timestamp)
             if key in self.folds_dict:
