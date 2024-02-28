@@ -28,6 +28,7 @@ from ..setting import SAMPLING_INTERVAL, MODEL_KWARGS, MODULE_DIR, TRANSFORM_KWA
 from ..utils.directory import create_directory
 from ..utils.function import call_with_dict
 from ..utils.plot import draw_predictions
+from ..utils.timestamp import to_datetime
 
 
 class Module(ABC):
@@ -149,7 +150,10 @@ class Module(ABC):
 
         return test_timestamps
 
-    def optimize(self, dc: DataCollection, start_timestamp: Union[int, None] = None) -> Generator[Status, None, None]:
+    def optimize(self, dc: DataCollection, start_date: Union[str, None] = None) -> Generator[Status, None, None]:
+        # parse start_date
+        start_date = to_datetime(date=start_date) if start_date is not None else None
+
         # setup cross validation
         first_valid_timestamp = self.dataset.feature_transform.get_first_valid_timestamp(dc=dc)
         iterator = self.cross_validation(first_valid_timestamp=first_valid_timestamp)
@@ -158,7 +162,7 @@ class Module(ABC):
         status = Status(folds_count=self.cross_validation.folds_count)
         for fold in iterator:
             # skip folds which are not include in start_timestamp
-            if start_timestamp is not None and fold.test_start_timestamp < start_timestamp:
+            if start_date is not None and fold.test_stop_timestamp < start_date.timestamp():
                 continue
 
             start_time = time.time()
