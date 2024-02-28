@@ -17,15 +17,11 @@ class Status:
 
     @property
     def completed_folds_count(self) -> int:
-        return len(self.completed_folds)
+        return self.last_fold.index + 1 if 0 < len(self.folds) else 1
 
     @property
     def folds(self) -> List[Fold]:
         return self.__folds
-
-    @property
-    def completed_folds(self) -> List[Fold]:
-        return self.folds
 
     @property
     def last_fold(self) -> Fold:

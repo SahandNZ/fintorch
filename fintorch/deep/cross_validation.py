@@ -1,5 +1,5 @@
 import math
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Iterator
 
 from fintorch.deep.dtype import Fold
@@ -92,6 +92,7 @@ class CrossValidation:
             train_timestamps = list(range(train_start_timestamp, train_stop_timestamp, int(self.interval)))
 
             fold = Fold(
+                index=self.index,
                 train_timestamps=train_timestamps,
                 val_timestamps=val_timestamps,
                 test_timestamps=test_timestamps

@@ -5,13 +5,18 @@ from . import Epoch
 
 
 class Fold:
-    def __init__(self, train_timestamps: List[int], val_timestamps: List[int], test_timestamps: List[int]):
-        self.epochs_count: int = 0
-        self.__epochs: List[Epoch] = []
-
+    def __init__(self, index: int, train_timestamps: List[int], val_timestamps: List[int], test_timestamps: List[int]):
+        self.__index = index
         self.__train_timestamps: List[int] = train_timestamps
         self.__val_timestamps: List[int] = val_timestamps
         self.__test_timestamp: List[int] = test_timestamps
+
+        self.epochs_count: int = 0
+        self.__epochs: List[Epoch] = []
+
+    @property
+    def index(self) -> int:
+        return self.__index
 
     @property
     def epochs(self) -> List[Epoch]:
@@ -23,7 +28,7 @@ class Fold:
 
     @property
     def completed(self) -> bool:
-        return all([epoch.completed for epoch in self.epochs])
+        return all(epoch.completed for epoch in self.epochs)
 
     @property
     def elapsed_time(self) -> float:
