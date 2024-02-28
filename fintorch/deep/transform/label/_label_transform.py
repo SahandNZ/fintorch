@@ -12,7 +12,7 @@ from ....dtype import DataCollection
 from ....enum import TimeFrame
 from ....setting import NUMPY_LABEL_DTYPE
 from ....utils.plot import draw_candlestick_plot, draw_labels
-from ....utils.timestamp import create_timestamps, to_timestamp
+from ....utils.timestamp import to_timestamp
 
 
 class LabelTransform(Transform, ABC):
@@ -69,11 +69,11 @@ class LabelTransform(Transform, ABC):
         ldf = ldf.iloc[:self.dim_sequence]
 
         # make sure there is enough time steps and there is no nan values
-        if self.dim_sequence != len(ldf) or not np.isnan(ldf.label).max():
+        if self.dim_sequence != len(ldf) or 0 < np.isnan(ldf.label).sum():
             return None
 
         # one hot encoding
-        labels = ldf.label.to_numpy()
+        labels = ldf.label.to_numpy().astype(int)
         one_hot = np.zeros(self.num_classes)
         one_hot[labels] = 1
 
