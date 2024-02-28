@@ -1,22 +1,14 @@
-import argparse
-import itertools
-import json
 import time
-
 from multiprocessing import Process, Queue
 from typing import List
 
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
-from torch import nn
 
-from examples.args import add_default_args_and_parse
-from fintorch.deep.model import MODEL_TYPES
-from fintorch.deep.module import Module, create_module
-from fintorch.deep.transform.feature import FEATURE_TRANSFORM_TYPES
-from fintorch.deep.transform.label import LABEL_TRANSFORM_TYPES
+from fintorch.deep.module import Module, create_modules
 from fintorch.exchange import ONLINE_EXCHANGE
+from fintorch.utils.args import DefaultArgumentParser
 
 
 def target(module: Module, queue: Queue):
@@ -96,45 +88,9 @@ def run_multi_process(args, modules: List[Module]):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    args = add_default_args_and_parse(parser)
+    args = DefaultArgumentParser.parse()
 
-    # load config
-    with open(args.config_path, "r") as file:
-        config_dict = json.load(file)
-
-    # get symbols and time_frames fom config_dict
-    symbols = config_dict["symbols"]
-    time_frames = config_dict["time-frames"]
-
-    # define model kwargs
-    model_kwargs = {
-        "dim_sequence": args.dim_sequence,
-        "dim_feature": 4,
-        "dim_output": 2,
-        "num_hidden_layers": args.num_hidden_layers,
-        "batch_norm": args.no_batch_norm,
-        "dropout": args.dropout,
-        "activation_fn": nn.Softmax(dim=-1)
-    }
-
-    # define modules
-    modules = []
-    items = list(itertools.product(FEATURE_TRANSFORM_TYPES, LABEL_TRANSFORM_TYPES, MODEL_TYPES, symbols, time_frames))
-    for ft_type, lt_type, model_type, symbol, time_frame in items:
-        # create module
-        transform_kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
-        module = create_module(
-            feature_transform_type=ft_type,
-            label_transform_type=lt_type,
-            transform_kwargs=transform_kwargs,
-            model_type=model_type,
-            model_kwargs=model_kwargs,
-            interval=args.interval,
-        )
-
-        modules.append(module)
-
+    modules = create_modules(args=args)
     run_multi_process(args=args, modules=modules)
 
 

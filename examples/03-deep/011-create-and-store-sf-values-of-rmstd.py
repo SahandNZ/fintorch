@@ -1,28 +1,20 @@
-import argparse
-
 from rich.progress import Progress
 
-from examples.args import add_default_args_and_parse
 from fintorch.deep.transform.feature import *
 from fintorch.exchange import ONLINE_EXCHANGE
 from fintorch.setting import RICH_PROGRESS_COLUMNS
+from fintorch.utils.args import DefaultArgumentParser
+from fintorch.utils.function import call_with_dict
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    args = add_default_args_and_parse(parser)
-
-    # define transform
-    transform = RollingMeanStdTrRocFeatureTransform(
-        symbol=args.symbol,
-        time_frame=args.time_frame,
-        dim_sequence=args.dim_sequence
-    )
+    args = DefaultArgumentParser.parse()
 
     # load data collection
-    dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[transform.symbol], time_frames=[transform.time_frame])
+    dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
 
     # create sf values
+    transform = call_with_dict(RollingMeanStdTrRocFeatureTransform, args.transform_kwargs)
     with Progress(*RICH_PROGRESS_COLUMNS) as progress, transform:
         transform.prepare_valid_sf(dc=dc, progress=progress)
 

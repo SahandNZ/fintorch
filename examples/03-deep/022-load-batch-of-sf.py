@@ -1,21 +1,19 @@
-import argparse
 import time
 
-from examples.args import add_default_args_and_parse
 from fintorch.deep.dtype import Dataset
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
 from fintorch.exchange import ONLINE_EXCHANGE
+from fintorch.utils.args import DefaultArgumentParser
+from fintorch.utils.function import call_with_dict
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    args = add_default_args_and_parse(parser)
+    args = DefaultArgumentParser.parse()
 
     # define feature and label transforms
-    feature_transform = RollingMeanStdTrRocFeatureTransform(symbol=args.symbol, time_frame=args.time_frame,
-                                                            dim_sequence=args.dim_sequence)
-    label_transform = ForwardMiddleSmaLabelTransform(symbol=args.symbol, time_frame=args.time_frame)
+    feature_transform = call_with_dict(RollingMeanStdTrRocFeatureTransform, args.transform_kwargs)
+    label_transform = call_with_dict(ForwardMiddleSmaLabelTransform, args.transform_kwargs)
 
     # define dataset
     dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=args.interval)
@@ -34,7 +32,7 @@ def main():
             print("Loading batch takes:     {:.3f} ms".format(elapsed_time_ms))
             print("Batch x.shape:", batch_x.shape)
             print("Batch y.shape:", batch_y.shape)
-            
+
 
 if __name__ == '__main__':
     main()

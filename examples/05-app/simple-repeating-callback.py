@@ -1,8 +1,8 @@
-import argparse
 import time
 from datetime import datetime
 
 from fintorch.app import Application, Context
+from fintorch.utils.args import DefaultArgumentParser
 
 
 def callback(context: Context, sleep: int):
@@ -12,9 +12,7 @@ def callback(context: Context, sleep: int):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--config-path', action='store', type=str, required=False, default="./../config.json")
-    args = parser.parse_args()
+    args = DefaultArgumentParser.parse()
 
     app = Application.from_config(path=args.config_path)
     app.job_queue.run_repeating(callback=callback, kwargs={"sleep": 5}, interval=10, when='open', misfire_grace_time=2)

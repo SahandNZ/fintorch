@@ -1,18 +1,16 @@
-import argparse
 import atexit
 import itertools
-import json
 from multiprocessing import Process
 from typing import List
 
 from rich.progress import Progress
 
-from examples.args import add_default_args_and_parse
 from fintorch.deep.transform import Transform
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
 from fintorch.exchange import ONLINE_EXCHANGE
 from fintorch.setting import RICH_PROGRESS_COLUMNS
+from fintorch.utils.args import DefaultArgumentParser
 from fintorch.utils.function import call_with_dict
 
 
@@ -69,22 +67,13 @@ def run_multi_process(args, transforms: List[Transform]):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    args = add_default_args_and_parse(parser)
-
-    # load config
-    with open(args.config_path, "r") as file:
-        config_dict = json.load(file)
-
-    # get symbols and time_frames fom config_dict
-    symbols = config_dict["symbols"]
-    time_frames = config_dict["time-frames"]
+    args = DefaultArgumentParser.parse()
 
     # define feature and label transforms
     transform_types = FEATURE_TRANSFORM_TYPES + LABEL_TRANSFORM_TYPES
 
     transforms = []
-    for transform_type, symbol, time_frame in itertools.product(transform_types, symbols, time_frames):
+    for transform_type, symbol, time_frame in itertools.product(transform_types, args.symbols, args.time_frames):
         transform_kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
         transform = call_with_dict(transform_type, transform_kwargs)
         transforms.append(transform)

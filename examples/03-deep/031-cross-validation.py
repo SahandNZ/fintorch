@@ -1,21 +1,15 @@
-import argparse
-
-from examples.args import add_default_args_and_parse
 from fintorch.deep.cross_validation import CrossValidation
 from fintorch.deep.transform.feature import RollingMeanStdTrRocFeatureTransform
 from fintorch.exchange import ONLINE_EXCHANGE
+from fintorch.utils.args import DefaultArgumentParser
+from fintorch.utils.function import call_with_dict
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    args = add_default_args_and_parse(parser)
+    args = DefaultArgumentParser.parse()
 
     # define feature transform
-    feature_transform = RollingMeanStdTrRocFeatureTransform(
-        symbol=args.symbol,
-        time_frame=args.time_frame,
-        dim_sequence=args.dim_sequence
-    )
+    feature_transform = call_with_dict(RollingMeanStdTrRocFeatureTransform, args.transform_kwargs)
 
     # define sliding window cross validation
     cross_validation = CrossValidation(interval=args.interval)
