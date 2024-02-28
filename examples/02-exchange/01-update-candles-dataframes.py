@@ -9,14 +9,17 @@ from fintorch.exchange import ONLINE_EXCHANGE
 from fintorch.setting import BASE_TIME_FRAME, RICH_PROGRESS_COLUMNS
 
 
-def work(symbol: str, progress: Progress):
-    ONLINE_EXCHANGE.future.data.update_candles_dataframe(symbol=symbol, time_frame=BASE_TIME_FRAME, progress=progress)
-
-
 def run(symbols: List[str]):
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
+        overall_task = progress.add_task("Overall", total=len(symbols))
         for symbol in symbols:
-            work(symbol=symbol, progress=progress)
+            ONLINE_EXCHANGE.future.data.update_candles_dataframe(
+                symbol=symbol,
+                time_frame=BASE_TIME_FRAME,
+                progress=progress
+            )
+
+            progress.update(task_id=overall_task, advance=1)
 
 
 def main():

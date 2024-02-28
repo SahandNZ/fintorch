@@ -14,7 +14,7 @@ def main():
     dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
 
     # draw ohlc plot
-    transform = NextFractalLabelTransform(symbol=args.symbol, time_frame=TimeFrame(args.time_frame))
+    transform = ForwardIchimokuLabelTransform(symbol=args.symbol, time_frame=TimeFrame(args.time_frame))
     transform.show_ohlc_plot(dc=dc, start_date=args.start_date, stop_date=args.stop_date)
 
 
