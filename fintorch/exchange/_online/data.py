@@ -182,6 +182,8 @@ class OnlineData(Data, Network, ABC):
         if progress is not None:
             description = f"Downloading {symbol} {time_frame} Candles"
             task = progress.add_task(description=description, total=len(items))
+        else:
+            task = None
 
         candles: List[Candle] = []
         for index in items:
@@ -204,8 +206,11 @@ class OnlineData(Data, Network, ABC):
 
             # update progress bar
             if progress is not None:
-                with progress:
-                    progress.update(task, advance=1)
+                progress.update(task, advance=1)
+
+        # make progress bar invisible
+        if progress is not None:
+            progress.update(task, visible=False)
 
         return Candle.to_dataframe(candles)
 
