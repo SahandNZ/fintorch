@@ -118,9 +118,7 @@ class Transform(Component):
     def get_valid_timestamps(self, dc: DataCollection) -> List[int]:
         first_valid_timestamp = self.get_first_valid_timestamp(dc=dc)
         last_valid_timestamp = self.get_last_valid_timestamp(dc=dc)
-        timestamps = list(range(first_valid_timestamp, last_valid_timestamp, int(self.time_frame)))
-
-        return timestamps
+        return list(range(first_valid_timestamp, last_valid_timestamp, int(self.time_frame)))
 
     def prepare_valid_sf(self, dc: DataCollection, progress: Union[Progress, None] = None) -> None:
         timestamps = self.get_valid_timestamps(dc=dc)

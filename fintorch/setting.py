@@ -18,7 +18,6 @@ FEATURE_BYTES = os.environ.get("FINTORCH_FEATURE_BYTES", 4)
 LABEL_BYTES = os.environ.get("FINTORCH_LABEL_PRECISION", 2)
 NUMPY_FEATURE_DTYPE = np.dtype(f'f{FEATURE_BYTES}')
 NUMPY_LABEL_DTYPE = np.dtype(f'f{LABEL_BYTES}')
-FILE_COMPRESS_FACTOR = 128
 
 # proxies
 HTTP_PROXY = os.environ.get("FINTORCH_HTTP_PROXY", "http://tracker:nlOv5rC7cL3q3bYR@95.216.41.71:3128")
@@ -30,8 +29,7 @@ PROXIES = {"http": HTTP_PROXY, "https": HTTPS_PROXY, "socks5": SOCKS5_PROXY}
 EXCHANGE_NAME = os.environ.get("FINTORCH_EXCHANGE_NAME", "binance")
 
 # intervals
-TRADING_INTERVAL = os.environ.get("FINTORCH_TRADING_INTERVAL", TimeFrame.MIN15)
-SAMPLING_INTERVAL = os.environ.get("FINTORCH_TRADING_INTERVAL", TimeFrame.MIN15)
+INTERVAL = os.environ.get("FINTORCH_TRADING_INTERVAL", TimeFrame.MIN15)
 
 # Data
 BASE_TIME_FRAME = os.environ.get("FINTORCH_BASE_TIME_FRAME", 900)
@@ -48,13 +46,20 @@ RICH_PROGRESS_COLUMNS = [
     TimeRemainingColumn(),
 ]
 
-# Hyper parameters
+# Model hyper-parameters
 DIM_SEQUENCE = 32
 DIM_FEATURE = 4
 DIM_OUTPUT = 2
 NUM_HIDDEN_LAYERS = 2
 BATCH_NORM = True
 DROPOUT = 0.5
+ACTIVATION_FN = nn.Softmax(dim=-1)
+
+# Trainer hyper-parameters
+EPOCHS_COUNT = 10
+BATCH_SIZE = 128
+LR = 1e-3
+WEIGHT_DECAY = 1e-2
 
 # Transform kwargs
 TRANSFORM_KWARGS = {
@@ -69,5 +74,5 @@ MODEL_KWARGS = {
     "num_hidden_layers": NUM_HIDDEN_LAYERS,
     "batch_norm": BATCH_NORM,
     "dropout": DROPOUT,
-    "activation_fn": nn.Softmax(dim=-1)
+    "activation_fn": ACTIVATION_FN
 }

@@ -1,4 +1,3 @@
-import copy
 import gc
 import itertools
 import os.path
@@ -24,7 +23,8 @@ from .transform.feature import FEATURE_TRANSFORM_TYPES, FeatureTransform
 from .transform.label import LABEL_TRANSFORM_TYPES, LabelTransform
 from ..dtype import DataCollection
 from ..enum import TimeFrame
-from ..setting import SAMPLING_INTERVAL, MODEL_KWARGS, MODULE_DIR, TRANSFORM_KWARGS
+from ..setting import INTERVAL, MODEL_KWARGS, MODULE_DIR, TRANSFORM_KWARGS, EPOCHS_COUNT, BATCH_SIZE, LR, WEIGHT_DECAY
+from ..utils.args import DefaultNamespace
 from ..utils.directory import create_directory
 from ..utils.function import call_with_dict
 from ..utils.plot import draw_predictions
@@ -36,11 +36,11 @@ class Module(ABC):
             self,
             dataset: Dataset,
             model_type: Type[Model],
-            model_kwargs: Dict[str, Any],
-            epoch: int = 10,
-            batch_size: int = 128,
-            lr: float = 1e-3,
-            weight_decay: float = 1e-2
+            model_kwargs: Dict[str, Any] = MODEL_KWARGS,
+            epochs_count: int = EPOCHS_COUNT,
+            batch_size: int = BATCH_SIZE,
+            lr: float = LR,
+            weight_decay: float = WEIGHT_DECAY
     ):
         self.__dataset: Dataset = dataset
 
@@ -50,7 +50,7 @@ class Module(ABC):
 
         self.__cross_validation = CrossValidation(interval=self.dataset.interval)
         self.__trainer: Trainer = Trainer(
-            epochs_count=epoch,
+            epochs_count=epochs_count,
             data_loader=DataLoader(batch_size=batch_size, post_load_fn=Module._post_load_fn),
             criterion=CE(),
             optimizer=Optimizer(torch_optimizer_type=torch.optim.Adam, lr=lr, weight_decay=weight_decay),
@@ -144,11 +144,14 @@ class Module(ABC):
         return self.cross_validation.test_start_timestamp
 
     def get_test_timestamps(self, dc: DataCollection) -> List[int]:
-        valid_timestamps = self.dataset.feature_transform.get_valid_timestamps(dc=dc)
         test_start_timestamps = self.get_test_start_timestamp(dc=dc)
-        test_timestamps = [test_start_timestamps <= ts for ts in valid_timestamps]
+        feature_last_valid_timestamps = self.dataset.feature_transform.get_last_valid_timestamp(dc=dc)
+        return list(range(test_start_timestamps, feature_last_valid_timestamps, self.time_frame))
 
-        return test_timestamps
+    def get_vaid_test_timestamps(self, dc: DataCollection) ->List[int]:
+        test_start_timestamps = self.get_test_start_timestamp(dc=dc)
+        label_last_valid_timestamps = self.dataset.label_transform.get_last_valid_timestamp(dc=dc)
+        return list(range(test_start_timestamps, label_last_valid_timestamps, self.time_frame))
 
     def optimize(self, dc: DataCollection, start_date: Union[str, None] = None) -> Generator[Status, None, None]:
         # parse start_date
@@ -250,10 +253,10 @@ class Module(ABC):
 def create_module(
         feature_transform_type: Type[FeatureTransform],
         label_transform_type: Type[LabelTransform],
-        transform_kwargs: Dict[str, Any],
         model_type: Type[Model],
-        model_kwargs: Dict[str, Any],
-        interval: TimeFrame
+        transform_kwargs: Dict[str, Any] = TRANSFORM_KWARGS,
+        model_kwargs: Dict[str, Any] = MODEL_KWARGS,
+        interval: TimeFrame = INTERVAL
 ) -> Module:
     # create feature and label transforms
     feature_transform = call_with_dict(feature_transform_type, transform_kwargs)
@@ -266,20 +269,25 @@ def create_module(
     return Module(dataset=dataset, model_type=model_type, model_kwargs=model_kwargs)
 
 
-def create_modules(symbols: List[str], time_frames: List[int]) -> List[Module]:
+def create_modules(args: DefaultNamespace) -> List[Module]:
     modules = []
-    items = itertools.product(FEATURE_TRANSFORM_TYPES, LABEL_TRANSFORM_TYPES, MODEL_TYPES, symbols, time_frames)
-    for ft_type, lt_type, model_type, symbol, time_frame in items:
-        transform_kwargs = copy.deepcopy(TRANSFORM_KWARGS)
-        transform_kwargs.update({"symbol": symbol, "time_frame": time_frame})
+    items = itertools.product(
+        args.symbols,
+        args.time_frames,
+        FEATURE_TRANSFORM_TYPES,
+        LABEL_TRANSFORM_TYPES,
+        MODEL_TYPES
+    )
+    for symbol, time_frame, ft_type, lt_type, model_type in items:
+        transform_kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
 
         module = create_module(
             feature_transform_type=ft_type,
             label_transform_type=lt_type,
-            transform_kwargs=transform_kwargs,
             model_type=model_type,
-            model_kwargs=MODEL_KWARGS,
-            interval=SAMPLING_INTERVAL
+            transform_kwargs=transform_kwargs,
+            model_kwargs=args.model_kwargs,
+            interval=args.interval
         )
 
         modules.append(module)
