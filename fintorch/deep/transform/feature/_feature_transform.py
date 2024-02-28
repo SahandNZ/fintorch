@@ -45,7 +45,7 @@ class FeatureTransform(Transform, ABC):
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError()
 
-    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> Union[List, None]:
+    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> Union[np.array, None]:
         # backward cropping feature dataframe with timestamp and sequence length
         fdf = df[df.index < timestamp]
         fdf = fdf.iloc[-self.dim_sequence:]

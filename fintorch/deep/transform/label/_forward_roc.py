@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
@@ -30,10 +31,9 @@ class ForwardRocLabelTransform(LabelTransform):
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["roc"] = df.close / df.open - 1
         df["f-roc"] = df.roc.rolling(self.forward).sum().shift(-self.forward + 1)
-        df.dropna(inplace=True)
 
         df["up"] = 0 < df["f-roc"]
-        df["label"] = df.up.astype(int)
+        df["label"] = np.where(np.isnan(df["f-roc"]), np.nan, df.up)
 
         return df
 

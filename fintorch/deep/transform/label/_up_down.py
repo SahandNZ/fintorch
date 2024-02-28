@@ -22,8 +22,7 @@ class UpDownLabelTransform(LabelTransform):
 
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["up"] = df.open < df.close
-        df["label"] = df.up.astype(int)
-        df.dropna(inplace=True)
+        df["label"] = df.up
 
         return df
 

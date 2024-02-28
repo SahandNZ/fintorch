@@ -99,15 +99,25 @@ class Transform(Component):
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
         df_first_timestamp = df.index[0]
 
-        return int(max(on_board_timestamp, df_first_timestamp) + self.look_back * int(self.time_frame))
+        first_timestamp = max(on_board_timestamp, df_first_timestamp)
+        first_valid_timestamp = int(first_timestamp + self.look_back * int(self.time_frame))
+        return first_valid_timestamp
 
-    def get_last_valid_timestamp(self) -> int:
-        current_timestamp = datetime.now().timestamp() // int(self.time_frame) * int(self.time_frame)
-        return int(current_timestamp - self.look_ahead * int(self.time_frame))
+    def get_last_valid_timestamp(self, dc: Union[DataCollection, None] = None) -> int:
+        current_open_timestamp = datetime.now().timestamp() // int(self.time_frame) * int(self.time_frame)
+        if dc is not None:
+            df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
+            df_last_timestamp = df.index[-1]
+            last_timestamp = min(current_open_timestamp, df_last_timestamp)
+        else:
+            last_timestamp = current_open_timestamp
+
+        last_valid_timestamp = int(last_timestamp - self.look_ahead * int(self.time_frame))
+        return last_valid_timestamp
 
     def get_valid_timestamps(self, dc: DataCollection) -> List[int]:
         first_valid_timestamp = self.get_first_valid_timestamp(dc=dc)
-        last_valid_timestamp = self.get_last_valid_timestamp()
+        last_valid_timestamp = self.get_last_valid_timestamp(dc=dc)
         timestamps = list(range(first_valid_timestamp, last_valid_timestamp, int(self.time_frame)))
 
         return timestamps

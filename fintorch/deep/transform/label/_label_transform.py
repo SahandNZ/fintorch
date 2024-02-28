@@ -12,7 +12,7 @@ from ....dtype import DataCollection
 from ....enum import TimeFrame
 from ....setting import NUMPY_LABEL_DTYPE
 from ....utils.plot import draw_candlestick_plot, draw_labels
-from ....utils.timestamp import create_timestamps
+from ....utils.timestamp import create_timestamps, to_timestamp
 
 
 class LabelTransform(Transform, ABC):
@@ -63,12 +63,13 @@ class LabelTransform(Transform, ABC):
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError()
 
-    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> Union[List, None]:
+    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> Union[np.array, None]:
         # forward cropping label dataframe with timestamp and sequence length
         ldf = df[timestamp <= df.index]
         ldf = ldf.iloc[:self.dim_sequence]
 
-        if self.dim_sequence != len(ldf):
+        # make sure there is enough time steps and there is no nan values
+        if self.dim_sequence != len(ldf) or not np.isnan(ldf.label).max():
             return None
 
         # one hot encoding
@@ -84,12 +85,16 @@ class LabelTransform(Transform, ABC):
 
     def draw_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str) \
             -> Tuple[plt.Figure, plt.Axes, pd.DataFrame]:
-        timestamps = create_timestamps(start_date=start_date, stop_date=stop_date, interval=self.time_frame)
+        # create start and stop timestamps
+        start_timestamp = to_timestamp(date=start_date)
+        stop_timestamp = to_timestamp(date=stop_date)
+
+        # process and crop df based on timestamps
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame).copy()
         df = self._process_df(df=df)
-        df = df.loc[timestamps]
+        df = df[(start_timestamp <= df.index.to_series()) & (df.index.to_series() < stop_timestamp)]
 
-        # draw ohlc and backgrounds
+        # draw candlestick plot
         fig, ohlc_ax = plt.subplots(nrows=1, ncols=1, figsize=(20, 10))
         draw_candlestick_plot(ax=ohlc_ax, df=df)
         draw_labels(ohlc_ax=ohlc_ax, df=df)

@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
@@ -34,10 +35,9 @@ class ForwardBackwardMinimumLabelTransform(LabelTransform):
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["bmin"] = df.close.rolling(self.backward).min()
         df["fmin"] = df.close.rolling(self.forward).min().shift(-self.forward + 1)
-        df.dropna(inplace=True)
 
         df["up"] = df.bmin <= df.fmin
-        df["label"] = df.up.astype(int)
+        df["label"] = np.where(np.isnan(df.bmin) | np.isnan(df.fmin), np.nan, df.up)
 
         return df
 

@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
@@ -51,11 +52,9 @@ class ForwardIchimokuLabelTransform(LabelTransform):
         df["base"] = self.donchian(df, length=self.base_length)
         df["conversion"] = self.donchian(df, length=self.conversion_length)
 
-        df["up"] = df.conversion < df.base
+        df["up"] = np.where(np.isnan(df.base) | np.isnan(df.conversion), np.nan, df.conversion < df.base)
         df["f-up"] = df.up.shift(-self.forward)
-        df.dropna(inplace=True)
-
-        df["label"] = df["f-up"].astype(int)
+        df["label"] = np.where(np.isnan(df["f-up"]), np.nan, df["f-up"])
 
         return df
 

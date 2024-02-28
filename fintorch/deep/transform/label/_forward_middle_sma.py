@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
@@ -33,12 +34,11 @@ class ForwardMiddleSmaLabelTransform(LabelTransform):
         return self.__forward
 
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["msma"] = df.close.rolling(self.backward).mean().shift(-self.backward // 2)
+        df["msma"] = df.close.rolling(self.backward, center=True).mean()
         df["f-msma"] = df.msma.shift(-self.forward)
-        df.dropna(inplace=True)
 
         df["up"] = df.msma < df["f-msma"]
-        df["label"] = df.up.astype(int)
+        df["label"] = np.where(np.isnan(df.msma) | np.isnan(df["f-msma"]), np.nan, df.up)
 
         return df
 
