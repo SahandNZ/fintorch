@@ -1,11 +1,10 @@
-import math
 from typing import List, Union
 
 def static_hash(value: Union[str, int, float]) -> int:
     if isinstance(value, str):
         hash_value = int.from_bytes(value.encode(), byteorder="big") % (17 ** 8)
     elif isinstance(value, int) or isinstance(value, float):
-        hash_value = math.ceil(value) % (11 ** 8)
+        hash_value = value % (11 ** 8)
     elif isinstance(value, bool):
         hash_value = int(value)
     else:

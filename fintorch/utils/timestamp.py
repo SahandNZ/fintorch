@@ -3,15 +3,17 @@ from typing import List, Union
 import math
 
 
+def to_datetime(date: Union[str, datetime]) -> datetime:
+    return datetime.strptime(date, "%Y-%m-%d") if isinstance(date, str) else date
+
+
+def to_timestamp(date: Union[str, datetime]) -> int:
+    return int(to_datetime(date=date).timestamp())
+
+
 def create_timestamps(start_date: Union[str, datetime], stop_date: Union[str, datetime], interval: int) -> List[int]:
-    if isinstance(start_date, str):
-        start_date = datetime.strptime(start_date, "%Y-%m-%d")
-    if isinstance(stop_date, str):
-        stop_date = datetime.strptime(stop_date, "%Y-%m-%d")
-
-    start_timestamp = math.ceil(start_date.timestamp() / interval) * interval
-    stop_timestamp = math.floor(stop_date.timestamp() / interval) * interval
-
+    start_timestamp = math.ceil(to_timestamp(date=start_date) / interval) * interval
+    stop_timestamp = math.floor(to_timestamp(date=stop_date) / interval) * interval
     return list(range(start_timestamp, stop_timestamp, interval))
 
 

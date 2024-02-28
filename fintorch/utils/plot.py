@@ -2,6 +2,7 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 import mplfinance as mpf
+import numpy as np
 import pandas as pd
 from matplotlib.patches import Rectangle
 
@@ -42,7 +43,7 @@ def draw_rectangle(ax: plt.Axes, x1: int, y1: int, x2: int, y2: int, color: str 
     y = min(y1, y2)
     width = abs(x2 - x1)
     height = abs(y2 - y1)
-    color = color if color else 'g' if y1 < y2 else 'r'
+    color = color or ('g' if y1 < y2 else 'r')
     area = Rectangle((x, y), width, height, color=color, alpha=alpha)
     ax.add_patch(area)
 
@@ -51,11 +52,12 @@ def draw_labels(ohlc_ax: plt.Axes, df: pd.DataFrame):
     label, start_index = df.label.iloc[0], 0
     for index in range(1, len(df) + 1):
         if len(df) == index or label != df.label.iloc[index]:
-            minimum_price = df.low.iloc[start_index: index].min()
-            maximum_price = df.high.iloc[start_index: index].max()
-            y1 = minimum_price if 1 == label else maximum_price
-            y2 = maximum_price if 1 == label else minimum_price
-            draw_rectangle(ax=ohlc_ax, x1=start_index, y1=y1, x2=index, y2=y2)
+            if not np.isnan(label):
+                minimum_price = df.low.iloc[start_index: index].min()
+                maximum_price = df.high.iloc[start_index: index].max()
+                y1 = minimum_price if 1 == label else maximum_price
+                y2 = maximum_price if 1 == label else minimum_price
+                draw_rectangle(ax=ohlc_ax, x1=start_index, y1=y1, x2=index - 1, y2=y2)
 
             if index < len(df):
                 label = df.label.iloc[index]
@@ -63,14 +65,14 @@ def draw_labels(ohlc_ax: plt.Axes, df: pd.DataFrame):
 
 
 def draw_predictions(ohlc_ax: plt.Axes, df: pd.DataFrame):
-    label, start_index, y_values = df.label.iloc[0], 0, []
+    label, start_index, y, y_values = df.label.iloc[0], 0, 0, []
     for index in range(1, len(df) + 1):
         if len(df) == index or label != df.label.iloc[index]:
-            minimum_price = df.low.iloc[start_index: index].min()
-            maximum_price = df.high.iloc[start_index: index].max()
+            if not np.isnan(label):
+                y = df.low.iloc[start_index: index].min()
 
             for j in range(start_index, index):
-                y_values.append(minimum_price if 1 == label else maximum_price)
+                y_values.append(y)
 
             if index < len(df):
                 label = df.label.iloc[index]
