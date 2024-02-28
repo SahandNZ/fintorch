@@ -24,8 +24,7 @@ FILE_COMPRESS_FACTOR = 128
 HTTP_PROXY = os.environ.get("FINTORCH_HTTP_PROXY", "http://tracker:nlOv5rC7cL3q3bYR@95.216.41.71:3128")
 HTTPS_PROXY = os.environ.get("FINTORCH_HTTPS_PROXY", "http://tracker:nlOv5rC7cL3q3bYR@95.216.41.71:3128")
 SOCKS5_PROXY = os.environ.get("FINTORCH_SOCKS5_PROXY", "dante-user:IiS8v39yGHyEMHeuuhQPOA43jryzeuT0@95.216.41.71:1080")
-# PROXIES = {"http": HTTP_PROXY, "https": HTTPS_PROXY, "socks5": SOCKS5_PROXY}
-PROXIES = None
+PROXIES = {"http": HTTP_PROXY, "https": HTTPS_PROXY, "socks5": SOCKS5_PROXY}
 
 # Exchange
 EXCHANGE_NAME = os.environ.get("FINTORCH_EXCHANGE_NAME", "binance")
