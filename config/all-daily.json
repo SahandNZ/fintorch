@@ -1,0 +1,56 @@
+{
+  "proxies": {
+    "http": "http://tracker:nlOv5rC7cL3q3bYR@95.216.41.71:3128",
+    "https": "http://tracker:nlOv5rC7cL3q3bYR@95.216.41.71:3128",
+    "socks5": "dante-user:IiS8v39yGHyEMHeuuhQPOA43jryzeuT0@95.216.41.71:1080"
+  },
+  "exchange": {
+    "name": "binance"
+  },
+  "time-frames": [
+    86400
+  ],
+  "symbols": [
+    "BTC-USDT",
+    "ETH-USDT",
+    "BCH-USDT",
+    "XRP-USDT",
+    "EOS-USDT",
+    "LTC-USDT",
+    "TRX-USDT",
+    "ETC-USDT",
+    "LINK-USDT",
+    "XLM-USDT",
+    "ADA-USDT",
+    "XMR-USDT",
+    "DASH-USDT",
+    "ZEC-USDT",
+    "XTZ-USDT",
+    "BNB-USDT",
+    "ATOM-USDT",
+    "ONT-USDT",
+    "IOTA-USDT",
+    "BAT-USDT",
+    "VET-USDT",
+    "NEO-USDT",
+    "QTUM-USDT",
+    "IOST-USDT",
+    "THETA-USDT",
+    "ALGO-USDT",
+    "ZIL-USDT",
+    "KNC-USDT",
+    "ZRX-USDT",
+    "COMP-USDT",
+    "OMG-USDT",
+    "DOGE-USDT",
+    "SXP-USDT",
+    "KAVA-USDT",
+    "BAND-USDT",
+    "WAVES-USDT",
+    "MKR-USDT",
+    "DOT-USDT",
+    "YFI-USDT",
+    "DEFI-USDT"
+  ]
+}
+

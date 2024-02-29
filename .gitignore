@@ -1,6 +1,5 @@
 # project
-/examples/tmp
-/examples/config*.json
+/tmp
 
 # Python environments
 **/env/
