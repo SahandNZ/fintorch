@@ -116,10 +116,6 @@ class Module(ABC):
             str(self.cross_validation.static_hash),
             str(self.trainer.static_hash)
         )
-
-        print(self.directory)
-        print()
-        
         self.__folds_dict_path = os.path.join(self.directory, "folds-dict.pkl")
 
         # safe load self.folds_dict
