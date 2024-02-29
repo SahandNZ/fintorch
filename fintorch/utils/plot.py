@@ -85,5 +85,6 @@ def draw_predictions(ohlc_ax: plt.Axes, df: pd.DataFrame):
     ddf = df[0 == df.prediction]
 
     # draw scatters
-    ohlc_ax.scatter(x=udf.index.to_list(), y=udf.y, s=2, marker='o', c="g", label="Up Prediction")
-    ohlc_ax.scatter(x=ddf.index.to_list(), y=ddf.y, s=2, marker='o', c="r", label="Down Prediction")
+    size = 2 ** 11 // len(df)
+    ohlc_ax.scatter(x=udf.index.to_list(), y=udf.y, s=size, marker='o', c="g", label="Up Prediction")
+    ohlc_ax.scatter(x=ddf.index.to_list(), y=ddf.y, s=size, marker='o', c="r", label="Down Prediction")
