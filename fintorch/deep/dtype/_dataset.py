@@ -17,13 +17,11 @@ class Dataset(ABC):
         self.__label_transform: LabelTransform = label_transform
         self.__interval: TimeFrame = interval
 
-        self.__static_hash: int = static_list_hash(
-            [
-                int(self.interval),
-                hash(self.feature_transform),
-                hash(self.label_transform)
-            ]
-        )
+        self.__static_hash: int = static_list_hash([
+            int(self.interval),
+            self.feature_transform.static_hash,
+            self.label_transform.static_hash
+        ])
 
     @property
     def feature_transform(self) -> FeatureTransform:
