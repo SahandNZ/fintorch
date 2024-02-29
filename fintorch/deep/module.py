@@ -111,11 +111,15 @@ class Module(ABC):
         # assign values to directory and folds_dict_path
         self.__directory = os.path.join(
             MODULE_DIR,
-            str(hash(self.dataset)),
-            str(hash(self.model)),
-            str(hash(self.cross_validation)),
-            str(hash(self.trainer))
+            str(self.dataset.static_hash),
+            str(self.model.static_hash),
+            str(self.cross_validation.static_hash),
+            str(self.trainer.static_hash)
         )
+
+        print(self.directory)
+        print()
+        
         self.__folds_dict_path = os.path.join(self.directory, "folds-dict.pkl")
 
         # safe load self.folds_dict
@@ -148,7 +152,7 @@ class Module(ABC):
         feature_last_valid_timestamps = self.dataset.feature_transform.get_last_valid_timestamp(dc=dc)
         return list(range(test_start_timestamps, feature_last_valid_timestamps, self.time_frame))
 
-    def get_vaid_test_timestamps(self, dc: DataCollection) ->List[int]:
+    def get_vaid_test_timestamps(self, dc: DataCollection) -> List[int]:
         test_start_timestamps = self.get_test_start_timestamp(dc=dc)
         label_last_valid_timestamps = self.dataset.label_transform.get_last_valid_timestamp(dc=dc)
         return list(range(test_start_timestamps, label_last_valid_timestamps, self.time_frame))

@@ -24,6 +24,15 @@ class CrossValidation:
         self.__folds_count = -1
         self.__index: int = -1
 
+        self.__static_hash: int = static_list_hash(
+            [
+                int(self.interval),
+                self.train_length,
+                self.val_length,
+                self.test_length
+            ]
+        )
+
     @property
     def interval(self) -> TimeFrame:
         return self.__interval
@@ -59,6 +68,10 @@ class CrossValidation:
     @property
     def index(self) -> int:
         return self.__index
+
+    @property
+    def static_hash(self) -> int:
+        return self.__static_hash
 
     def __call__(self, first_valid_timestamp: int) -> Iterator:
         first_valid_timestamp = first_valid_timestamp + (self.train_length + self.val_length) * self.interval
@@ -101,13 +114,3 @@ class CrossValidation:
             return fold
         else:
             raise StopIteration
-
-    def __hash__(self):
-        return static_list_hash(
-            [
-                int(self.interval),
-                self.train_length,
-                self.val_length,
-                self.test_length
-            ]
-        )

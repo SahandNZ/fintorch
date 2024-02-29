@@ -2,17 +2,16 @@ import copy
 import gc
 import time
 import warnings
-from typing import Generator, List, Tuple
+from typing import Generator, Tuple
 
 import torch
 
-from .cross_validation import CrossValidation
+from .criterion import Criterion
 from .data_loader import DataLoader
 from .dtype import Dataset, Epoch, Fold
 from .lr_scheduler import LrScheduler
 from .model import Model
 from .optimizer import Optimizer
-from .criterion import Criterion
 from ..utils.hash import static_list_hash
 
 
@@ -38,6 +37,15 @@ class Trainer:
 
         self.__auto_cuda: bool = auto_cuda
         self.__half_precision: bool = half_precision
+
+        self.__static_hash: int = static_list_hash([
+            self.epochs_count,
+            self.data_loader.static_hash,
+            self.criterion.static_hash,
+            self.optimizer.static_hash,
+            self.lr_scheduler.static_hash,
+            self.gradient_clipping_threshold
+        ])
 
     @property
     def epochs_count(self) -> int:
@@ -88,6 +96,10 @@ class Trainer:
             return torch.float16 if 'cuda' == self.device_type else torch.bfloat16
         else:
             return torch.float32
+
+    @property
+    def static_hash(self) -> int:
+        return self.__static_hash
 
     def optimize_fold(self, dataset: Dataset, model: Model, fold: Fold) -> Generator[None, None, None]:
         # move model to cuda device if it's available
@@ -198,13 +210,3 @@ class Trainer:
                 loss = self.criterion(y_hat, y)
 
         return loss, y_hat
-
-    def __hash__(self):
-        return static_list_hash([
-            self.epochs_count,
-            self.data_loader.batch_size,
-            self.criterion.name,
-            str(hash(self.optimizer)),
-            str(hash(self.lr_scheduler)),
-            self.gradient_clipping_threshold
-        ])

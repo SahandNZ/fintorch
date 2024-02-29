@@ -13,7 +13,7 @@ from .network import Https, Network, Wss
 from .. import Data
 from ...dtype import Candle, DataCollection, SymbolInfo
 from ...enum import MarketType, TimeFrame
-from ...setting import BASE_TIME_FRAME, CANDLE_COUNTS, DATA_DIR
+from ...setting import BASE_TIME_FRAME, CANDLE_COUNTS, FINTORCH_DATA_DIR
 from ...utils.directory import create_directory
 from ...utils.pandas import resample_df
 
@@ -110,7 +110,7 @@ class OnlineData(Data, Network, ABC):
         return corrected_df
 
     def __exchange_data_directory(self) -> str:
-        data_directory = str(os.path.join(DATA_DIR, self.exchange_name, str(self.market_type)))
+        data_directory = str(os.path.join(FINTORCH_DATA_DIR, self.exchange_name, str(self.market_type)))
         create_directory(data_directory)
         return data_directory
 

@@ -38,6 +38,14 @@ class Transform(Component):
         self.__timestamp_to_sf: Dict[int, List] = {}
         self.__processed_df: pd.DataFrame = pd.DataFrame()
 
+        self.__static_hash: int = static_list_hash([
+            self.short_name,
+            self.symbol,
+            self.time_frame,
+            self.look_back,
+            self.look_ahead
+        ])
+
     @property
     def symbol(self) -> str:
         return self.__symbol
@@ -73,6 +81,10 @@ class Transform(Component):
     @property
     def path(self) -> str:
         return os.path.join(self.directory, f"sequence-length-{self.dim_sequence}.pkl")
+
+    @property
+    def static_hash(self) -> int:
+        return self.__static_hash
 
     def open(self) -> None:
         # safe load timestamp_to_sf
@@ -198,15 +210,6 @@ class Transform(Component):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-
-    def __hash__(self):
-        return static_list_hash([
-            self.short_name,
-            self.symbol,
-            self.time_frame,
-            self.look_back,
-            self.look_ahead
-        ])
 
     def __str__(self) -> str:
         return "{} - {} - {}".format(self.short_name, self.symbol, str(self.time_frame))

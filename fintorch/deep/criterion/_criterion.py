@@ -3,6 +3,8 @@ from abc import ABC, abstractmethod
 import torch
 from torch import nn
 
+from fintorch.utils.hash import static_hash
+
 
 class Criterion(nn.Module, ABC):
     def __init__(self, name: str, reduction: str, classification_criterion: bool):
@@ -10,6 +12,8 @@ class Criterion(nn.Module, ABC):
         self.__name: str = name
         self.__reduction: str = reduction
         self.__classification_criterion: bool = classification_criterion
+
+        self.__static_hash: int = static_hash(self.name)
 
     @property
     def name(self) -> str:
@@ -22,6 +26,10 @@ class Criterion(nn.Module, ABC):
     @property
     def classification_criterion(self) -> bool:
         return self.__classification_criterion
+
+    @property
+    def static_hash(self) -> int:
+        return self.__static_hash
 
     @abstractmethod
     def forward(self, input_: torch.Tensor, target: torch.Tensor):

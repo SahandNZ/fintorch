@@ -3,10 +3,10 @@ import math
 import random
 from typing import Callable, Iterator, Tuple, List
 
-import numpy as np
 import torch
 
 from fintorch.deep.dtype import Dataset
+from fintorch.utils.hash import static_hash
 
 
 class DataLoader:
@@ -17,9 +17,11 @@ class DataLoader:
         self.__dataset: Dataset = None
         self.__timestamps: List[int] = None
         self.__batch_count: int = None
-        self.__shuffle: bool = None
 
+        self.__shuffle: bool = None
         self._index: int = -1
+
+        self.__static_hash: int = static_hash(self.batch_count)
 
     @property
     def batch_size(self) -> int:
@@ -48,6 +50,10 @@ class DataLoader:
     @property
     def index(self) -> int:
         return self._index
+
+    @property
+    def static_hash(self) -> int:
+        return self.__static_hash
 
     def __call__(self, dataset: Dataset, timestamps: List[int], shuffle: bool) -> Iterator:
         self.__dataset = dataset

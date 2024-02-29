@@ -1,4 +1,6 @@
+import inspect
 from typing import List, Union
+
 
 def static_hash(value: Union[str, int, float]) -> int:
     if isinstance(value, str):
@@ -9,6 +11,8 @@ def static_hash(value: Union[str, int, float]) -> int:
         hash_value = int(value)
     else:
         hash_value = 1
+
+    hash_value = 773 if 0 == hash_value else hash_value
 
     return hash_value
 

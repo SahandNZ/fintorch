@@ -17,6 +17,14 @@ class Dataset(ABC):
         self.__label_transform: LabelTransform = label_transform
         self.__interval: TimeFrame = interval
 
+        self.__static_hash: int = static_list_hash(
+            [
+                int(self.interval),
+                hash(self.feature_transform),
+                hash(self.label_transform)
+            ]
+        )
+
     @property
     def feature_transform(self) -> FeatureTransform:
         return self.__feature_transform
@@ -28,6 +36,10 @@ class Dataset(ABC):
     @property
     def interval(self) -> TimeFrame:
         return self.__interval
+
+    @property
+    def static_hash(self) -> int:
+        return self.__static_hash
 
     def open(self) -> None:
         self.feature_transform.open()
@@ -77,12 +89,3 @@ class Dataset(ABC):
             return self._load_samples(timestamps=item)
         else:
             raise ValueError("item parameter must be int (single timestamp) or list of ints (multiple timestamps).")
-
-    def __hash__(self):
-        return static_list_hash(
-            [
-                int(self.interval),
-                hash(self.feature_transform),
-                hash(self.label_transform)
-            ]
-        )

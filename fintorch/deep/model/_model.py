@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterator, List
+from typing import List
 
 import torch
 from torch import nn
@@ -23,6 +23,15 @@ class Model(nn.Module, Component, ABC):
         self.__activation_fn: nn.Module = activation_fn
 
         self.__device: torch.device = torch.device("cpu")
+        self.__static_hash: int = static_list_hash([
+            self.name,
+            self.dim_sequence,
+            self.dim_feature,
+            self.dim_output,
+            self.num_hidden_layers,
+            self.batch_norm,
+            self.dropout,
+        ])
 
     @property
     def dim_sequence(self) -> int:
@@ -56,8 +65,12 @@ class Model(nn.Module, Component, ABC):
     def device(self) -> torch.device:
         return next(self.parameters()).device
 
+    @property
+    def static_hash(self) -> int:
+        return self.__static_hash
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = x.to(self.device)
+        # x = x.to(self.device)
         return self._forward(x)
 
     def reset(self, layers: List[nn.Module] = None):
@@ -75,14 +88,3 @@ class Model(nn.Module, Component, ABC):
     @abstractmethod
     def _forward(self, x: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError()
-
-    def __hash__(self):
-        return static_list_hash([
-            self.name,
-            self.dim_sequence,
-            self.dim_feature,
-            self.dim_output,
-            self.num_hidden_layers,
-            self.batch_norm,
-            self.dropout,
-        ])
