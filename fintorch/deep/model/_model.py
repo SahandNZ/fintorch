@@ -9,8 +9,18 @@ from ...utils.hash import static_list_hash
 
 
 class Model(nn.Module, Component, ABC):
-    def __init__(self, name: str, short_name: str, dim_sequence: int, dim_feature: int, dim_output: int,
-                 num_hidden_layers: int, batch_norm: bool, dropout: float, activation_fn: nn.Module):
+    def __init__(
+            self,
+            name: str,
+            short_name: str,
+            dim_sequence: int,
+            dim_feature: int,
+            dim_output: int,
+            num_hidden_layers: int,
+            dropout: float,
+            batch_norm: bool,
+            activation_fn: nn.Module
+    ):
         nn.Module.__init__(self)
         Component.__init__(self, name=name, short_name=short_name, description="")
 
@@ -18,8 +28,8 @@ class Model(nn.Module, Component, ABC):
         self.__dim_feature: int = dim_feature
         self.__dim_output: int = dim_output
         self.__num_hidden_layers: int = num_hidden_layers
-        self.__batch_norm: bool = batch_norm
         self.__dropout: float = dropout
+        self.__batch_norm: bool = batch_norm
         self.__activation_fn: nn.Module = activation_fn
 
         self.__device: torch.device = torch.device("cpu")
@@ -50,12 +60,12 @@ class Model(nn.Module, Component, ABC):
         return self.__num_hidden_layers
 
     @property
-    def batch_norm(self) -> bool:
-        return self.__batch_norm
-
-    @property
     def dropout(self) -> float:
         return self.__dropout
+
+    @property
+    def batch_norm(self) -> bool:
+        return self.__batch_norm
 
     @property
     def activation_fn(self) -> nn.Module:

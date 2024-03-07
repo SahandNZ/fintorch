@@ -9,8 +9,16 @@ from ._model import Model
 
 
 class FeedForward(Model):
-    def __init__(self, dim_sequence: int, dim_feature: int, dim_output: int, num_hidden_layers: int = 2,
-                 batch_norm: bool = True, dropout: float = 0.5, activation_fn: nn.Module = None):
+    def __init__(
+            self,
+            dim_sequence: int,
+            dim_feature: int,
+            dim_output: int,
+            num_hidden_layers: int = 2,
+            dropout: float = 0.5,
+            batch_norm: bool = True,
+            activation_fn: nn.Module = None
+    ):
         super().__init__(
             name="Feed Forward",
             short_name="FF",
@@ -18,8 +26,8 @@ class FeedForward(Model):
             dim_feature=dim_feature,
             dim_output=dim_output,
             num_hidden_layers=num_hidden_layers,
-            batch_norm=batch_norm,
             dropout=dropout,
+            batch_norm=batch_norm,
             activation_fn=activation_fn
         )
 
