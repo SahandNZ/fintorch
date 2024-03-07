@@ -5,31 +5,31 @@ from ._fold import Fold
 
 
 class Status:
-    def __init__(self, folds_count: int):
-        self.__folds_count = folds_count
+    def __init__(self, total_folds_count: int):
+        self.total_folds_count = total_folds_count
 
         self.__folds: List[Fold] = []
         self.__fold_elapsed_times: List[float] = []
-
-    @property
-    def folds_count(self) -> int:
-        return self.__folds_count
-
-    @property
-    def completed_folds_count(self) -> int:
-        return self.last_fold.index + 1 if 0 < len(self.folds) else 1
 
     @property
     def folds(self) -> List[Fold]:
         return self.__folds
 
     @property
+    def fold_elapsed_times(self) -> List[float]:
+        return self.__fold_elapsed_times
+
+    @property
     def last_fold(self) -> Fold:
         return self.__folds[-1]
 
     @property
-    def fold_elapsed_times(self) -> List[float]:
-        return self.__fold_elapsed_times
+    def completed_folds_count(self) -> int:
+        return sum(1 for fold in self.folds if fold.completed)
+
+    @property
+    def remaining_folds_count(self) -> int:
+        return self.total_folds_count - self.completed_folds_count
 
     @property
     def elapsed_time(self) -> float:
@@ -37,7 +37,10 @@ class Status:
 
     @property
     def total_time(self) -> float:
-        return self.elapsed_time * self.folds_count / self.completed_folds_count
+        if 1 < self.completed_folds_count:
+            return self.elapsed_time / self.completed_folds_count * self.total_folds_count
+        else:
+            return 0
 
     @property
     def remaining_time(self) -> float:
@@ -56,5 +59,11 @@ class Status:
         total_time = datetime.strftime(datetime.utcfromtimestamp(self.total_time), '%H:%M:%S')
 
         return "Fold ({}/{}) ({} {} {})\n{}" \
-            .format(self.completed_folds_count, self.folds_count, elapsed_time, remaining_time, total_time,
-                    str(self.last_fold))
+            .format(
+            self.completed_folds_count,
+            self.total_folds_count,
+            elapsed_time,
+            remaining_time,
+            total_time,
+            str(self.last_fold)
+        )
