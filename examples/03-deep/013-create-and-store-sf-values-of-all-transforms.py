@@ -29,7 +29,7 @@ def main():
 
             # create sf values
             with transform:
-                transform.prepare_valid_sf(dc=dc, progress=progress)
+                transform.prepare_sf(dc=dc, progress=progress)
 
             # update progress bar
             progress.update(task_id=overall_task, advance=1)

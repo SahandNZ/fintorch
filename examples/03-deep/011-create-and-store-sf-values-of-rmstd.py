@@ -16,7 +16,7 @@ def main():
     # create sf values
     transform = call_with_dict(RollingMeanStdTrRocFeatureTransform, args.transform_kwargs)
     with Progress(*RICH_PROGRESS_COLUMNS) as progress, transform:
-        transform.prepare_valid_sf(dc=dc, progress=progress)
+        transform.prepare_sf(dc=dc, progress=progress)
 
 
 if __name__ == '__main__':
