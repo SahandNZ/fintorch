@@ -15,7 +15,7 @@ class TechnicalAnalysisFeatureTransform(FeatureTransform):
             time_frame=time_frame,
             dim_sequence=dim_sequence,
             look_back=(backward + dim_sequence) * 2,
-            features=[""],
+            features=["adx", "dpo", "stc", "kst"],
         )
         self.__backward: int = backward
 

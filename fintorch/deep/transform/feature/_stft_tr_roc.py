@@ -13,6 +13,7 @@ class StftTrRocFeatureTransform(FeatureTransform):
             symbol=symbol,
             time_frame=time_frame,
             dim_sequence=dim_sequence,
+            look_back=0,
             features=["tr", "roc", "clean-tr", "clean-roc"],
         )
         self.dfft = DFFT(muting_percentage=muting_percentage)
