@@ -6,15 +6,13 @@ from ....utils.signal import DFFT
 
 
 class StftTrRocFeatureTransform(FeatureTransform):
-    def __init__(self, symbol: str, time_frame: TimeFrame, dim_sequence: int, muting_percentage: int = 95):
+    def __init__(self, symbol: str, time_frame: TimeFrame, dim_sequence: int, muting_percentage: int = 90):
         super().__init__(
             name="Short Term Fourier Transform of True Range and Rate of Change",
             short_name="STFT",
             symbol=symbol,
             time_frame=time_frame,
             dim_sequence=dim_sequence,
-            look_back=0,
-            look_ahead=0,
             features=["tr", "roc", "clean-tr", "clean-roc"],
         )
         self.dfft = DFFT(muting_percentage=muting_percentage)
