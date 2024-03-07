@@ -125,7 +125,34 @@ class Metrics:
             return round(numerator / denominator, 2)
 
     def __str__(self):
-        return self.criterion.to_str(self.objective)
+        return (
+            "{:<16}{}\n"
+            "{:<16}{}\n"
+            "{:<16}{}\n\n"
+            "{:^8}{:^16}{:^16}{:^8}{:^8}\n"
+            "{:^8}{:^16}{:^16}{:^8}{:^8}\n"
+            "{:^8}{:^16}{:^16}{:^8}{:^8}\n"
+            "{:^8}{:^16}{:^16}{:^8}{:^8}\n"
+        ).format(
+            "LOSS", round(self.objective, 4),
+            "ACCURACY", self.accuracy,
+            "PROB-ACCURACY", self.probability_accuracy,
 
-    def __lt__(self, other):
-        return self.__criterion.less_than(self.objective, other.objective)
+            "CLASS", "PRECISION", "PROB-PRECISION", "RECALL", "F1",
+            "-" * 6, "-" * 14, "-" * 14, "-" * 6, "-" * 6,
+
+            "Down",
+            self.precision(label=0),
+            self.probability_precision(label=0),
+            self.recall(label=0),
+            self.f1(label=0),
+
+            "Up",
+            self.precision(label=1),
+            self.probability_precision(label=1),
+            self.recall(label=1),
+            self.f1(label=1)
+        )
+
+        def __lt__(self, other):
+            return self.__criterion.less_than(self.objective, other.objective)
