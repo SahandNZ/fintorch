@@ -89,7 +89,6 @@ def run_multi_process(args, modules: List[Module]):
 
 def main():
     args = DefaultArgumentParser.parse()
-
     modules = create_modules_from_args(args=args)
     run_multi_process(args=args, modules=modules)
 

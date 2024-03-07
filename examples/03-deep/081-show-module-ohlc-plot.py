@@ -1,5 +1,5 @@
 from fintorch.deep.model import FeedForward
-from fintorch.deep.module import create_module
+from fintorch.deep.module import create_default_module
 from fintorch.deep.transform.feature import *
 from fintorch.deep.transform.label import *
 from fintorch.exchange import ONLINE_EXCHANGE
@@ -10,13 +10,10 @@ def main():
     args = DefaultArgumentParser.parse()
 
     # define module
-    module = create_module(
+    module = create_default_module(
         feature_transform_type=RollingMeanStdTrRocFeatureTransform,
         label_transform_type=ForwardMiddleSmaLabelTransform,
         model_type=FeedForward,
-        transform_kwargs=args.transform_kwargs,
-        model_kwargs=args.model_kwargs,
-        interval=args.interval,
     )
 
     # load data collection
