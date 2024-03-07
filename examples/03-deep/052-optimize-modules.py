@@ -3,7 +3,7 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.progress import Progress
 
-from fintorch.deep.module import create_modules
+from fintorch.deep.module import create_modules_from_args
 from fintorch.exchange import ONLINE_EXCHANGE
 from fintorch.setting import RICH_PROGRESS_COLUMNS
 from fintorch.utils.args import DefaultArgumentParser
@@ -11,8 +11,7 @@ from fintorch.utils.args import DefaultArgumentParser
 
 def main():
     args = DefaultArgumentParser.parse()
-
-    modules = create_modules(args=args)
+    modules = create_modules_from_args(args=args)
 
     # optimize modules with rich panel
     overall_progress = Progress(*RICH_PROGRESS_COLUMNS)

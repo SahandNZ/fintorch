@@ -6,7 +6,7 @@ from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
 
-from fintorch.deep.module import Module, create_modules
+from fintorch.deep.module import Module, create_modules_from_args
 from fintorch.exchange import ONLINE_EXCHANGE
 from fintorch.utils.args import DefaultArgumentParser
 
@@ -90,7 +90,7 @@ def run_multi_process(args, modules: List[Module]):
 def main():
     args = DefaultArgumentParser.parse()
 
-    modules = create_modules(args=args)
+    modules = create_modules_from_args(args=args)
     run_multi_process(args=args, modules=modules)
 
 
