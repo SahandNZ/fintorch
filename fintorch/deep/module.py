@@ -24,8 +24,23 @@ from .transform.feature import FEATURE_TRANSFORM_TYPES, FeatureTransform
 from .transform.label import LABEL_TRANSFORM_TYPES, LabelTransform
 from ..dtype import DataCollection
 from ..enum import TimeFrame
-from ..setting import INTERVAL, MODEL_KWARGS, MODULE_DIR, TRANSFORM_KWARGS, EPOCHS_COUNT, BATCH_SIZE, LR, WEIGHT_DECAY, \
-    DIM_SEQUENCE
+from ..setting import (
+    MODULE_DIR,
+
+    SYMBOL,
+    TIME_FRAME,
+
+    INTERVAL,
+    MODEL_KWARGS,
+    TRANSFORM_KWARGS,
+
+    LR,
+    SHUFFLE,
+    BATCH_SIZE,
+    EPOCHS_COUNT,
+    WEIGHT_DECAY,
+    GRADIENT_CLIPPING_THRESHOLD,
+)
 from ..utils.args import DefaultNamespace
 from ..utils.directory import create_directory
 from ..utils.function import call_with_dict
@@ -39,10 +54,12 @@ class Module(ABC):
             dataset: Dataset,
             model_type: Type[Model],
             model_kwargs: Dict[str, Any] = MODEL_KWARGS,
-            epochs_count: int = EPOCHS_COUNT,
-            batch_size: int = BATCH_SIZE,
             lr: float = LR,
-            weight_decay: float = WEIGHT_DECAY
+            shuffle: bool = SHUFFLE,
+            batch_size: int = BATCH_SIZE,
+            epochs_count: int = EPOCHS_COUNT,
+            weight_decay: float = WEIGHT_DECAY,
+            gradient_clipping_threshold: float = GRADIENT_CLIPPING_THRESHOLD
     ):
         self.__dataset: Dataset = dataset
 
@@ -52,12 +69,13 @@ class Module(ABC):
 
         self.__cross_validation = CrossValidation(interval=self.dataset.interval)
         self.__trainer: Trainer = Trainer(
-            epochs_count=epochs_count,
             data_loader=DataLoader(batch_size=batch_size, post_load_fn=Module._post_load_fn),
             criterion=CE(),
             optimizer=Optimizer(torch_optimizer_type=torch.optim.Adam, lr=lr, weight_decay=weight_decay),
             lr_scheduler=LrScheduler(torch_lr_scheduler_type=torch.optim.lr_scheduler.StepLR, step_size=1, gamma=0.9),
-            gradient_clipping_threshold=None,
+            shuffle=shuffle,
+            epochs_count=epochs_count,
+            gradient_clipping_threshold=gradient_clipping_threshold,
         )
 
         self.__directory: str = None
@@ -258,23 +276,21 @@ class Module(ABC):
         )
 
 
-def create_module(
+def create_default_module(
         feature_transform_type: Type[FeatureTransform],
         label_transform_type: Type[LabelTransform],
         model_type: Type[Model],
-        transform_kwargs: Dict[str, Any] = TRANSFORM_KWARGS,
-        model_kwargs: Dict[str, Any] = MODEL_KWARGS,
-        interval: TimeFrame = INTERVAL
+        symbol: str = SYMBOL,
+        time_frame: TimeFrame = TIME_FRAME
 ) -> Module:
-    # create feature and label transforms
-    feature_transform = call_with_dict(feature_transform_type, transform_kwargs)
-    label_transform = call_with_dict(label_transform_type, transform_kwargs)
+    transform_kwargs = copy.deepcopy(TRANSFORM_KWARGS)
+    transform_kwargs.update({"symbol": symbol, "time_frame": time_frame})
+    feature_transform = call_with_dict(feature_transform_type, TRANSFORM_KWARGS)
+    label_transform = call_with_dict(label_transform_type, TRANSFORM_KWARGS)
+    dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=INTERVAL)
+    module = Module(dataset=dataset, model_type=model_type, model_kwargs=MODEL_KWARGS)
 
-    # create dataset
-    dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=interval)
-
-    # create module
-    return Module(dataset=dataset, model_type=model_type, model_kwargs=model_kwargs)
+    return module
 
 
 def create_default_modules(symbols: List[str], time_frames: List[TimeFrame]) -> List[Module]:
@@ -287,15 +303,12 @@ def create_default_modules(symbols: List[str], time_frames: List[TimeFrame]) -> 
         MODEL_TYPES
     )
     for symbol, time_frame, ft_type, lt_type, model_type in items:
-        transform_kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": DIM_SEQUENCE}
-
-        module = create_module(
+        module = create_default_module(
             feature_transform_type=ft_type,
             label_transform_type=lt_type,
             model_type=model_type,
-            transform_kwargs=transform_kwargs,
-            model_kwargs=MODEL_KWARGS,
-            interval=INTERVAL
+            symbol=symbol,
+            time_frame=time_frame
         )
 
         modules.append(module)
@@ -314,15 +327,13 @@ def create_modules_from_args(args: DefaultNamespace) -> List[Module]:
     )
     for symbol, time_frame, ft_type, lt_type, model_type in items:
         transform_kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
+        feature_transform = call_with_dict(ft_type, transform_kwargs)
+        label_transform = call_with_dict(lt_type, transform_kwargs)
+        dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=args.interval)
 
-        module = create_module(
-            feature_transform_type=ft_type,
-            label_transform_type=lt_type,
-            model_type=model_type,
-            transform_kwargs=transform_kwargs,
-            model_kwargs=args.model_kwargs,
-            interval=args.interval
-        )
+        kwargs = {"dataset": dataset, "model_type": model_type}
+        kwargs.update(args.__dict__)
+        module = call_with_dict(Module, kwargs)
 
         modules.append(module)
 
