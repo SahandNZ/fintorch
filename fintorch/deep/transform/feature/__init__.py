@@ -5,6 +5,6 @@ from ._technical_analysis import TechnicalAnalysisFeatureTransform
 
 FEATURE_TRANSFORM_TYPES = [
     RollingMeanStdTrRocFeatureTransform,
+    TechnicalAnalysisFeatureTransform,
     StftTrRocFeatureTransform,
-    TechnicalAnalysisFeatureTransform
 ]
