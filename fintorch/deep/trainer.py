@@ -23,9 +23,10 @@ class Trainer:
             criterion: Criterion,
             optimizer: Optimizer,
             lr_scheduler: LrScheduler,
-            gradient_clipping_threshold: float = None,
+            shuffle: bool = True,
             auto_cuda: bool = True,
-            half_precision: bool = True
+            half_precision: bool = True,
+            gradient_clipping_threshold: float = None,
     ) -> None:
 
         self.__epochs_count: int = epochs_count
@@ -33,10 +34,11 @@ class Trainer:
         self.__criterion: Criterion = criterion
         self.__optimizer: Optimizer = optimizer
         self.__lr_scheduler: LrScheduler = lr_scheduler
-        self.__gradient_clipping_threshold: float = gradient_clipping_threshold
 
+        self.__shuffle: bool = shuffle
         self.__auto_cuda: bool = auto_cuda
         self.__half_precision: bool = half_precision
+        self.__gradient_clipping_threshold: float = gradient_clipping_threshold
 
         self.__static_hash: int = static_list_hash([
             self.epochs_count,
@@ -44,6 +46,7 @@ class Trainer:
             self.criterion.static_hash,
             self.optimizer.static_hash,
             self.lr_scheduler.static_hash,
+            self.shuffle,
             self.gradient_clipping_threshold
         ])
 
@@ -68,12 +71,20 @@ class Trainer:
         return self.__lr_scheduler
 
     @property
-    def gradient_clipping_threshold(self) -> float:
-        return self.__gradient_clipping_threshold
+    def shuffle(self) -> bool:
+        return self.__shuffle
 
     @property
     def auto_cuda(self) -> bool:
         return self.__auto_cuda
+
+    @property
+    def gradient_clipping_threshold(self) -> float:
+        return self.__gradient_clipping_threshold
+
+    @property
+    def half_precision(self) -> bool:
+        return self.__half_precision
 
     @property
     def device_type(self) -> str:
@@ -85,10 +96,6 @@ class Trainer:
     @property
     def device(self) -> torch.device:
         return torch.device(self.device_type)
-
-    @property
-    def half_precision(self) -> bool:
-        return self.__half_precision
 
     @property
     def dtype(self) -> torch.dtype:
@@ -152,7 +159,7 @@ class Trainer:
 
     def ___batched_common_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: Epoch, mode: str) -> Generator:
         optimize = "train" == mode
-        shuffle = not optimize
+        shuffle = self.shuffle and optimize
         timestamps = getattr(fold, f"{mode}_timestamps")
         iterator = self.data_loader(dataset=dataset, timestamps=timestamps, shuffle=shuffle)
         setattr(epoch, f"{mode}_batch_count", self.data_loader.batch_count)
