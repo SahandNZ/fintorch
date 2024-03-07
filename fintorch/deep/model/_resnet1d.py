@@ -1,8 +1,8 @@
+import math
 from typing import List
 
 import numpy as np
 import torch
-import math
 from torch import nn
 
 from ._model import Model

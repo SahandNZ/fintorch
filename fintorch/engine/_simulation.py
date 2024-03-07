@@ -1,5 +1,3 @@
-import time
-
 import matplotlib.pyplot as plt
 from rich.progress import Progress
 

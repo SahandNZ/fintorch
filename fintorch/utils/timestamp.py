@@ -1,6 +1,6 @@
+import math
 from datetime import datetime
 from typing import List, Union
-import math
 
 
 def to_datetime(date: Union[str, datetime]) -> datetime:

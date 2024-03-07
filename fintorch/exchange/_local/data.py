@@ -1,5 +1,4 @@
 import inspect
-import sys
 from typing import List
 
 import pandas as pd

@@ -1,10 +1,9 @@
 import pandas as pd
 
+from ..strategy import Strategy
 from ...dtype import Order
 from ...enum import OrderSide, TimeFrame
-
 from ...exchange import Exchange
-from ..strategy import Strategy
 
 
 class SmaStrategy(Strategy):

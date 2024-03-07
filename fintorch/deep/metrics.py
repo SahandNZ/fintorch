@@ -1,8 +1,9 @@
 from typing import List
 
 import torch
-from .criterion import Criterion
 from torch import nn
+
+from .criterion import Criterion
 
 
 class Metrics:

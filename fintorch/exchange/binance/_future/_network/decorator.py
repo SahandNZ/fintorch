@@ -1,8 +1,8 @@
 from typing import Callable
 
+from fintorch.utils.decorator import encode_param, decode_field
 from .decoder import *
 from .encoder import *
-from fintorch.utils.decorator import encode_param, decode_field
 
 
 def encode_symbol(func: Callable):

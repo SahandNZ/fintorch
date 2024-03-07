@@ -7,8 +7,8 @@ from urllib import parse
 
 from requests import Response
 
-from .exception import BinanceFutureHttpsException
 from fintorch.exchange._online import Https
+from .exception import BinanceFutureHttpsException
 
 
 class BinanceFutureHttps(Https):

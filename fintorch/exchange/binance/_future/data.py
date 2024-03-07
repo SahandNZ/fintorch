@@ -1,11 +1,10 @@
 from datetime import datetime
-from typing import List, Any, Dict
+from typing import List, Dict
 
 from ._network.decorator import *
-from ._network.deserializer import candle_deserializer, candle_wss_deserializer, symbol_info_deserializer
+from ._network.deserializer import candle_deserializer, symbol_info_deserializer
 from ._network.encoder import *
 from ._network.https import BinanceFutureHttps
-from ._network.wss import BinanceFutureWss
 from ... import OnlineData
 from ....dtype import SymbolInfo, Candle
 from ....enum import MarketType, TimeFrame

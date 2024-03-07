@@ -1,7 +1,5 @@
 from rich.progress import Progress
 
-from rich.progress import Progress
-
 from fintorch.engine import SimulationEngine
 from fintorch.exchange import ONLINE_EXCHANGE
 from fintorch.setting import RICH_PROGRESS_COLUMNS

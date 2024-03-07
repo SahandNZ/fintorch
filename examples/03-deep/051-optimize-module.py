@@ -8,6 +8,7 @@ from fintorch.deep.transform.label import *
 from fintorch.exchange import ONLINE_EXCHANGE
 from fintorch.utils.args import DefaultArgumentParser
 
+
 def main():
     args = DefaultArgumentParser.parse()
 
