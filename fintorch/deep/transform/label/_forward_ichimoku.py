@@ -1,9 +1,8 @@
-import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from ....enum import TimeFrame
 from ._label_transform import LabelTransform
+from ....enum import TimeFrame
 
 
 class ForwardIchimokuLabelTransform(LabelTransform):
@@ -11,7 +10,7 @@ class ForwardIchimokuLabelTransform(LabelTransform):
             self,
             symbol: str,
             time_frame: TimeFrame,
-            forward: int = 12,
+            forward: int = 10,
             base_length: int = 5,
             conversion_length: int = 20,
     ):
@@ -23,8 +22,6 @@ class ForwardIchimokuLabelTransform(LabelTransform):
                         "labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
-            dim_sequence=1,
-            look_back=max(base_length, conversion_length),
             look_ahead=forward,
             classes=["UP", "DOWN"]
         )
@@ -44,20 +41,20 @@ class ForwardIchimokuLabelTransform(LabelTransform):
     def conversion_length(self) -> int:
         return self.__conversion_length
 
-    @staticmethod
-    def donchian(df: pd.DataFrame, length: int) -> pd.Series:
-        return (df.close.rolling(length).max() + df.close.rolling(length).min()) / 2
+    def forward_donchian(self, df: pd.DataFrame, length: int) -> pd.Series:
+        forward_highest = df.high.rolling(window=length, min_periods=1).max().shift(periods=-self.forward).ffill()
+        forward_lowest = df.low.rolling(window=length, min_periods=1).min().shift(periods=-self.forward).ffill()
+        forward_middle = (forward_highest + forward_lowest) / 2
+
+        return forward_middle
 
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["base"] = self.donchian(df, length=self.base_length)
-        df["conversion"] = self.donchian(df, length=self.conversion_length)
-
-        df["up"] = np.where(np.isnan(df.base) | np.isnan(df.conversion), np.nan, df.conversion < df.base)
-        df["f-up"] = df.up.shift(-self.forward)
-        df["label"] = np.where(np.isnan(df["f-up"]), np.nan, df["f-up"])
+        df["forward-base"] = self.forward_donchian(df=df, length=self.base_length)
+        df["forward-conversion"] = self.forward_donchian(df=df, length=self.conversion_length)
+        df["label"] = df["forward-conversion"] <= df["forward-base"]
 
         return df
 
     def _draw_lines(self, ohlc_ax: plt.Axes, df: pd.DataFrame) -> None:
-        ohlc_ax.plot(df.base, label="Base Line")
-        ohlc_ax.plot(df.conversion, label="Conversion Line")
+        ohlc_ax.plot(df["forward-base"], label="Forward Base Line")
+        ohlc_ax.plot(df["forward-conversion"], label="Forward Conversion Line")

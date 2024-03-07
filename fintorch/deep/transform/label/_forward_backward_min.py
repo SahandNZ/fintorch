@@ -1,13 +1,12 @@
-import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from ....enum import TimeFrame
 from ._label_transform import LabelTransform
+from ....enum import TimeFrame
 
 
 class ForwardBackwardMinimumLabelTransform(LabelTransform):
-    def __init__(self, symbol: str, time_frame: TimeFrame, forward: int = 10, backward: int = 10):
+    def __init__(self, symbol: str, time_frame: TimeFrame, backward: int = 10, forward: int = 10):
         super().__init__(
             name="Forward Backward Min",
             short_name="F.B-Min",
@@ -15,8 +14,6 @@ class ForwardBackwardMinimumLabelTransform(LabelTransform):
                         "the Forward Min series to assign trend labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
-            dim_sequence=1,
-            look_back=backward,
             look_ahead=forward,
             classes=["UP", "DOWN"]
         )
@@ -33,14 +30,13 @@ class ForwardBackwardMinimumLabelTransform(LabelTransform):
         return self.__forward
 
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["bmin"] = df.close.rolling(self.backward).min()
-        df["fmin"] = df.close.rolling(self.forward).min().shift(-self.forward + 1)
-
-        df["up"] = df.bmin <= df.fmin
-        df["label"] = np.where(np.isnan(df.bmin) | np.isnan(df.fmin), np.nan, df.up)
+        forward_indexer = pd.api.indexers.FixedForwardWindowIndexer(window_size=self.forward)
+        df["backward-min"] = df.close.rolling(window=self.backward, min_periods=1).min()
+        df["forward-min"] = df.close.rolling(window=forward_indexer, min_periods=1).min()
+        df["label"] = df["backward-min"] <= df["forward-min"]
 
         return df
 
     def _draw_lines(self, ohlc_ax: plt.Axes, df: pd.DataFrame) -> None:
-        ohlc_ax.plot(df.bmin, label="Backward Min")
-        ohlc_ax.plot(df.fmin, label="Forward Min")
+        ohlc_ax.plot(df["backward-min"], label="Backward Min")
+        ohlc_ax.plot(df["forward-min"], label="Forward Min")

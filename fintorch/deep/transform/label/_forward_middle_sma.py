@@ -1,13 +1,12 @@
-import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from ....enum import TimeFrame
 from ._label_transform import LabelTransform
+from ....enum import TimeFrame
 
 
 class ForwardMiddleSmaLabelTransform(LabelTransform):
-    def __init__(self, symbol: str, time_frame: TimeFrame, backward: int = 51, forward: int = 12):
+    def __init__(self, symbol: str, time_frame: TimeFrame, forward: int = 10, length: int = 21):
         super().__init__(
             name="Forward Middle Simple Moving Average",
             short_name="F.M-SMA",
@@ -16,32 +15,28 @@ class ForwardMiddleSmaLabelTransform(LabelTransform):
                         "with the forward values to assign trend labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
-            dim_sequence=1,
-            look_back=backward // 2 + 1,
-            look_ahead=backward // 2 + 1 + forward,
+            look_ahead=length // 2 + forward,
             classes=["UP", "DOWN"]
         )
 
-        self.__backward: int = backward
+        self.__length: int = length
         self.__forward: int = forward
 
     @property
-    def backward(self) -> int:
-        return self.__backward
+    def length(self) -> int:
+        return self.__length
 
     @property
     def forward(self) -> int:
         return self.__forward
 
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["msma"] = df.close.rolling(self.backward, center=True).mean()
-        df["f-msma"] = df.msma.shift(-self.forward)
-
-        df["up"] = df.msma < df["f-msma"]
-        df["label"] = np.where(np.isnan(df.msma) | np.isnan(df["f-msma"]), np.nan, df.up)
+        df["middle-sma"] = df.close.rolling(window=self.length, min_periods=1, center=True).mean()
+        df["forward-middle-sma"] = df["middle-sma"].shift(periods=-self.forward).ffill()
+        df["label"] = df["middle-sma"] <= df["forward-middle-sma"]
 
         return df
 
     def _draw_lines(self, ohlc_ax: plt.Axes, df: pd.DataFrame) -> None:
-        ohlc_ax.plot(df.msma, label="Middle SMA")
-        ohlc_ax.plot(df["f-msma"], label="Forward Middle SMA")
+        ohlc_ax.plot(df["middle-sma"], label="Middle SMA")
+        ohlc_ax.plot(df["forward-middle-sma"], label="Forward Middle SMA")

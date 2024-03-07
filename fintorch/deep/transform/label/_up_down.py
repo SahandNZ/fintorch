@@ -1,8 +1,8 @@
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from ....enum import TimeFrame
 from ._label_transform import LabelTransform
+from ....enum import TimeFrame
 
 
 class UpDownLabelTransform(LabelTransform):
@@ -14,15 +14,12 @@ class UpDownLabelTransform(LabelTransform):
                         "to assign trend labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
-            dim_sequence=1,
-            look_back=0,
             look_ahead=0,
             classes=["UP", "DOWN"]
         )
 
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["up"] = df.open < df.close
-        df["label"] = df.up
+        df["label"] = df.open <= df.close
 
         return df
 
