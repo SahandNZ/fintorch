@@ -30,6 +30,8 @@ SOCKS5_PROXY = os.environ.get("FINTORCH_SOCKS5_PROXY", "dante-user:IiS8v39yGHyEM
 PROXIES = {"http": HTTP_PROXY, "https": HTTPS_PROXY, "socks5": SOCKS5_PROXY}
 
 # Exchange
+SYMBOL = "BTC-USDT"
+TIME_FRAME = TimeFrame.DAY1
 EXCHANGE_NAME = os.environ.get("FINTORCH_EXCHANGE_NAME", "binance")
 
 # intervals
@@ -55,18 +57,22 @@ DIM_SEQUENCE = 32
 DIM_FEATURE = 4
 DIM_OUTPUT = 2
 NUM_HIDDEN_LAYERS = 2
-BATCH_NORM = True
 DROPOUT = 0.5
+BATCH_NORM = True
 ACTIVATION_FN = nn.Softmax(dim=-1)
 
 # Trainer hyper-parameters
-EPOCHS_COUNT = 10
-BATCH_SIZE = 128
 LR = 1e-3
+SHUFFLE = True
+BATCH_SIZE = 128
+EPOCHS_COUNT = 10
 WEIGHT_DECAY = 1e-2
+GRADIENT_CLIPPING_THRESHOLD = None
 
 # Transform kwargs
 TRANSFORM_KWARGS = {
+    "symbol": SYMBOL,
+    "time_frame": TIME_FRAME,
     "dim_sequence": DIM_SEQUENCE
 }
 

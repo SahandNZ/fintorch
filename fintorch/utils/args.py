@@ -4,8 +4,29 @@ import os
 from typing import Any, Dict, List
 
 from fintorch.enum import TimeFrame
-from fintorch.setting import NUM_HIDDEN_LAYERS, INTERVAL, DROPOUT, DIM_SEQUENCE, DIM_FEATURE, BATCH_NORM, DIM_OUTPUT, \
-    ACTIVATION_FN, CONFIG_DIR, LR, WEIGHT_DECAY
+from fintorch.setting import (
+    CONFIG_DIR,
+
+    SYMBOL,
+    TIME_FRAME,
+    EXCHANGE_NAME,
+
+    INTERVAL,
+    DIM_SEQUENCE,
+    DIM_FEATURE,
+    DIM_OUTPUT,
+    NUM_HIDDEN_LAYERS,
+    DROPOUT,
+    BATCH_NORM,
+    ACTIVATION_FN,
+
+    LR,
+    SHUFFLE,
+    BATCH_SIZE,
+    EPOCHS_COUNT,
+    WEIGHT_DECAY,
+    GRADIENT_CLIPPING_THRESHOLD,
+)
 
 
 class DefaultNamespace(argparse.Namespace):
@@ -23,13 +44,13 @@ class DefaultNamespace(argparse.Namespace):
             "dim_feature": self.dim_feature,
             "dim_output": self.dim_output,
             "num_hidden_layers": self.num_hidden_layers,
-            "batch_norm": self.batch_norm,
             "dropout": self.dropout,
+            "batch_norm": self.batch_norm,
             "activation_fn": ACTIVATION_FN
         }
 
         # load other args from config file
-        self.config_path = os.path.join(CONFIG_DIR, f"{self.config_name}.json")
+        self.config_path = os.path.join(CONFIG_DIR, f"{self.config}.json")
         with open(self.config_path, "r") as file:
             config_dict = json.load(file)
 
@@ -42,16 +63,17 @@ class DefaultArgumentParser(argparse.ArgumentParser):
         super().__init__()
 
         # datetime args
-        self.add_argument("--stop-date", action="store", type=str, required=False, default="2024-01-01")
-        self.add_argument("--start-date", action="store", type=str, required=False, default="2019-01-01")
+        self.add_argument("--stop-date", action="store", type=str, required=False, default="2024-03-01")
+        self.add_argument("--start-date", action="store", type=str, required=False, default="2024-01-01")
 
         # process args
-        self.add_argument("--config-name", action="store", type=str, required=False, default="btc-daily")
+        self.add_argument("--config", action="store", type=str, required=False, default="btc-daily")
         self.add_argument("--max-workers", action="store", type=int, required=False, default=os.cpu_count())
 
         # market args
-        self.add_argument("--symbol", action="store", type=str, required=False, default="BTC-USDT")
-        self.add_argument("--time-frame", action="store", type=int, required=False, default=TimeFrame.DAY1)
+        self.add_argument("--symbol", action="store", type=str, required=False, default=SYMBOL)
+        self.add_argument("--time-frame", action="store", type=int, required=False, default=TIME_FRAME)
+        self.add_argument("--exchange-name", action="store", type=str, required=False, default=EXCHANGE_NAME)
 
         # deep learning args
         self.add_argument("--interval", action="store", type=int, required=False, default=INTERVAL)
@@ -63,16 +85,16 @@ class DefaultArgumentParser(argparse.ArgumentParser):
         self.add_argument("--dropout", action="store", type=float, required=False, default=DROPOUT)
         self.add_argument("--batch-norm", action="store", type=bool, required=False, default=BATCH_NORM)
 
-        self.add_argument("--epochs", action="store", type=int, required=False, default=10)
-        self.add_argument("--batch-size", action="store", type=int, required=False, default=128)
         self.add_argument("--lr", action="store", type=float, required=False, default=LR)
+        self.add_argument("--shuffle", action="store", type=bool, required=False, default=SHUFFLE)
+        self.add_argument("--batch-size", action="store", type=int, required=False, default=BATCH_SIZE)
+        self.add_argument("--epochs-count", action="store", type=int, required=False, default=EPOCHS_COUNT)
         self.add_argument("--weight-decay", action="store", type=float, required=False, default=WEIGHT_DECAY)
+        self.add_argument("--gct", action="store", type=float, required=False, default=GRADIENT_CLIPPING_THRESHOLD)
 
         # backtest args
         self.add_argument("--initial-capital", action="store", type=int, required=False, default=1000)
         self.add_argument("--speed", action="store", type=int, required=False, default=10000)
-
-        self.__namespace: argparse.Namespace = None
 
     @staticmethod
     def parse(args: List[str] = None) -> DefaultNamespace:
