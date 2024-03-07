@@ -13,5 +13,5 @@ MODEL_TYPES = [
     LSTM,
     Hybrid,
     ResNet1D,
-    # Transformer
+    Transformer
 ]
