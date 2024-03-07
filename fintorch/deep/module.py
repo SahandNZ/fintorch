@@ -1,3 +1,4 @@
+import copy
 import gc
 import itertools
 import os.path
@@ -23,7 +24,8 @@ from .transform.feature import FEATURE_TRANSFORM_TYPES, FeatureTransform
 from .transform.label import LABEL_TRANSFORM_TYPES, LabelTransform
 from ..dtype import DataCollection
 from ..enum import TimeFrame
-from ..setting import INTERVAL, MODEL_KWARGS, MODULE_DIR, TRANSFORM_KWARGS, EPOCHS_COUNT, BATCH_SIZE, LR, WEIGHT_DECAY
+from ..setting import INTERVAL, MODEL_KWARGS, MODULE_DIR, TRANSFORM_KWARGS, EPOCHS_COUNT, BATCH_SIZE, LR, WEIGHT_DECAY, \
+    DIM_SEQUENCE
 from ..utils.args import DefaultNamespace
 from ..utils.directory import create_directory
 from ..utils.function import call_with_dict
@@ -139,33 +141,39 @@ class Module(ABC):
         gc.collect()
 
     def get_test_start_timestamp(self, dc: DataCollection) -> int:
-        first_valid_timestamp = self.dataset.feature_transform.get_first_valid_timestamp(dc=dc)
-        self.cross_validation(first_valid_timestamp=first_valid_timestamp)
-        return self.cross_validation.test_start_timestamp
+        start_timestamp = self.dataset.feature_transform.get_start_timestamp(dc=dc)
+        stop_timestamp = self.dataset.feature_transform.get_stop_timestamp(dc=dc)
+
+        tmp_cross_validation = copy.deepcopy(self.cross_validation)
+        tmp_cross_validation(start_timestamp=start_timestamp, stop_timestamp=stop_timestamp)
+        test_start_timestamp = tmp_cross_validation.start_timestamp
+        del tmp_cross_validation
+
+        return test_start_timestamp
+
+    def get_test_stop_timestamp(self, dc: DataCollection) -> int:
+        return self.dataset.feature_transform.get_stop_timestamp(dc=dc)
 
     def get_test_timestamps(self, dc: DataCollection) -> List[int]:
-        test_start_timestamps = self.get_test_start_timestamp(dc=dc)
-        feature_last_valid_timestamps = self.dataset.feature_transform.get_last_valid_timestamp(dc=dc)
-        return list(range(test_start_timestamps, feature_last_valid_timestamps, self.time_frame))
-
-    def get_vaid_test_timestamps(self, dc: DataCollection) -> List[int]:
-        test_start_timestamps = self.get_test_start_timestamp(dc=dc)
-        label_last_valid_timestamps = self.dataset.label_transform.get_last_valid_timestamp(dc=dc)
-        return list(range(test_start_timestamps, label_last_valid_timestamps, self.time_frame))
+        test_start_timestamp = self.get_test_start_timestamp(dc=dc)
+        test_stop_timestamp = self.get_test_stop_timestamp(dc=dc)
+        return list(range(test_start_timestamp, test_stop_timestamp, self.time_frame))
 
     def optimize(self, dc: DataCollection, start_date: Union[str, None] = None) -> Generator[Status, None, None]:
         # parse start_date
         start_date = to_datetime(date=start_date) if start_date is not None else None
 
         # setup cross validation
-        first_valid_timestamp = self.dataset.feature_transform.get_first_valid_timestamp(dc=dc)
-        iterator = self.cross_validation(first_valid_timestamp=first_valid_timestamp)
+        start_timestamp = self.dataset.feature_transform.get_start_timestamp(dc=dc)
+        stop_timestamp = self.dataset.feature_transform.get_stop_timestamp(dc=dc)
+        folds_iterator = self.cross_validation(start_timestamp=start_timestamp, stop_timestamp=stop_timestamp)
 
         # optimize new folds
-        status = Status(folds_count=self.cross_validation.folds_count)
-        for fold in iterator:
+        status = Status(total_folds_count=self.cross_validation.folds_count)
+        for fold in folds_iterator:
             # skip folds which are not include in start_timestamp
             if start_date is not None and fold.test_stop_timestamp < start_date.timestamp():
+                status.total_folds_count -= 1
                 continue
 
             start_time = time.time()
@@ -269,7 +277,33 @@ def create_module(
     return Module(dataset=dataset, model_type=model_type, model_kwargs=model_kwargs)
 
 
-def create_modules(args: DefaultNamespace) -> List[Module]:
+def create_default_modules(symbols: List[str], time_frames: List[TimeFrame]) -> List[Module]:
+    modules = []
+    items = itertools.product(
+        symbols,
+        time_frames,
+        FEATURE_TRANSFORM_TYPES,
+        LABEL_TRANSFORM_TYPES,
+        MODEL_TYPES
+    )
+    for symbol, time_frame, ft_type, lt_type, model_type in items:
+        transform_kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": DIM_SEQUENCE}
+
+        module = create_module(
+            feature_transform_type=ft_type,
+            label_transform_type=lt_type,
+            model_type=model_type,
+            transform_kwargs=transform_kwargs,
+            model_kwargs=MODEL_KWARGS,
+            interval=INTERVAL
+        )
+
+        modules.append(module)
+
+    return modules
+
+
+def create_modules_from_args(args: DefaultNamespace) -> List[Module]:
     modules = []
     items = itertools.product(
         args.symbols,
