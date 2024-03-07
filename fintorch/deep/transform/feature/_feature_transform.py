@@ -1,20 +1,26 @@
 import math
 from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import List, Union
 
 import numpy as np
 import pandas as pd
 
 from .._transform import Transform
-from ....dtype import DataCollection
 from ....enum import TimeFrame
 from ....setting import NUMPY_FEATURE_DTYPE
 
 
 class FeatureTransform(Transform, ABC):
-    def __init__(self, name: str, short_name: str, symbol: str, time_frame: TimeFrame, dim_sequence: int,
-                 look_back: int, look_ahead: int, features: List[str]):
+    def __init__(
+            self,
+            name: str,
+            short_name: str,
+            symbol: str,
+            time_frame: TimeFrame,
+            dim_sequence: int,
+            look_back: int,
+            features: List[str]
+    ):
         super().__init__(
             name=name,
             short_name=short_name,
@@ -23,7 +29,7 @@ class FeatureTransform(Transform, ABC):
             time_frame=time_frame,
             dim_sequence=dim_sequence,
             look_back=look_back,
-            look_ahead=look_ahead
+            look_ahead=0
         )
         self.__features: List[str] = features
 
@@ -33,13 +39,6 @@ class FeatureTransform(Transform, ABC):
 
     def _shift_timestamp(self, timestamp: int) -> int:
         return math.floor(timestamp / self.time_frame) * self.time_frame
-
-    def _can_not_be_none(self, dc: DataCollection, timestamp: int) -> bool:
-        symbol_info = dc.get_symbol_info(symbol=self.symbol)
-        first_timestamp = symbol_info.on_board_timestamp + int(self.time_frame) * self.look_back
-        last_timestamp = datetime.now().timestamp() // int(self.time_frame) * int(self.time_frame)
-
-        return first_timestamp <= timestamp <= last_timestamp
 
     @abstractmethod
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:

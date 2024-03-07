@@ -1,7 +1,6 @@
 import os
 import pickle
 from abc import abstractmethod
-from datetime import datetime
 from typing import Dict, Generator, Union, List
 
 import numpy as np
@@ -87,7 +86,6 @@ class Transform(Component):
         return self.__static_hash
 
     def open(self) -> None:
-        # safe load timestamp_to_sf
         try:
             with open(self.path, "rb") as file:
                 self.__timestamp_to_sf = pickle.load(file)
@@ -95,45 +93,38 @@ class Transform(Component):
             self.__timestamp_to_sf = {}
 
     def close(self) -> None:
-        # dump timestamp_to_sf
         create_directory(self.directory)
         with open(self.path, "wb+") as file:
             pickle.dump(self.timestamp_to_sf, file)
 
-    def get_first_valid_timestamp(self, dc: DataCollection) -> int:
-        # create on board timestamp
-        symbol_info = dc.get_symbol_info(symbol=self.symbol)
-        on_board_datetime = symbol_info.on_board_datetime
-        on_board_timestamp = on_board_datetime.replace(month=(on_board_datetime.month + 1) % 12, day=1).timestamp()
-        on_board_timestamp = on_board_timestamp // int(self.time_frame) * int(self.time_frame)
-
-        # create first available timestamp (seems there is a issue in binance candles database)
+    def get_start_timestamp(self, dc: DataCollection) -> int:
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
-        df_first_timestamp = df.index[0]
+        start_timestamp = df.index[0]
+        start_timestamp = int(start_timestamp + self.look_back * int(self.time_frame))
 
-        first_timestamp = max(on_board_timestamp, df_first_timestamp)
-        first_valid_timestamp = int(first_timestamp + self.look_back * int(self.time_frame))
-        return first_valid_timestamp
+        return start_timestamp
 
-    def get_last_valid_timestamp(self, dc: Union[DataCollection, None] = None) -> int:
-        current_open_timestamp = datetime.now().timestamp() // int(self.time_frame) * int(self.time_frame)
-        if dc is not None:
-            df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
-            df_last_timestamp = df.index[-1]
-            last_timestamp = min(current_open_timestamp, df_last_timestamp)
-        else:
-            last_timestamp = current_open_timestamp
+    def get_stop_timestamp(self, dc: DataCollection) -> int:
+        df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
+        stop_timestamp = df.index[-1]
+        stop_timestamp = int(stop_timestamp - self.look_ahead * int(self.time_frame)) + int(self.time_frame)
 
-        last_valid_timestamp = int(last_timestamp - self.look_ahead * int(self.time_frame))
-        return last_valid_timestamp
+        return stop_timestamp
 
-    def get_valid_timestamps(self, dc: DataCollection) -> List[int]:
-        first_valid_timestamp = self.get_first_valid_timestamp(dc=dc)
-        last_valid_timestamp = self.get_last_valid_timestamp(dc=dc)
-        return list(range(first_valid_timestamp, last_valid_timestamp, int(self.time_frame)))
+    def get_timestamps(self, dc: DataCollection) -> List[int]:
+        start_timestamp = self.get_start_timestamp(dc=dc)
+        stop_timestamp = self.get_stop_timestamp(dc=dc)
+        timestamps = list(range(start_timestamp, stop_timestamp, int(self.time_frame)))
 
-    def prepare_valid_sf(self, dc: DataCollection, progress: Union[Progress, None] = None) -> None:
-        timestamps = self.get_valid_timestamps(dc=dc)
+        return timestamps
+
+    def prepare_sf(
+            self, dc: DataCollection,
+            timestamps: Union[List[int], None] = None,
+            progress: Union[Progress, None] = None
+    ) -> None:
+        if timestamps is None:
+            timestamps = self.get_timestamps(dc=dc)
 
         # create rich progress bar
         if progress is not None:
@@ -151,10 +142,6 @@ class Transform(Component):
         if progress is not None:
             progress.update(task_id=task, visible=False)
 
-    def prepare_sf(self, dc: DataCollection, timestamps: List[int]) -> None:
-        for _ in self.transform_sf(dc=dc, timestamps=timestamps):
-            pass
-
     def load_sf(self, timestamps: List[int]) -> Generator[Union[np.array, None], None, None]:
         for timestamp in timestamps:
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
@@ -163,17 +150,22 @@ class Transform(Component):
             yield sf
 
     def transform_sf(self, dc: DataCollection, timestamps: List[int]) -> Generator[np.array, None, None]:
-        # update sf values if needed
         for timestamp in timestamps:
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
-
-            # load or transform sf
             sf = self.timestamp_to_sf.get(shifted_timestamp, None)
-            if sf is None and self._can_not_be_none(dc=dc, timestamp=shifted_timestamp):
+            if not self.__is_sf_valid(dc=dc, timestamp=shifted_timestamp, sf=sf):
                 sf = self.__transform_sf(dc=dc, timestamp=shifted_timestamp)
                 self.timestamp_to_sf[shifted_timestamp] = sf
 
             yield sf
+
+    def __is_sf_valid(self, dc: DataCollection, timestamp: int, sf: Union[np.array, None]) -> bool:
+        start_timestamp = self.get_start_timestamp(dc=dc)
+        stop_timestamp = self.get_stop_timestamp(dc=dc)
+        is_timestamp_valid = start_timestamp <= timestamp < stop_timestamp
+        is_sf_valid = is_timestamp_valid and sf is not None
+
+        return is_sf_valid
 
     def __transform_sf(self, dc: DataCollection, timestamp: int) -> Union[np.array, None]:
         df = self.__transform_dc_to_df(dc=dc, timestamp=timestamp)
@@ -190,10 +182,6 @@ class Transform(Component):
 
     @abstractmethod
     def _shift_timestamp(self, timestamp: int) -> int:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def _can_not_be_none(self, dc: DataCollection, timestamp: int) -> bool:
         raise NotImplementedError()
 
     @abstractmethod

@@ -1,6 +1,5 @@
 import math
 from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import Tuple, Union, List
 
 import numpy as np
@@ -23,8 +22,6 @@ class LabelTransform(Transform, ABC):
             description: str,
             symbol: str,
             time_frame: TimeFrame,
-            dim_sequence: int,
-            look_back: int,
             look_ahead: int,
             classes: List[str]
     ):
@@ -34,8 +31,8 @@ class LabelTransform(Transform, ABC):
             description=description,
             symbol=symbol,
             time_frame=time_frame,
-            dim_sequence=dim_sequence,
-            look_back=look_back,
+            dim_sequence=1,
+            look_back=0,
             look_ahead=look_ahead
         )
         self.__classes: List[str] = classes
@@ -50,14 +47,6 @@ class LabelTransform(Transform, ABC):
 
     def _shift_timestamp(self, timestamp: int) -> int:
         return math.ceil(timestamp / self.time_frame) * self.time_frame
-
-    def _can_not_be_none(self, dc: DataCollection, timestamp: int) -> bool:
-        symbol_info = dc.get_symbol_info(symbol=self.symbol)
-        current_open_timestamp = datetime.now().timestamp() // int(self.time_frame) * int(self.time_frame)
-        first_timestamp = symbol_info.on_board_timestamp // int(self.time_frame) * self.time_frame
-        last_timestamp = current_open_timestamp - int(self.time_frame) * self.look_ahead
-
-        return first_timestamp <= timestamp <= last_timestamp
 
     @abstractmethod
     def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
