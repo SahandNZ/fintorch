@@ -63,7 +63,7 @@ ACTIVATION_FN = nn.Softmax(dim=-1)
 
 # Trainer hyper-parameters
 LR = 1e-3
-SHUFFLE = True
+SHUFFLE = False
 BATCH_SIZE = 128
 EPOCHS_COUNT = 10
 WEIGHT_DECAY = 1e-2
