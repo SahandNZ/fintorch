@@ -3,7 +3,7 @@ import json
 import os
 from typing import Any, Dict, List
 
-from fintorch.enum import TimeFrame
+from fintorch.enum import TimeFrame, MarketType
 from fintorch.setting import (
     CONFIG_DIR,
 
@@ -33,6 +33,20 @@ class DefaultNamespace(argparse.Namespace):
     def __init__(self, **kwargs: Dict[str, Any]):
         super().__init__(**kwargs)
 
+        # load app kwargs from its config file
+        path = os.path.join(CONFIG_DIR, f"{self.app_config}.json")
+        with open(path, "r") as file:
+            app_config_dict = json.load(file)
+
+        # load symbols and time frame from their config file
+        path = os.path.join(CONFIG_DIR, f"{self.stf_config}.json")
+        with open(path, "r") as file:
+            stf_config_dict = json.load(file)
+
+        self.symbols: List[str] = stf_config_dict["symbols"]
+        self.time_frames: List[TimeFrame] = [TimeFrame(tf) for tf in stf_config_dict["time-frames"]]
+
+        # transform and model and app kwargs
         self.transform_kwargs = {
             "symbol": self.symbol,
             "time_frame": self.time_frame,
@@ -49,13 +63,13 @@ class DefaultNamespace(argparse.Namespace):
             "activation_fn": ACTIVATION_FN
         }
 
-        # load other args from config file
-        self.config_path = os.path.join(CONFIG_DIR, f"{self.config}.json")
-        with open(self.config_path, "r") as file:
-            config_dict = json.load(file)
-
-        self.symbols: List[str] = config_dict["symbols"]
-        self.time_frames: List[TimeFrame] = [TimeFrame(tf) for tf in config_dict["time-frames"]]
+        self.app_kwargs = app_config_dict
+        self.app_kwargs.update({
+            "symbols": self.symbols,
+            "time_frames": self.time_frames,
+            "interval": self.interval,
+            "market_type": MarketType.FUTURE,
+        })
 
 
 class DefaultArgumentParser(argparse.ArgumentParser):
@@ -64,10 +78,11 @@ class DefaultArgumentParser(argparse.ArgumentParser):
 
         # datetime args
         self.add_argument("--stop-date", action="store", type=str, required=False, default="2024-03-01")
-        self.add_argument("--start-date", action="store", type=str, required=False, default="2024-01-01")
+        self.add_argument("--start-date", action="store", type=str, required=False, default="2020-01-01")
 
         # process args
-        self.add_argument("--config", action="store", type=str, required=False, default="btc-daily")
+        self.add_argument("--app-config", action="store", type=str, required=False, default="app")
+        self.add_argument("--stf-config", action="store", type=str, required=False, default="5-daily")
         self.add_argument("--max-workers", action="store", type=int, required=False, default=os.cpu_count())
 
         # market args
