@@ -1,12 +1,4 @@
 {
-  "proxies": {
-    "http": "http://tracker:nlOv5rC7cL3q3bYR@95.216.41.71:3128",
-    "https": "http://tracker:nlOv5rC7cL3q3bYR@95.216.41.71:3128",
-    "socks5": "dante-user:IiS8v39yGHyEMHeuuhQPOA43jryzeuT0@95.216.41.71:1080"
-  },
-  "exchange": {
-    "name": "binance"
-  },
   "time-frames": [
     86400
   ],
