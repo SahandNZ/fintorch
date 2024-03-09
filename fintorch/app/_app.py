@@ -1,5 +1,4 @@
 import copy
-import json
 from typing import Dict, List
 
 from ._context import Context
@@ -26,16 +25,9 @@ class Application:
         self.__job_queue = JobQueue(context=self.context)
 
     @staticmethod
-    def from_config(path: str):
-        with open(path, 'r') as file:
-            config_dct = json.load(file)
-
-        return Application.from_dict(dct=config_dct)
-
-    @staticmethod
     def from_dict(dct: Dict):
         dct = copy.deepcopy(dct)
-        dct['online-exchange'] = OnlineExchange.from_dict(dct["online-exchange"])
+        dct['online-exchange'] = OnlineExchange.from_dict(dct)
         app = call_with_dict(Application, dct)
 
         return app
