@@ -1,3 +1,4 @@
+import gc
 import time
 from multiprocessing import Process, Queue
 from typing import List
@@ -5,50 +6,56 @@ from typing import List
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
+from rich.progress import Progress
 
 from fintorch.deep.module import Module, create_modules_from_args
 from fintorch.exchange import ONLINE_EXCHANGE
-from fintorch.utils.args import DefaultArgumentParser
+from fintorch.setting import RICH_PROGRESS_COLUMNS
+from fintorch.utils.args import DefaultArgumentParser, DefaultNamespace
 
 
-def target(module: Module, queue: Queue):
+def target(module: Module, queue: Queue, args: DefaultNamespace):
     try:
-        # load data collection
         dc = ONLINE_EXCHANGE.future.data.get_data_collection(symbols=[module.symbol], time_frames=[module.time_frame])
-
-        # optimize folds
         with module:
-            for status in module.optimize(dc=dc):
+            for status in module.optimize(dc=dc, start_date=args.start_date):
                 queue.put(str(status))
+
         queue.put(-1)
     except Exception as e:
         queue.put(str(e))
-        time.sleep(10)
+        time.sleep(20)
         queue.put(-1)
 
 
-def create_process(modules: List[Module]):
+def create_process(modules: List[Module], args: DefaultNamespace):
     for module in modules:
-        # create process
-        process_args = (module, Queue())
-        process = Process(target=target, args=process_args)
-
-        yield process, process_args
+        queue = Queue()
+        process = Process(target=target, args=(module, queue, args))
+        yield process, (module, queue)
 
 
-def run_multi_process(args, modules: List[Module]):
+def run_multi_process(modules: List[Module], args: DefaultNamespace):
     # create rich main layout
-    rows, columns = 6, 4
+    rows_count, columns_count = 5, 5
+
+    overall_progress = Progress(*RICH_PROGRESS_COLUMNS)
+    overall_task = overall_progress.add_task(description="overall jobs", total=len(modules))
+    progress_panel = Panel.fit(overall_progress, title="Overall progress")
+
+    rows = [Layout(name=f"row-{i}") for i in range(rows_count)]
+    rows.append(Layout(progress_panel, name="progress"))
+
     main_layout = Layout()
-    main_layout.split_column(*[Layout(name=f"row-{i}") for i in range(rows)])
+    main_layout.split_column(*rows)
     free_layouts: List[Layout] = []
-    for i in range(rows):
-        layouts = [Layout(Panel("Pending..."), name=f"col-{j}") for j in range(columns)]
+    for i in range(rows_count):
+        layouts = [Layout(Panel("Pending..."), name=f"col-{j}") for j in range(columns_count)]
         main_layout[f"row-{i}"].split_row(*layouts)
         free_layouts.extend(layouts)
 
     # create process generator to avoid from too many open files issue
-    process_generator = create_process(modules=modules)
+    process_generator = create_process(modules=modules, args=args)
 
     # create terminal layout to track processes
     process_to_args = {}
@@ -74,6 +81,7 @@ def run_multi_process(args, modules: List[Module]):
                     if isinstance(message, str):
                         layout.update(Panel(message, title=f"{module}"))
                     elif isinstance(message, int) and -1 == message:
+                        overall_progress.update(task_id=overall_task, advance=1)
                         layout.update(Panel("Pending..."))
                         free_layouts.append(layout)
                         done_process_set.add(process)
@@ -85,12 +93,13 @@ def run_multi_process(args, modules: List[Module]):
             for process in done_process_set:
                 if process in process_to_args:
                     del process_to_args[process]
+                    gc.collect()
 
 
 def main():
     args = DefaultArgumentParser.parse()
     modules = create_modules_from_args(args=args)
-    run_multi_process(args=args, modules=modules)
+    run_multi_process(modules=modules, args=args)
 
 
 if __name__ == '__main__':
