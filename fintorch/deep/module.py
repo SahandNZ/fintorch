@@ -285,8 +285,8 @@ def create_default_module(
 ) -> Module:
     transform_kwargs = copy.deepcopy(TRANSFORM_KWARGS)
     transform_kwargs.update({"symbol": symbol, "time_frame": time_frame})
-    feature_transform = call_with_dict(feature_transform_type, TRANSFORM_KWARGS)
-    label_transform = call_with_dict(label_transform_type, TRANSFORM_KWARGS)
+    feature_transform = call_with_dict(feature_transform_type, transform_kwargs)
+    label_transform = call_with_dict(label_transform_type, transform_kwargs)
     dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=INTERVAL)
     module = Module(dataset=dataset, model_type=model_type, model_kwargs=MODEL_KWARGS)
 
