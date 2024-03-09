@@ -16,15 +16,6 @@ class Metrics:
         self.__prediction: torch.Tensor = torch.argmax(y_hat, dim=-1) if self.classification_task else None
         self.__probability: torch.Tensor = torch.max(y_hat, dim=-1).values if self.classification_task else None
 
-    @staticmethod
-    def get_best_metric(metrics_list: List):
-        best_metric = None
-        for metric in metrics_list:
-            if best_metric is None or best_metric < metric:
-                best_metric = metric
-
-        return best_metric
-
     @property
     def criterion(self) -> Criterion:
         return self.__criterion
@@ -55,15 +46,15 @@ class Metrics:
 
     @property
     def objective(self) -> float:
-        return self.criterion(self.y_hat, self.y).detach().item()
+        return round(self.criterion(self.y_hat, self.y).detach().item(), 4)
 
     @property
     def mse_loss(self) -> float:
-        return nn.functional.mse_loss(self.y_hat, self.y).detach().item()
+        return round(nn.functional.mse_loss(self.y_hat, self.y).detach().item(), 4)
 
     @property
     def mae_loss(self) -> float:
-        return nn.functional.l1_loss(self.y_hat, self.y).detach().item()
+        return round(nn.functional.l1_loss(self.y_hat, self.y).detach().item(), 4)
 
     @property
     def accuracy(self) -> float:
