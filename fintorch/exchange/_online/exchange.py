@@ -12,13 +12,13 @@ class OnlineExchange(Exchange):
 
     @staticmethod
     def from_name(name: str, interval: TimeFrame, proxies: Dict[str, str] = None):
-        dct = {"name": name, "interval": interval, "proxies": proxies}
+        dct = {"exchange-name": name, "interval": interval, "proxies": proxies}
         exchange = OnlineExchange.from_dict(dct=dct)
 
         return exchange
 
     @staticmethod
     def from_dict(dct: Dict):
-        name = dct["name"]
+        name = dct["exchange-name"]
         exchange_cls = import_class(module=f"fintorch.exchange.{name}", contains=f"{name}exchange")
         return call_with_dict(exchange_cls, dct)
