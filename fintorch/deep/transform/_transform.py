@@ -154,10 +154,13 @@ class Transform(Component):
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
             sf = self.timestamp_to_sf.get(shifted_timestamp, None)
             if not self.__is_sf_valid(dc=dc, timestamp=shifted_timestamp, sf=sf):
-                sf = self.__transform_sf(dc=dc, timestamp=shifted_timestamp)
+                sf = self.__transform_dc_to_sf(dc=dc, timestamp=shifted_timestamp)
                 self.timestamp_to_sf[shifted_timestamp] = sf
 
             yield sf
+
+    def transform_df(self, dc: DataCollection) -> pd.DataFrame:
+        return self.__transform_dc_to_df(dc=dc)
 
     def __is_sf_valid(self, dc: DataCollection, timestamp: int, sf: Union[np.array, None]) -> bool:
         start_timestamp = self.get_start_timestamp(dc=dc)
@@ -167,16 +170,16 @@ class Transform(Component):
 
         return is_sf_valid
 
-    def __transform_sf(self, dc: DataCollection, timestamp: int) -> Union[np.array, None]:
+    def __transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> Union[np.array, None]:
         df = self.__transform_dc_to_df(dc=dc, timestamp=timestamp)
         sf = self._transform_df_to_sf(df=df, timestamp=timestamp)
 
         return sf
 
-    def __transform_dc_to_df(self, dc: DataCollection, timestamp: int) -> pd.DataFrame:
-        if 0 == len(self.processed_df) or timestamp not in self.processed_df.index:
-            df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
-            self.__processed_df = self._process_df(df.copy())
+    def __transform_dc_to_df(self, dc: DataCollection, timestamp: Union[int] = None) -> pd.DataFrame:
+        if 0 == len(self.processed_df) or (timestamp is not None and timestamp not in self.processed_df.index):
+            df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame).copy()
+            self.__processed_df = self._process_df(df)
 
         return self.processed_df
 
