@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import Callable, List, Dict, Union
 
@@ -6,12 +7,13 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 from ._context import Context
 from ._job import Job
+from ..enum import TimeFrame
 
 
 class JobQueue:
     def __init__(self, context: Context):
         self.__context: Context = context
-        self.__scheduler = BlockingScheduler(executors={'default': ProcessPoolExecutor(max_workers=8)})
+        self.__scheduler = BlockingScheduler(executors={'default': ProcessPoolExecutor(max_workers=os.cpu_count() - 4)})
 
     @property
     def context(self) -> Context:
@@ -44,7 +46,13 @@ class JobQueue:
         if not self.scheduler.running:
             self.scheduler.start()
 
-    def run_once(self, callback: Callable, args: List = None, kwargs: Dict = None) -> Job:
+    def run_once(
+            self,
+            callback: Callable,
+            args: List = None,
+            kwargs: Dict = None,
+            misfire_grace_time: int = None
+    ) -> Job:
         args = self._cast_args(args)
         kwargs = self._cast_kwargs(kwargs)
 
@@ -53,12 +61,20 @@ class JobQueue:
             func=job.run,
             name=job.name,
             args=(self.__context, args, kwargs),
+            misfire_grace_time=misfire_grace_time
         )
 
         return job
 
-    def run_repeating(self, callback: Callable, interval: int, args: List = None, kwargs: Dict = None,
-                      when: str = 'any', misfire_grace_time: int = None) -> Job:
+    def run_repeating(
+            self,
+            callback: Callable,
+            interval: int,
+            args: List = None,
+            kwargs: Dict = None,
+            when: str = 'any',
+            misfire_grace_time: int = None
+    ) -> Job:
         args = self._cast_args(args)
         kwargs = self._cast_kwargs(kwargs)
         start_date = self._cast_when(interval=interval, when=when)
