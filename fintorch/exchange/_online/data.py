@@ -93,7 +93,7 @@ class OnlineData(Data, Network, ABC):
 
         # assign value to start timestamp
         if 0 == len(df):
-            if CANDLE_COUNTS is None:
+            if 0 < CANDLE_COUNTS:
                 symbol_info = self.get_symbol_info(symbol=symbol)
                 start_timestamp = symbol_info.on_board_timestamp
             else:
