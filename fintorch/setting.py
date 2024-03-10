@@ -35,11 +35,11 @@ TIME_FRAME = TimeFrame.DAY1
 EXCHANGE_NAME = os.environ.get("FINTORCH_EXCHANGE_NAME", "binance")
 
 # intervals
-INTERVAL = os.environ.get("FINTORCH_TRADING_INTERVAL", TimeFrame.MIN15)
+INTERVAL = int(os.environ.get("FINTORCH_TRADING_INTERVAL", TimeFrame.MIN15))
 
 # Data
-BASE_TIME_FRAME = os.environ.get("FINTORCH_BASE_TIME_FRAME", 900)
-CANDLE_COUNTS = os.environ.get("FINTORCH_CANDLE_COUNTS", None)
+BASE_TIME_FRAME = int(os.environ.get("FINTORCH_BASE_TIME_FRAME", 900))
+CANDLE_COUNTS = int(os.environ.get("FINTORCH_CANDLE_COUNTS", -1))
 
 # Rich progress columns
 RICH_PROGRESS_COLUMNS = [
