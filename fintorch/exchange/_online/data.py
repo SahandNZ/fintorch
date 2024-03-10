@@ -13,7 +13,7 @@ from .network import Https, Network, Wss
 from .. import Data
 from ...dtype import Candle, DataCollection, SymbolInfo
 from ...enum import MarketType, TimeFrame
-from ...setting import BASE_TIME_FRAME, CANDLE_COUNTS, FINTORCH_DATA_DIR
+from ...setting import BASE_TIME_FRAME, CANDLES_COUNT, FINTORCH_DATA_DIR
 from ...utils.directory import create_directory
 from ...utils.pandas import resample_df
 
@@ -93,12 +93,12 @@ class OnlineData(Data, Network, ABC):
 
         # assign value to start timestamp
         if 0 == len(df):
-            if 0 < CANDLE_COUNTS:
+            if 0 < CANDLES_COUNT:
                 symbol_info = self.get_symbol_info(symbol=symbol)
                 start_timestamp = symbol_info.on_board_timestamp
             else:
                 current_open_timestamp = datetime.now().timestamp() // int(time_frame) * int(time_frame)
-                start_timestamp = current_open_timestamp - CANDLE_COUNTS * time_frame
+                start_timestamp = current_open_timestamp - CANDLES_COUNT * time_frame
         else:
             start_timestamp = df.index[-1] + time_frame
 

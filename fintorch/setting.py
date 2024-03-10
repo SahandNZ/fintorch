@@ -39,7 +39,7 @@ INTERVAL = int(os.environ.get("FINTORCH_TRADING_INTERVAL", TimeFrame.MIN15))
 
 # Data
 BASE_TIME_FRAME = int(os.environ.get("FINTORCH_BASE_TIME_FRAME", 900))
-CANDLE_COUNTS = int(os.environ.get("FINTORCH_CANDLE_COUNTS", -1))
+CANDLES_COUNT = int(os.environ.get("FINTORCH_CANDLES_COUNT", -1))
 
 # Rich progress columns
 RICH_PROGRESS_COLUMNS = [
