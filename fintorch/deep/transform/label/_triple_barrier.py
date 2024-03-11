@@ -9,7 +9,7 @@ class TripleBarrierLabelTransform(LabelTransform):
     def __init__(self, symbol: str, time_frame: TimeFrame, forward: int = 10):
         super().__init__(
             name="Triple Barrier",
-            short_name="T-Bar",
+            short_name="T-Barrier",
             description="",
             symbol=symbol,
             time_frame=time_frame,
