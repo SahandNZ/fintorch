@@ -6,11 +6,11 @@ from ._feature_transform import FeatureTransform
 from ....enum import TimeFrame
 
 
-class TechnicalAnalysisFeatureTransform(FeatureTransform):
+class TechnicalTrendIndicatorsFeatureTransform(FeatureTransform):
     def __init__(self, symbol: str, time_frame: TimeFrame, dim_sequence: int, backward: int = 11):
         super().__init__(
-            name="Technical Analysis Feature Transform",
-            short_name="TA",
+            name="Technical Trend Indicators Feature Transform",
+            short_name="TIND",
             symbol=symbol,
             time_frame=time_frame,
             dim_sequence=dim_sequence,
