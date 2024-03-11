@@ -11,8 +11,8 @@ LABEL_TRANSFORM_TYPES = [
     ForwardBackwardMinimumLabelTransform,
     ForwardIchimokuLabelTransform,
     ForwardMiddleSmaLabelTransform,
-    ForwardRocLabelTransform,
-    NextFractalLabelTransform,
+    # ForwardRocLabelTransform,
+    # NextFractalLabelTransform,
     TripleBarrierLabelTransform,
-    UpDownLabelTransform,
+    # UpDownLabelTransform,
 ]
