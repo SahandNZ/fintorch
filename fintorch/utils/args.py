@@ -23,6 +23,9 @@ from fintorch.setting import (
     LR,
     SHUFFLE,
     BATCH_SIZE,
+    VAL_LENGTH,
+    TEST_LENGTH,
+    TRAIN_LENGTH,
     EPOCHS_COUNT,
     WEIGHT_DECAY,
     GRADIENT_CLIPPING_THRESHOLD,
@@ -82,7 +85,7 @@ class DefaultArgumentParser(argparse.ArgumentParser):
 
         # process args
         self.add_argument("--app-config", action="store", type=str, required=False, default="app")
-        self.add_argument("--stf-config", action="store", type=str, required=False, default="5-daily")
+        self.add_argument("--stf-config", action="store", type=str, required=False, default="btc-eth-daily")
         self.add_argument("--max-workers", action="store", type=int, required=False, default=os.cpu_count())
 
         # market args
@@ -103,6 +106,9 @@ class DefaultArgumentParser(argparse.ArgumentParser):
         self.add_argument("--lr", action="store", type=float, required=False, default=LR)
         self.add_argument("--shuffle", action="store", type=bool, required=False, default=SHUFFLE)
         self.add_argument("--batch-size", action="store", type=int, required=False, default=BATCH_SIZE)
+        self.add_argument("--val-length", action="store", type=int, required=False, default=VAL_LENGTH)
+        self.add_argument("--test-length", action="store", type=int, required=False, default=TEST_LENGTH)
+        self.add_argument("--train-length", action="store", type=int, required=False, default=TRAIN_LENGTH)
         self.add_argument("--epochs-count", action="store", type=int, required=False, default=EPOCHS_COUNT)
         self.add_argument("--weight-decay", action="store", type=float, required=False, default=WEIGHT_DECAY)
         self.add_argument("--gct", action="store", type=float, required=False, default=GRADIENT_CLIPPING_THRESHOLD)
