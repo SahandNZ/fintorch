@@ -1,3 +1,5 @@
+import math
+
 import pandas as pd
 from matplotlib import pyplot as plt
 
@@ -6,7 +8,7 @@ from ....enum import TimeFrame
 
 
 class ForwardMiddleSmaLabelTransform(LabelTransform):
-    def __init__(self, symbol: str, time_frame: TimeFrame, forward: int = 10, length: int = 21):
+    def __init__(self, symbol: str, time_frame: TimeFrame, forward: int = 5, length: int = 11):
         super().__init__(
             name="Forward Middle Simple Moving Average",
             short_name="F.M-SMA",
@@ -15,7 +17,7 @@ class ForwardMiddleSmaLabelTransform(LabelTransform):
                         "with the forward values to assign trend labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
-            look_ahead=length // 2 + forward,
+            look_ahead=math.ceil(forward + length / 2),
             classes=["UP", "DOWN"]
         )
 
