@@ -14,7 +14,7 @@ class UpDownLabelTransform(LabelTransform):
                         "to assign trend labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
-            look_ahead=0,
+            look_ahead=1,
             classes=["UP", "DOWN"]
         )
 
