@@ -14,7 +14,7 @@ class NextFractalLabelTransform(LabelTransform):
                         "to assign trend labels to the data.",
             symbol=symbol,
             time_frame=time_frame,
-            look_ahead=length // 2 * 2,
+            look_ahead=length * 2,
             classes=["UP", "DOWN"]
         )
 
