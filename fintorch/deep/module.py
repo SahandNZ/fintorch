@@ -37,6 +37,9 @@ from ..setting import (
     LR,
     SHUFFLE,
     BATCH_SIZE,
+    VAL_LENGTH,
+    TEST_LENGTH,
+    TRAIN_LENGTH,
     EPOCHS_COUNT,
     WEIGHT_DECAY,
     GRADIENT_CLIPPING_THRESHOLD,
@@ -57,6 +60,9 @@ class Module(ABC):
             lr: float = LR,
             shuffle: bool = SHUFFLE,
             batch_size: int = BATCH_SIZE,
+            val_length: int = VAL_LENGTH,
+            test_length: int = TEST_LENGTH,
+            train_length: int = TRAIN_LENGTH,
             epochs_count: int = EPOCHS_COUNT,
             weight_decay: float = WEIGHT_DECAY,
             gradient_clipping_threshold: float = GRADIENT_CLIPPING_THRESHOLD
@@ -67,7 +73,12 @@ class Module(ABC):
         self.__model_kwargs: Dict[str, Any] = model_kwargs
         self.__model: Union[Model, None] = None
 
-        self.__cross_validation = CrossValidation(interval=self.dataset.interval)
+        self.__cross_validation = CrossValidation(
+            interval=self.dataset.interval,
+            train_length=train_length,
+            val_length=val_length,
+            test_length=test_length
+        )
         self.__trainer: Trainer = Trainer(
             data_loader=DataLoader(batch_size=batch_size, post_load_fn=Module._post_load_fn),
             criterion=CE(),
@@ -78,9 +89,9 @@ class Module(ABC):
             gradient_clipping_threshold=gradient_clipping_threshold,
         )
 
-        self.__directory: str = None
-        self.__folds_dict_path: str = None
-        self.__folds_dict: Dict[Tuple[int, int], Fold] = None
+        self.__directory: str = ""
+        self.__folds_dict_path: str = ""
+        self.__folds_dict: Dict[Tuple[int, int], Fold] = {}
 
     @property
     def dataset(self) -> Dataset:
