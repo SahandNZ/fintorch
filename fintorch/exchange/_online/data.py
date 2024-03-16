@@ -112,8 +112,6 @@ class OnlineData(Data, Network, ABC):
         else:
             start_timestamp = df.index[-1] + time_frame
 
-        print(datetime.fromtimestamp(start_timestamp))
-
         new_df = self.__send_get_candles_requests(symbol, time_frame, start_timestamp, progress=progress)
         updated_df = pd.concat([df, new_df]) if 0 != len(new_df) and 0 != len(df) else (df if 0 != len(df) else new_df)
         corrected_df = self.__check_candles_dataframe(symbol=symbol, time_frame=time_frame, df=updated_df)
