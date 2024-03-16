@@ -14,4 +14,4 @@ class SymbolInfo:
 
     @property
     def on_board_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.on_board_timestamp)
+        return datetime.fromtimestamp(self.on_board_timestamp) if self.on_board_timestamp is not None else None
