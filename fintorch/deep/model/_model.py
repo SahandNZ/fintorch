@@ -40,7 +40,7 @@ class Model(nn.Module, Component, ABC):
             self.dim_output,
             self.num_hidden_layers,
             self.batch_norm,
-            self.dropout,
+            self.dropout * 10 ** 2,
         ])
 
     @property
