@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import List, Dict
 
 from ._network.decorator import *
@@ -24,14 +23,8 @@ class BinanceFutureData(OnlineData):
     def get_current_timestamp(self) -> int:
         endpoint = '/fapi/v1/time'
         response = self._https.get(endpoint=endpoint)
-        server_time = int(response['serverTime'])
+        server_time = int(response['serverTime']) // 1000
         return server_time
-
-    def get_ping(self) -> int:
-        local = datetime.now().timestamp() * 1000
-        server = self.get_current_timestamp()
-        ping = round(server - local)
-        return ping
 
     @decode_symbol
     def _get_symbols_info(self) -> List[SymbolInfo]:
