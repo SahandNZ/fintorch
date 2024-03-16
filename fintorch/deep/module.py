@@ -48,7 +48,7 @@ from ..utils.args import DefaultNamespace
 from ..utils.directory import create_directory
 from ..utils.function import call_with_dict
 from ..utils.plot import draw_predictions
-from ..utils.timestamp import to_datetime
+from ..utils.timestamp import to_datetime, to_timestamp
 
 
 class Module(ABC):
@@ -156,6 +156,15 @@ class Module(ABC):
         except (FileNotFoundError, EOFError, pickle.UnpicklingError):
             self.__folds_dict = {}
 
+        # remove uncompleted folds from self.folds_dict
+        uncompleted_keys = []
+        for key, fold in self.folds_dict.items():
+            if len(fold.epochs) < self.trainer.epochs_count:
+                uncompleted_keys.append(key)
+
+        for key in uncompleted_keys:
+            del self.folds_dict[key]
+
     def close(self) -> None:
         self.dataset.close()
 
@@ -183,9 +192,20 @@ class Module(ABC):
     def get_test_stop_timestamp(self, dc: DataCollection) -> int:
         return self.dataset.feature_transform.get_stop_timestamp(dc=dc)
 
-    def get_test_timestamps(self, dc: DataCollection) -> List[int]:
+    def get_test_timestamps(
+            self,
+            dc: DataCollection,
+            start_date: Union[str, None],
+            stop_date: Union[str, None]
+    ) -> List[int]:
         test_start_timestamp = self.get_test_start_timestamp(dc=dc)
         test_stop_timestamp = self.get_test_stop_timestamp(dc=dc)
+
+        if start_date is not None:
+            test_start_timestamp = max(test_start_timestamp, to_timestamp(date=start_date))
+        if stop_date is not None:
+            test_stop_timestamp = min(test_stop_timestamp, to_timestamp(date=stop_date))
+
         return list(range(test_start_timestamp, test_stop_timestamp, self.time_frame))
 
     def optimize(self, dc: DataCollection, start_date: Union[str, None] = None) -> Generator[Status, None, None]:
@@ -304,6 +324,23 @@ def create_default_module(
     return module
 
 
+def create_module_from_args(
+        feature_transform_type: Type[FeatureTransform],
+        label_transform_type: Type[LabelTransform],
+        model_type: Type[Model],
+        args: DefaultNamespace
+) -> Module:
+    feature_transform = call_with_dict(feature_transform_type, args.transform_kwargs)
+    label_transform = call_with_dict(label_transform_type, args.transform_kwargs)
+    dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=args.interval)
+
+    kwargs = {"dataset": dataset, "model_type": model_type}
+    kwargs.update(args.__dict__)
+    module = call_with_dict(Module, kwargs)
+
+    return module
+
+
 def create_default_modules(symbols: List[str], time_frames: List[TimeFrame]) -> List[Module]:
     modules = []
     items = itertools.product(
@@ -327,7 +364,7 @@ def create_default_modules(symbols: List[str], time_frames: List[TimeFrame]) -> 
     return modules
 
 
-def create_modules_from_args(args: DefaultNamespace) -> List[Module]:
+def create_default_modules_from_args(args: DefaultNamespace) -> List[Module]:
     modules = []
     items = itertools.product(
         args.symbols,
