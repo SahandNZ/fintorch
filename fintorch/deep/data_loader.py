@@ -21,7 +21,7 @@ class DataLoader:
         self.__shuffle: bool = None
         self._index: int = -1
 
-        self.__static_hash: int = static_hash(self.batch_count)
+        self.__static_hash: int = static_hash(self.batch_size)
 
     @property
     def batch_size(self) -> int:
