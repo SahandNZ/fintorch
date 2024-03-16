@@ -1,6 +1,6 @@
 import gc
 import time
-from multiprocessing import Process, Queue
+from multiprocessing import Queue, Process
 from typing import List
 
 from rich.layout import Layout
@@ -28,13 +28,6 @@ def target(module: Module, queue: Queue, args: DefaultNamespace):
         queue.put(-1)
 
 
-def create_process(modules: List[Module], args: DefaultNamespace):
-    for module in modules:
-        queue = Queue()
-        process = Process(target=target, args=(module, queue, args))
-        yield process, (module, queue)
-
-
 def run_multi_process(modules: List[Module], args: DefaultNamespace):
     # create rich main layout
     rows_count, columns_count = 5, 5
@@ -54,23 +47,32 @@ def run_multi_process(modules: List[Module], args: DefaultNamespace):
         main_layout[f"row-{i}"].split_row(*layouts)
         free_layouts.extend(layouts)
 
-    # create process generator to avoid from too many open files issue
-    process_generator = create_process(modules=modules, args=args)
-
-    # create terminal layout to track processes
-    process_to_args = {}
-    process_to_layout = {}
+    # multi process life cycles and properties
+    pending_process_set = set()
     running_process_set = set()
     done_process_set = set()
+    process_to_layout = {}
+    process_to_args = {}
+
+    # Create pending processes and add them to set
+    for module in modules:
+        queue = Queue()
+        process = Process(target=target, args=(module, queue, args))
+        process_to_args[process] = (module, queue)
+        pending_process_set.add(process)
+
+    # Update main_layout to track processes
     with Live(main_layout, refresh_per_second=2):
         while len(done_process_set) < len(modules):
-            # start process if there is free worker (processor)
-            if len(running_process_set) < args.max_workers:
-                process, process_args = next(process_generator)
-                process_to_args[process] = process_args
+            # start process if there is free worker and work to do
+            if len(running_process_set) < args.max_workers and 0 < len(pending_process_set):
+                process = pending_process_set.pop()
                 process_to_layout[process] = free_layouts.pop(0)
                 running_process_set.add(process)
                 process.start()
+
+            # remove running processes from pending process set
+            pending_process_set = pending_process_set - running_process_set
 
             # update terminal live display
             for process in running_process_set:
