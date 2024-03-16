@@ -16,8 +16,8 @@ class Optimizer(ABC):
 
         # static hash calculations
         sorted_kwargs = {k: v for k, v in sorted(self.__kwargs.items(), key=lambda item: item[0])}
-        lr = sorted_kwargs.pop("lr") / 1e-5
-        weight_decay = sorted_kwargs.pop("weight_decay") / 1e-5
+        lr = sorted_kwargs.pop("lr") * 10 ** 5
+        weight_decay = sorted_kwargs.pop("weight_decay") * 10 ** 5
         self.__static_hash: int = static_list_hash(
             [
                 self.__torch_optimizer_type.__name__,
