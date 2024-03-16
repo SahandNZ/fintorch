@@ -13,7 +13,7 @@ from ..enum import TimeFrame
 class JobQueue:
     def __init__(self, context: Context):
         self.__context: Context = context
-        self.__scheduler = BlockingScheduler(executors={'default': ProcessPoolExecutor(max_workers=os.cpu_count() - 4)})
+        self.__scheduler = BlockingScheduler(executors={'default': ProcessPoolExecutor(max_workers=8)})
 
     @property
     def context(self) -> Context:
