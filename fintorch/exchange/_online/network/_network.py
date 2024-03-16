@@ -1,7 +1,7 @@
 from abc import ABC
 
-from fintorch.exchange._online.network._https import Https
-from fintorch.exchange._online.network._wss import Wss
+from ._https import Https
+from ._wss import Wss
 
 
 class Network(ABC):

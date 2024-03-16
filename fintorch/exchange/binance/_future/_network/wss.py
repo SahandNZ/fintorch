@@ -1,7 +1,7 @@
 import json
 from typing import Dict, Callable, Any
 
-from fintorch.exchange._online import Wss
+from ...._online import Wss
 
 
 class BinanceFutureWss(Wss):

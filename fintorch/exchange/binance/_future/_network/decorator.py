@@ -1,6 +1,6 @@
 from typing import Callable
 
-from fintorch.utils.decorator import encode_param, decode_field
+from .....utils.decorator import encode_param, decode_field
 from .decoder import *
 from .encoder import *
 

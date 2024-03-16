@@ -5,7 +5,7 @@ from urllib import parse
 import requests
 from requests import Response
 
-from fintorch.exchange._online.network._protocol import Protocol
+from ._protocol import Protocol
 
 
 class Https(Protocol):
@@ -27,8 +27,14 @@ class Https(Protocol):
     def __request(self, method: str, endpoint: str, params: Dict, sign: bool):
         url = parse.urljoin(self._base_url, endpoint)
         headers, params, body = self.prepare(method, endpoint, params, sign)
-        response = requests.request(method=method, url=url, headers=headers, params=params, proxies=self._proxies,
-                                    **body)
+        response = requests.request(
+            method=method,
+            url=url,
+            headers=headers,
+            params=params,
+            proxies=self._proxies,
+            **body
+        )
         data = self.parse(response)
         return data
 

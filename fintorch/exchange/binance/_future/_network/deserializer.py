@@ -1,9 +1,7 @@
 from datetime import datetime
 from typing import Dict
 
-import numpy as np
-
-from fintorch.dtype import Candle, Order, SymbolInfo, Position
+from .....dtype import Candle, Order, SymbolInfo, Position
 
 
 def candle_deserializer(data: Dict):

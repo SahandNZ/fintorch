@@ -1,4 +1,4 @@
-from fintorch.enum import OrderSide, OrderStatus, OrderType, PositionSide
+from .....enum import OrderSide, OrderStatus, OrderType, PositionSide
 
 
 def symbol_decoder(symbol: str) -> str:

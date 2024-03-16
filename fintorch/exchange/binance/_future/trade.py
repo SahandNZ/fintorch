@@ -1,10 +1,8 @@
 from typing import Dict, List
 
-from ._network.decorator import *
 from ._network.https import BinanceFutureHttps
-from ._network.wss import BinanceFutureWss
 from ..._online import OnlineTrade
-from ....dtype import Balance, Order, Position
+from ....dtype import Order, Position
 from ....enum import MarketType, TimeFrame
 
 
@@ -12,7 +10,6 @@ class BinanceFutureTrade(OnlineTrade):
     def __init__(self, exchange_name: str, market_type: MarketType, interval: TimeFrame, key: str = None,
                  secret_key: str = None, proxies: Dict = None):
         https = BinanceFutureHttps(key=key, secret_key=secret_key, proxies=proxies)
-        # wss = BinanceFutureWss(key=key, secret_key=secret_key, proxies=proxies)
         super().__init__(exchange_name=exchange_name, market_type=market_type, interval=interval, https=https, wss=None)
 
     def get_leverage(self, symbol: str) -> int:
