@@ -16,6 +16,7 @@ from ...enum import MarketType, TimeFrame
 from ...setting import BASE_TIME_FRAME, CANDLES_COUNT, FINTORCH_DATA_DIR
 from ...utils.directory import create_directory
 from ...utils.pandas import resample_df
+from ...utils.timestamp import to_timestamp
 
 
 class OnlineData(Data, Network, ABC):
@@ -29,10 +30,11 @@ class OnlineData(Data, Network, ABC):
 
     def prepare(self, symbols: List[str], time_frames: List[TimeFrame]) -> None:
         super().prepare(symbols=symbols, time_frames=time_frames)
-        self.__last_update_timestamp = math.inf
+        self.__last_update_timestamp = to_timestamp(date="2019-01-01")
         for symbol, time_frame in itertools.product(symbols, time_frames):
             df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
-            self.__last_update_timestamp = min(self.__last_update_timestamp, df.index[-1])
+            if 0 < len(df):
+                self.__last_update_timestamp = min(self.__last_update_timestamp, df.index[-1])
 
     def next(self, timestamp: int) -> None:
         super().next(timestamp=timestamp)
@@ -40,6 +42,12 @@ class OnlineData(Data, Network, ABC):
             self.__last_update_timestamp = timestamp
             for symbol in self.symbols:
                 self.update_candles_dataframe(symbol=symbol, time_frame=BASE_TIME_FRAME)
+
+    def get_ping(self) -> int:
+        local = datetime.now().timestamp() * 1000
+        server = self.get_current_timestamp()
+        ping = round(server - local)
+        return ping
 
     def get_symbols(self) -> List[str]:
         return [symbol_info.symbol for symbol_info in self.get_symbols_info()]
@@ -83,24 +91,28 @@ class OnlineData(Data, Network, ABC):
 
     def update_symbols_info(self, symbol: Union[str, None]):
         self.__symbols_info_dict = self.__load_symbols_info_dict()
-        if symbol is not None and symbol not in self.__symbols_info_dict:
+        if 0 == len(self.__symbols_info_dict) or (symbol is not None and symbol not in self.__symbols_info_dict):
             symbols_info_list = self._get_symbols_info()
             self.__symbols_info_dict = {symbol_info.symbol: symbol_info for symbol_info in symbols_info_list}
             self.__save_symbols_info_dict(symbols_info_dict=self.__symbols_info_dict)
 
     def update_candles_dataframe(self, symbol: str, time_frame: TimeFrame, progress: Progress = None) -> pd.DataFrame:
+        symbol_info = self.get_symbol_info(symbol=symbol)
         df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
 
         # assign value to start timestamp
         if 0 == len(df):
             if 0 < CANDLES_COUNT:
-                symbol_info = self.get_symbol_info(symbol=symbol)
-                start_timestamp = symbol_info.on_board_timestamp
-            else:
                 current_open_timestamp = datetime.now().timestamp() // int(time_frame) * int(time_frame)
                 start_timestamp = current_open_timestamp - CANDLES_COUNT * time_frame
+            elif symbol_info.on_board_timestamp is not None:
+                start_timestamp = symbol_info.on_board_timestamp
+            else:
+                start_timestamp = to_timestamp(date="2019-01-01")
         else:
             start_timestamp = df.index[-1] + time_frame
+
+        print(datetime.fromtimestamp(start_timestamp))
 
         new_df = self.__send_get_candles_requests(symbol, time_frame, start_timestamp, progress=progress)
         updated_df = pd.concat([df, new_df]) if 0 != len(new_df) and 0 != len(df) else (df if 0 != len(df) else new_df)
@@ -124,7 +136,7 @@ class OnlineData(Data, Network, ABC):
         try:
             with open(self.__symbols_info_path(), "rb") as file:
                 symbols_info_dict = pickle.load(file)
-        except (FileNotFoundError, EOFError):
+        except (FileNotFoundError, EOFError, pickle.UnpicklingError):
             symbols_info_dict = {}
 
         return symbols_info_dict
@@ -155,8 +167,6 @@ class OnlineData(Data, Network, ABC):
         for index, value in enumerate(missed_values):
             if value:
                 raise NotImplementedError()
-
-        return self.__check_candles_dataframe(symbol=symbol, time_frame=time_frame, df=df)
 
     def __check_candles_dataframe(self, symbol: str, time_frame: TimeFrame, df: pd.DataFrame) -> pd.DataFrame:
         indices = df.index.to_series()
@@ -200,8 +210,12 @@ class OnlineData(Data, Network, ABC):
 
             # send request
             if req_start_ts < req_stop_ts:
-                req_candles = self._get_historical_candles(symbol=symbol, time_frame=time_frame,
-                                                           start_timestamp=req_start_ts, stop_timestamp=req_stop_ts)
+                req_candles = self._get_historical_candles(
+                    symbol=symbol,
+                    time_frame=time_frame,
+                    start_timestamp=req_start_ts,
+                    stop_timestamp=req_stop_ts
+                )
                 candles.extend(req_candles)
 
             # update progress bar
