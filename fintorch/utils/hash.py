@@ -4,12 +4,12 @@ from typing import List, Union
 def static_hash(value: Union[str, int, float]) -> int:
     if isinstance(value, str):
         hash_value = int.from_bytes(value.encode(), byteorder="big") % (17 ** 8)
-    elif isinstance(value, int) or isinstance(value, float):
+    elif isinstance(value, int):
         hash_value = value % (11 ** 8)
     elif isinstance(value, bool):
         hash_value = int(value)
     else:
-        hash_value = 1
+        raise ValueError(f"Value must be type of str, integer, or boolean not type of {type(value)}.")
 
     hash_value = 773 if 0 == hash_value else hash_value
 
