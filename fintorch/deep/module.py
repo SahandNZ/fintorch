@@ -5,6 +5,7 @@ import os.path
 import pickle
 import time
 from abc import ABC
+from datetime import datetime
 from typing import Any, Dict, Generator, List, Tuple, Type, Union
 
 import matplotlib.pyplot as plt
@@ -48,7 +49,7 @@ from ..utils.args import DefaultNamespace
 from ..utils.directory import create_directory
 from ..utils.function import call_with_dict
 from ..utils.plot import draw_predictions
-from ..utils.timestamp import to_datetime, to_timestamp
+from ..utils.timestamp import to_timestamp
 
 
 class Module(ABC):
@@ -178,53 +179,59 @@ class Module(ABC):
         self.__model = None
         gc.collect()
 
-    def get_test_start_timestamp(self, dc: DataCollection) -> int:
-        start_timestamp = self.dataset.feature_transform.get_start_timestamp(dc=dc)
-        stop_timestamp = self.dataset.feature_transform.get_stop_timestamp(dc=dc)
+    def get_start_timestamp(self, dc: DataCollection) -> int:
+        first_timestamp = self.dataset.feature_transform.get_start_timestamp(dc=dc)
+        last_timestamp = self.dataset.feature_transform.get_stop_timestamp(dc=dc)
 
         tmp_cross_validation = copy.deepcopy(self.cross_validation)
-        tmp_cross_validation(start_timestamp=start_timestamp, stop_timestamp=stop_timestamp)
-        test_start_timestamp = tmp_cross_validation.start_timestamp
+        tmp_cross_validation(first_timestamp=first_timestamp, last_timestamp=last_timestamp)
+        start_timestamp = tmp_cross_validation.start_timestamp
         del tmp_cross_validation
 
-        return test_start_timestamp
+        return start_timestamp
 
-    def get_test_stop_timestamp(self, dc: DataCollection) -> int:
+    def get_stop_timestamp(self, dc: DataCollection) -> int:
         return self.dataset.feature_transform.get_stop_timestamp(dc=dc)
 
-    def get_test_timestamps(
+    def get_timestamps(
             self,
             dc: DataCollection,
-            start_date: Union[str, None],
-            stop_date: Union[str, None]
+            start_date: Union[str, None] = None,
+            stop_date: Union[str, None] = None
     ) -> List[int]:
-        test_start_timestamp = self.get_test_start_timestamp(dc=dc)
-        test_stop_timestamp = self.get_test_stop_timestamp(dc=dc)
+        start_timestamp = self.get_start_timestamp(dc=dc)
+        stop_timestamp = self.get_stop_timestamp(dc=dc)
 
         if start_date is not None:
-            test_start_timestamp = max(test_start_timestamp, to_timestamp(date=start_date))
+            start_timestamp = max(start_timestamp, to_timestamp(date=start_date))
         if stop_date is not None:
-            test_stop_timestamp = min(test_stop_timestamp, to_timestamp(date=stop_date))
+            stop_timestamp = min(stop_timestamp, to_timestamp(date=stop_date))
 
-        return list(range(test_start_timestamp, test_stop_timestamp, self.time_frame))
+        return list(range(start_timestamp, stop_timestamp, self.time_frame))
 
-    def optimize(self, dc: DataCollection, start_date: Union[str, None] = None) -> Generator[Status, None, None]:
+    def optimize(
+            self,
+            dc: DataCollection,
+            start_date: Union[str, None] = None,
+            stop_date: Union[str, None] = None,
+    ) -> Generator[Status, None, None]:
         # parse start_date
-        start_date = to_datetime(date=start_date) if start_date is not None else None
+        start_timestamp = to_timestamp(date=start_date) if start_date is not None else None
+        stop_timestamp = to_timestamp(date=stop_date) if stop_date is not None else None
 
         # setup cross validation
-        start_timestamp = self.dataset.feature_transform.get_start_timestamp(dc=dc)
-        stop_timestamp = self.dataset.feature_transform.get_stop_timestamp(dc=dc)
-        folds_iterator = self.cross_validation(start_timestamp=start_timestamp, stop_timestamp=stop_timestamp)
+        first_timestamp = self.dataset.feature_transform.get_start_timestamp(dc=dc)
+        last_timestamp = self.dataset.feature_transform.get_stop_timestamp(dc=dc)
+        folds_iterator = self.cross_validation(
+            first_timestamp=first_timestamp,
+            last_timestamp=last_timestamp,
+            start_timestamp=start_timestamp,
+            stop_timestamp=stop_timestamp
+        )
 
         # optimize new folds
         status = Status(total_folds_count=self.cross_validation.folds_count)
         for fold in folds_iterator:
-            # skip folds which are not include in start_timestamp
-            if start_date is not None and fold.test_stop_timestamp < start_date.timestamp():
-                status.total_folds_count -= 1
-                continue
-
             start_time = time.time()
             key = (fold.test_start_timestamp, fold.test_stop_timestamp)
             if key in self.folds_dict:
@@ -257,11 +264,17 @@ class Module(ABC):
         # set missed timestamps to None
         missed_timestamps = [ts for ts in timestamps if ts not in y_hats_dict]
         y_hats_dict.update({ts: None for ts in missed_timestamps})
+        y_hats_dict = {k: v for k, v in sorted(y_hats_dict.items(), key=lambda item: item[0])}
 
         return y_hats_dict
 
-    def draw_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str, mode: str = "val") \
-            -> Tuple[plt.Figure, plt.Axes, pd.DataFrame]:
+    def draw_ohlc_plot(
+            self,
+            dc: DataCollection,
+            start_date: str,
+            stop_date: str,
+            mode: str = "val"
+        ) -> Tuple[plt.Figure, plt.Axes, pd.DataFrame]:
         # draw ohlc and labels
         fig, ohlc_ax, df = self.dataset.label_transform.draw_ohlc_plot(
             dc=dc,
@@ -271,7 +284,9 @@ class Module(ABC):
 
         # add prediction column to df
         y_hats_dict = self.predict(dc=dc, timestamps=df.index.to_list(), mode=mode)
-        df["prediction"] = [np.argmax(value) for value in y_hats_dict.values()]
+        prediction_dict = {k: np.argmax(v) for k, v in y_hats_dict.items() if v is not None}
+        prediction_dict.update({k: np.nan for k, v in y_hats_dict.items() if v is None})
+        df["prediction"] = prediction_dict.values()
 
         # draw predictions
         df.reset_index(drop=False, inplace=True)
