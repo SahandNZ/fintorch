@@ -1,9 +1,9 @@
-import itertools
-import math
 import os
+import math
 import pickle
-from abc import ABC, abstractmethod
+import itertools
 from datetime import datetime
+from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Union
 
 import pandas as pd
@@ -30,11 +30,10 @@ class OnlineData(Data, Network, ABC):
 
     def prepare(self, symbols: List[str], time_frames: List[TimeFrame]) -> None:
         super().prepare(symbols=symbols, time_frames=time_frames)
-        self.__last_update_timestamp = to_timestamp(date="2019-01-01")
+        self.__last_update_timestamp = math.inf
         for symbol, time_frame in itertools.product(symbols, time_frames):
             df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
-            if 0 < len(df):
-                self.__last_update_timestamp = min(self.__last_update_timestamp, df.index[-1])
+            self.__last_update_timestamp = min(self.__last_update_timestamp, df.index[-1])
 
     def next(self, timestamp: int) -> None:
         super().next(timestamp=timestamp)
@@ -96,7 +95,7 @@ class OnlineData(Data, Network, ABC):
             self.__symbols_info_dict = {symbol_info.symbol: symbol_info for symbol_info in symbols_info_list}
             self.__save_symbols_info_dict(symbols_info_dict=self.__symbols_info_dict)
 
-    def update_candles_dataframe(self, symbol: str, time_frame: TimeFrame, progress: Progress = None) -> pd.DataFrame:
+    def update_candles_dataframe(self, symbol: str, time_frame: TimeFrame, progress: Progress = None):
         symbol_info = self.get_symbol_info(symbol=symbol)
         df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
 
@@ -115,9 +114,8 @@ class OnlineData(Data, Network, ABC):
         new_df = self.__send_get_candles_requests(symbol, time_frame, start_timestamp, progress=progress)
         updated_df = pd.concat([df, new_df]) if 0 != len(new_df) and 0 != len(df) else (df if 0 != len(df) else new_df)
         corrected_df = self.__check_candles_dataframe(symbol=symbol, time_frame=time_frame, df=updated_df)
-        self.__save_candles_dataframe(symbol=symbol, time_frame=time_frame, df=corrected_df)
-
-        return corrected_df
+        self.__save_candles_dataframe(symbol=symbol, time_frame=time_frame, df=corrected_df[:-1])
+        self.__candles_df_dict[(symbol, time_frame)] = corrected_df
 
     def __exchange_data_directory(self) -> str:
         data_directory = str(os.path.join(FINTORCH_DATA_DIR, self.exchange_name, str(self.market_type)))
