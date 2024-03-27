@@ -83,10 +83,9 @@ class DataLoader:
                 if self.post_load_fn is not None:
                     batch_x, batch_y = self.post_load_fn(batch_x, batch_y)
 
-                if torch.isnan(batch_x).max().item() or torch.isnan(batch_y).max().item():
-                    raise RuntimeError("NaN in batch")
-                if torch.isinf(batch_x).max().item() or torch.isinf(batch_y).max().item():
-                    raise RuntimeError("INF in batch")
+                if (torch.isnan(batch_x).max().item() or torch.isnan(batch_y).max().item() or
+                        torch.isinf(batch_x).max().item() or torch.isinf(batch_y).max().item()):
+                    raise RuntimeError("NaN or Inf values found in the batch data.")
 
             return batch_x, batch_y
         else:
