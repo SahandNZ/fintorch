@@ -25,7 +25,7 @@ class ForwardRocLabelTransform(LabelTransform):
     def forward(self) -> int:
         return self.__forward
 
-    def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
+    def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["roc"] = df.close / df.open - 1
         df["sum-roc"] = df.roc.rolling(window=self.forward, min_periods=1).sum()
         df["forward-sum-roc"] = df["sum-roc"].shift(periods=-self.forward).ffill()

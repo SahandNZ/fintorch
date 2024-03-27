@@ -24,7 +24,7 @@ class NextFractalLabelTransform(LabelTransform):
     def length(self) -> int:
         return self.__length
 
-    def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
+    def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["center-max"] = df.close.rolling(window=self.length, min_periods=1, center=True).max()
         df["center-min"] = df.close.rolling(window=self.length, min_periods=1, center=True).min()
         df["is-high-fractal"] = df.close == df["center-max"]

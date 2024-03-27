@@ -48,7 +48,7 @@ class ForwardIchimokuLabelTransform(LabelTransform):
 
         return forward_middle
 
-    def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
+    def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["forward-base"] = self.forward_donchian(df=df, length=self.base_length)
         df["forward-conversion"] = self.forward_donchian(df=df, length=self.conversion_length)
         df["label"] = df["forward-conversion"] <= df["forward-base"]

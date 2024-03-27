@@ -35,7 +35,6 @@ class Transform(Component):
         self.__look_ahead: int = look_ahead
 
         self.__timestamp_to_sf: Dict[int, List] = {}
-        self.__processed_df: pd.DataFrame = pd.DataFrame()
 
         self.__static_hash: int = static_list_hash([
             self.short_name,
@@ -70,8 +69,8 @@ class Transform(Component):
         return self.__timestamp_to_sf
 
     @property
-    def processed_df(self) -> pd.DataFrame:
-        return self.__processed_df
+    def static_hash(self) -> int:
+        return self.__static_hash
 
     @property
     def directory(self) -> str:
@@ -80,10 +79,6 @@ class Transform(Component):
     @property
     def path(self) -> str:
         return os.path.join(self.directory, f"sequence-length-{self.dim_sequence}.pkl")
-
-    @property
-    def static_hash(self) -> int:
-        return self.__static_hash
 
     def open(self) -> None:
         try:
@@ -146,54 +141,37 @@ class Transform(Component):
         for timestamp in timestamps:
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
             sf = self.timestamp_to_sf.get(shifted_timestamp, None)
-
             yield sf
 
     def transform_sf(self, dc: DataCollection, timestamps: List[int]) -> Generator[np.array, None, None]:
         for timestamp in timestamps:
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
             sf = self.timestamp_to_sf.get(shifted_timestamp, None)
-            if not self.__is_sf_valid(dc=dc, timestamp=shifted_timestamp, sf=sf):
-                sf = self.__transform_dc_to_sf(dc=dc, timestamp=shifted_timestamp)
+            if not self._is_sf_valid(dc=dc, timestamp=shifted_timestamp, sf=sf):
+                sf = self._transform_dc_to_sf(dc=dc, timestamp=shifted_timestamp)
                 self.timestamp_to_sf[shifted_timestamp] = sf
 
             yield sf
 
-    def transform_df(self, dc: DataCollection) -> pd.DataFrame:
-        return self.__transform_dc_to_df(dc=dc)
-
-    def __is_sf_valid(self, dc: DataCollection, timestamp: int, sf: Union[np.array, None]) -> bool:
-        start_timestamp = self.get_start_timestamp(dc=dc)
-        stop_timestamp = self.get_stop_timestamp(dc=dc)
-        is_timestamp_valid = start_timestamp <= timestamp < stop_timestamp
-        is_sf_valid = is_timestamp_valid and sf is not None
-
-        return is_sf_valid
-
-    def __transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> Union[np.array, None]:
-        df = self.__transform_dc_to_df(dc=dc, timestamp=timestamp)
-        sf = self._transform_df_to_sf(df=df, timestamp=timestamp)
-
-        return sf
-
-    def __transform_dc_to_df(self, dc: DataCollection, timestamp: Union[int] = None) -> pd.DataFrame:
-        if 0 == len(self.processed_df) or (timestamp is not None and timestamp not in self.processed_df.index):
-            df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame).copy()
-            self.__processed_df = self._process_df(df)
-
-        return self.processed_df
+    @abstractmethod
+    def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        raise NotImplementedError()
 
     @abstractmethod
     def _shift_timestamp(self, timestamp: int) -> int:
         raise NotImplementedError()
 
     @abstractmethod
-    def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> Union[np.array, None]:
         raise NotImplementedError()
 
-    @abstractmethod
-    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> Union[List, None]:
-        raise NotImplementedError()
+    def _is_sf_valid(self, dc: DataCollection, timestamp: int, sf: Union[np.array, None]) -> bool:
+        start_timestamp = self.get_start_timestamp(dc=dc)
+        stop_timestamp = self.get_stop_timestamp(dc=dc)
+        is_timestamp_valid = start_timestamp <= timestamp < stop_timestamp
+        is_sf_valid = is_timestamp_valid and sf is not None
+
+        return is_sf_valid
 
     def __enter__(self):
         self.open()

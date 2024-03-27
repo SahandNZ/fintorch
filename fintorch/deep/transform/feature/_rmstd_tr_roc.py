@@ -2,6 +2,7 @@ import pandas as pd
 
 from ._feature_transform import FeatureTransform
 from ....enum import TimeFrame
+from ....utils.preprocess import remove_price_dependency
 
 
 class RollingMeanStdTrRocFeatureTransform(FeatureTransform):
@@ -12,8 +13,8 @@ class RollingMeanStdTrRocFeatureTransform(FeatureTransform):
             symbol=symbol,
             time_frame=time_frame,
             dim_sequence=dim_sequence,
-            look_back=(backward + dim_sequence) * 2,
-            features=["mean-tr", "mean-roc", "std-tr", "std-roc"],
+            look_back=(dim_sequence + backward) * 2,
+            features=["tr", "roc", "clean-tr", "clean-roc"],
         )
         self.__backward: int = backward
 
@@ -21,13 +22,20 @@ class RollingMeanStdTrRocFeatureTransform(FeatureTransform):
     def backward(self) -> int:
         return self.__backward
 
-    def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["tr"] = df.high / df.low - 1
-        df["roc"] = df.close / df.open - 1
-        df["mean-tr"] = df.tr.rolling(self.backward).mean()
-        df["mean-roc"] = df.roc.rolling(self.backward).mean()
-        df["std-tr"] = df.tr.rolling(self.backward).std()
-        df["std-roc"] = df.roc.rolling(self.backward).std()
-        df = df.dropna()
+    def transform_df(self, df: pd.DataFrame, inplace: bool = False) -> pd.DataFrame:
+        df = remove_price_dependency(df=df)
+
+        df["mean-open"] = df.open.rolling(window=self.backward, min_periods=1, center=True).mean()
+        df["mean-high"] = df.high.rolling(window=self.backward, min_periods=1, center=True).mean()
+        df["mean-low"] = df.low.rolling(window=self.backward, min_periods=1, center=True).mean()
+        df["mean-close"] = df.close.rolling(window=self.backward, min_periods=1, center=True).mean()
+
+        df["tr"] = df.high - df.low
+        df["roc"] = df.close - df.open
+        df["clean-tr"] = df["mean-high"] - df["mean-low"]
+        df["clean-roc"] = df["mean-close"] - df["mean-open"]
 
         return df
+
+    def normalize_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        return df / (df.max() - df.min())

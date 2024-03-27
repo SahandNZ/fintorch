@@ -2,7 +2,7 @@ import pandas as pd
 
 from ._feature_transform import FeatureTransform
 from ....enum import TimeFrame
-from ....utils.signal import DFFT
+from ....utils.preprocess import remove_price_dependency, sftf
 
 
 class StftTrRocFeatureTransform(FeatureTransform):
@@ -13,16 +13,30 @@ class StftTrRocFeatureTransform(FeatureTransform):
             symbol=symbol,
             time_frame=time_frame,
             dim_sequence=dim_sequence,
-            look_back=0,
+            look_back=dim_sequence * 2,
             features=["tr", "roc", "clean-tr", "clean-roc"],
         )
-        self.dfft = DFFT(muting_percentage=muting_percentage)
 
-    def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["tr"] = df.high / df.low - 1
-        df["roc"] = df.close / df.open - 1
-        df["clean-tr"] = self.dfft.transform(df.tr)
-        df["clean-roc"] = self.dfft.transform(df.roc)
-        df = df.dropna()
+        self.__muting_percentage: int = muting_percentage
+
+    @property
+    def muting_percentage(self) -> int:
+        return self.__muting_percentage
+
+    def transform_df(self, df: pd.DataFrame, inplace: bool = False) -> pd.DataFrame:
+        df = remove_price_dependency(df=df)
+
+        df["clean-open"] = sftf(array=df.open, muting_percentage=self.muting_percentage)
+        df["clean-high"] = sftf(array=df.high, muting_percentage=self.muting_percentage)
+        df["clean-low"] = sftf(array=df.low, muting_percentage=self.muting_percentage)
+        df["clean-close"] = sftf(array=df.close, muting_percentage=self.muting_percentage)
+
+        df["tr"] = df.high - df.low
+        df["roc"] = df.close - df.open
+        df["clean-tr"] = df["clean-high"] - df["clean-low"]
+        df["clean-roc"] = df["clean-close"] - df["clean-open"]
 
         return df
+
+    def normalize_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        return df / (df.max() - df.min())

@@ -8,7 +8,7 @@ from ....enum import TimeFrame
 
 
 class ForwardMiddleSmaLabelTransform(LabelTransform):
-    def __init__(self, symbol: str, time_frame: TimeFrame, forward: int = 5, length: int = 11):
+    def __init__(self, symbol: str, time_frame: TimeFrame, forward: int = 10, length: int = 21):
         super().__init__(
             name="Forward Middle Simple Moving Average",
             short_name="F.M-SMA",
@@ -32,7 +32,7 @@ class ForwardMiddleSmaLabelTransform(LabelTransform):
     def forward(self) -> int:
         return self.__forward
 
-    def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
+    def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["middle-sma"] = df.close.rolling(window=self.length, min_periods=1, center=True).mean()
         df["forward-middle-sma"] = df["middle-sma"].shift(periods=-self.forward).ffill()
         df["label"] = df["middle-sma"] <= df["forward-middle-sma"]

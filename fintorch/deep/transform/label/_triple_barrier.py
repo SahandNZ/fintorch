@@ -23,7 +23,7 @@ class TripleBarrierLabelTransform(LabelTransform):
     def forward(self) -> int:
         return self.__forward
 
-    def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
+    def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["forward-close"] = df.close.shift(periods=-self.forward).ffill()
         df["label"] = df.close <= df["forward-close"]
 

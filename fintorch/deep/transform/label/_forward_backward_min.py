@@ -29,7 +29,7 @@ class ForwardBackwardMinimumLabelTransform(LabelTransform):
     def forward(self) -> int:
         return self.__forward
 
-    def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
+    def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
         forward_indexer = pd.api.indexers.FixedForwardWindowIndexer(window_size=self.forward)
         df["backward-min"] = df.close.rolling(window=self.backward, min_periods=1).min()
         df["forward-min"] = df.close.rolling(window=forward_indexer, min_periods=1).min()

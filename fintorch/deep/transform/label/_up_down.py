@@ -18,7 +18,7 @@ class UpDownLabelTransform(LabelTransform):
             classes=["UP", "DOWN"]
         )
 
-    def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
+    def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["label"] = df.open <= df.close
 
         return df

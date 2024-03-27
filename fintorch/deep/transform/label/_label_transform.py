@@ -36,6 +36,7 @@ class LabelTransform(Transform, ABC):
             look_ahead=look_ahead
         )
         self.__classes: List[str] = classes
+        self.__df: Union[pd.DataFrame, None] = None
 
     @property
     def classes(self) -> List[str]:
@@ -45,20 +46,24 @@ class LabelTransform(Transform, ABC):
     def num_classes(self) -> int:
         return len(self.classes)
 
+    @property
+    def df(self) -> Union[pd.DataFrame, None]:
+        return self.__df
+
     def _shift_timestamp(self, timestamp: int) -> int:
         return math.ceil(timestamp / self.time_frame) * self.time_frame
 
-    @abstractmethod
-    def _process_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        raise NotImplementedError()
+    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> Union[np.array, None]:
+        if self.df is None or timestamp not in self.df.index:
+            df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
+            self.__df = self.transform_df(df=df)
 
-    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> Union[np.array, None]:
         # forward cropping label dataframe with timestamp and sequence length
-        ldf = df[timestamp <= df.index]
+        ldf = self.df[timestamp <= self.df.index]
         ldf = ldf.iloc[:self.dim_sequence]
 
         # make sure there is enough time steps and there is no nan values
-        if self.dim_sequence != len(ldf) or 0 < np.isnan(ldf.label).sum():
+        if self.dim_sequence != len(ldf):
             return None
 
         # one hot encoding
@@ -80,7 +85,7 @@ class LabelTransform(Transform, ABC):
 
         # process and crop df based on timestamps
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame).copy()
-        df = self._process_df(df=df)
+        df = self.transform_df(df=df)
         df = df[(start_timestamp <= df.index.to_series()) & (df.index.to_series() < stop_timestamp)]
 
         # draw candlestick plot
