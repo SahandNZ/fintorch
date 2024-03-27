@@ -4,7 +4,7 @@ from ._block import Block
 
 
 class Residual1D(Block):
-    def __init__(self, input_dim: int, output_dim: int, batch_norm: bool = False):
+    def __init__(self, input_dim: int, output_dim: int, batch_norm: bool = True):
         super().__init__()
 
         self.input_dim: int = input_dim
