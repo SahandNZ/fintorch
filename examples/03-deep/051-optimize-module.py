@@ -1,10 +1,10 @@
 from rich.live import Live
 from rich.panel import Panel
 
-from fintorch.deep.model import FeedForward
-from fintorch.deep.module import create_default_module
-from fintorch.deep.transform.feature import *
+from fintorch.deep.model import *
 from fintorch.deep.transform.label import *
+from fintorch.deep.transform.feature import *
+from fintorch.deep.module import create_module_from_args
 from fintorch.exchange import ONLINE_EXCHANGE
 from fintorch.utils.args import DefaultArgumentParser
 
@@ -13,7 +13,7 @@ def main():
     args = DefaultArgumentParser.parse()
 
     # define module
-    module = create_default_module(
+    module = create_module_from_args(
         feature_transform_type=RollingMeanStdTrRocFeatureTransform,
         label_transform_type=ForwardMiddleSmaLabelTransform,
         model_type=FeedForward

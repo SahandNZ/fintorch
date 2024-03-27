@@ -8,7 +8,7 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.progress import Progress
 
-from fintorch.deep.module import Module, create_modules_from_args
+from fintorch.deep.module import Module, create_default_modules_from_args
 from fintorch.exchange import ONLINE_EXCHANGE
 from fintorch.setting import RICH_PROGRESS_COLUMNS
 from fintorch.utils.args import DefaultArgumentParser, DefaultNamespace
@@ -100,7 +100,7 @@ def run_multi_process(modules: List[Module], args: DefaultNamespace):
 
 def main():
     args = DefaultArgumentParser.parse()
-    modules = create_modules_from_args(args=args)
+    modules = create_default_modules_from_args(args=args)
     run_multi_process(modules=modules, args=args)
 
 
