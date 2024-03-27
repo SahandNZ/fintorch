@@ -2,6 +2,8 @@ import math
 from datetime import datetime
 from typing import List, Union
 
+from fintorch.enum import TimeFrame
+
 
 def to_datetime(date: Union[str, datetime]) -> datetime:
     return datetime.strptime(date, "%Y-%m-%d") if isinstance(date, str) else date
@@ -9,6 +11,10 @@ def to_datetime(date: Union[str, datetime]) -> datetime:
 
 def to_timestamp(date: Union[str, datetime]) -> int:
     return int(to_datetime(date=date).timestamp())
+
+
+def round_timestamp(timestamp: int, time_frame: TimeFrame) -> int:
+    return int(timestamp // int(time_frame) * int(time_frame))
 
 
 def create_timestamps(start_date: Union[str, datetime], stop_date: Union[str, datetime], interval: int) -> List[int]:
