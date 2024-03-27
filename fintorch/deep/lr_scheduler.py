@@ -13,9 +13,7 @@ class LrScheduler:
 
         self.__torch_lr_scheduler: torch.optim.lr_scheduler.LRScheduler = None
 
-        # static hash calculations
-        sorted_kwargs = [v for k, v in sorted(self.__kwargs.items(), key=lambda item: item[0])]
-        self.__static_hash: int = static_list_hash([self.__torch_lr_scheduler_type.__name__, *sorted_kwargs])
+        self.__static_hash: int = static_list_hash([self.__torch_lr_scheduler_type.__name__])
 
     @property
     def torch_lr_scheduler(self) -> torch.optim.lr_scheduler.LRScheduler:
