@@ -47,7 +47,7 @@ class Trainer:
             self.optimizer.static_hash,
             self.lr_scheduler.static_hash,
             self.shuffle,
-            self.gradient_clipping_threshold
+            self.gradient_clipping_threshold if self.gradient_clipping_threshold is not None else 1
         ])
 
     @property
