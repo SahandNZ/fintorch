@@ -85,7 +85,7 @@ class DefaultArgumentParser(argparse.ArgumentParser):
 
         # process args
         self.add_argument("--app-config", action="store", type=str, required=False, default="app")
-        self.add_argument("--stf-config", action="store", type=str, required=False, default="btc-eth-daily")
+        self.add_argument("--stf-config", action="store", type=str, required=False, default="btc-15m")
         self.add_argument("--max-workers", action="store", type=int, required=False, default=os.cpu_count())
 
         # market args
