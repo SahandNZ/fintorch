@@ -7,8 +7,8 @@ class MSE(Criterion):
     def __init__(self):
         super().__init__(name="MSE", reduction='mean', classification_criterion=False)
 
-    def forward(self, input_: torch.Tensor, target: torch.Tensor):
-        return torch.nn.functional.mse_loss(input=input_, target=target, reduction=self.reduction)
+    def _forward(self, input: torch.Tensor, target: torch.Tensor):
+        return torch.nn.functional.mse_loss(input=input, target=target, reduction=self.reduction)
 
     def to_str(self, value: float) -> str:
         return "MSE: {:.6f}".format(value)

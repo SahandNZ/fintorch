@@ -17,7 +17,7 @@ class FocalMNP(Criterion):
     def fee_rate(self) -> float:
         return self.__fee_rate
 
-    def forward(self, qty: torch.Tensor, roc: torch.Tensor):
+    def _forward(self, qty: torch.Tensor, roc: torch.Tensor):
         if 1 < len(qty.shape):
             qty = qty.view(-1)
 

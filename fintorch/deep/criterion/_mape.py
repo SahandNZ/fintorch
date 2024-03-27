@@ -7,8 +7,8 @@ class MAPE(Criterion):
     def __init__(self):
         super().__init__(name="MAPE", reduction='mean', classification_criterion=False)
 
-    def forward(self, input_: torch.Tensor, target: torch.Tensor):
-        return torch.mean(torch.abs((input_ - target) / target))
+    def _forward(self, input: torch.Tensor, target: torch.Tensor):
+        return torch.mean(torch.abs((input - target) / target))
 
     def to_str(self, value: float) -> str:
         return "MAPE: {:.6f}".format(value)
