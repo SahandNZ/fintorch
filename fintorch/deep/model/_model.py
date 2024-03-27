@@ -40,7 +40,7 @@ class Model(nn.Module, Component, ABC):
             self.dim_output,
             self.num_hidden_layers,
             self.batch_norm,
-            self.dropout * 10 ** 2,
+            int(self.dropout * 10 ** 2),
         ])
 
     @property
@@ -80,8 +80,14 @@ class Model(nn.Module, Component, ABC):
         return self.__static_hash
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x = x.to(self.device)
-        return self._forward(x)
+        if torch.isnan(x).max() or torch.isinf(x).max():
+            raise RuntimeError("NaN or Inf values found in the output of the model.")
+
+        output = self._forward(x)
+        if torch.isnan(output).max() or torch.isinf(output).max():
+            raise RuntimeError("NaN or Inf values found in the output of the model.")
+
+        return output
 
     def reset(self, layers: List[nn.Module] = None):
         if layers is None:
