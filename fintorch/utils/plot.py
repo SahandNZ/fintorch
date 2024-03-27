@@ -83,8 +83,10 @@ def draw_predictions(ohlc_ax: plt.Axes, df: pd.DataFrame):
     df["y"] = y_values
     udf = df[1 == df.prediction]
     ddf = df[0 == df.prediction]
+    ndf = df[np.isnan(df.prediction)]
 
     # draw scatters
     size = 2 ** 11 // len(df)
     ohlc_ax.scatter(x=udf.index.to_list(), y=udf.y, s=size, marker='o', c="g", label="Up Prediction")
     ohlc_ax.scatter(x=ddf.index.to_list(), y=ddf.y, s=size, marker='o', c="r", label="Down Prediction")
+    ohlc_ax.scatter(x=ndf.index.to_list(), y=ndf.y, s=size, marker='o', c="gray", label="Nan Prediction")
