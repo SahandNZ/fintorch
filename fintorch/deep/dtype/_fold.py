@@ -130,11 +130,13 @@ class Fold:
         return ("Epoch ({}/{:<2}) ({} {} {})\n"
                 "Train  {:<6.4f}  {:<6.4f}  {:<5.1f}%  {:<5.1f}%  {}\n"
                 "Val    {:<6.4f}  {:<6.4f}  {:<5.1f}%  {:<5.1f}%  {}\n"
-                "Test   {:<6.4f}  {:<6.4f}  {:<5.1f}%  {:<5.1f}%  {}") \
+                "Test   {:<6.4f}  {:<6.4f}  {:<5.1f}%  {:<5.1f}%  {}\n"
+                "VoT    {:<6}  {:<6.4f}  {:<5}   {:<5.1f}%  {}") \
             .format(self.last_epoch.index, self.epochs_count, elapsed_time, remaining_time, total_time,
                     self.last_epoch.train_loss, self.best_train_epoch.train_loss, self.last_epoch.train_accuracy,
                     self.best_train_epoch.train_accuracy, self.best_train_epoch.index,
                     self.last_epoch.val_loss, self.best_val_epoch.val_loss, self.last_epoch.val_accuracy,
                     self.best_val_epoch.val_accuracy, self.best_val_epoch.index,
                     self.last_epoch.test_loss, self.best_test_epoch.test_loss, self.last_epoch.test_accuracy,
-                    self.best_test_epoch.test_accuracy, self.best_test_epoch.index)
+                    self.best_test_epoch.test_accuracy, self.best_test_epoch.index,
+                    "-", self.best_val_epoch.test_loss, "-", self.best_val_epoch.test_accuracy, "-")
