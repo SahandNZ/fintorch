@@ -36,7 +36,7 @@ class OnlineData(Data, Network, ABC):
         if self.__last_update_timestamp is None or self.__last_update_timestamp < timestamp:
             self.__last_update_timestamp = timestamp
             for symbol in self.symbols:
-                self._update_candles_dataframe(symbol=symbol, time_frame=BASE_TIME_FRAME)
+                self.update_candles_dataframe(symbol=symbol, time_frame=BASE_TIME_FRAME)
 
     def get_ping(self) -> int:
         local = datetime.now().timestamp()
@@ -91,7 +91,7 @@ class OnlineData(Data, Network, ABC):
             self.__save_symbols_info_dict(symbols_info_dict=self.__symbols_info_dict)
             self.__symbols_info_dict = {symbol_info.symbol: symbol_info for symbol_info in symbols_info_list}
 
-    def _update_candles_dataframe(self, symbol: str, time_frame: TimeFrame, progress: Progress = None) -> None:
+    def update_candles_dataframe(self, symbol: str, time_frame: TimeFrame, progress: Progress = None) -> None:
         symbol_info = self.get_symbol_info(symbol=symbol)
         df = self.__load_candles_dataframe(symbol=symbol, time_frame=time_frame)
 
@@ -140,7 +140,7 @@ class OnlineData(Data, Network, ABC):
     def __candles_dataframe_path(self, symbol: str, time_frame: TimeFrame) -> str:
         exchange_data_directory = self.__exchange_data_directory()
         candles_directory = str(os.path.join(exchange_data_directory, "candles", symbol))
-        file_path = str(os.path.join(candles_directory, f"{time_frame}.csv"))
+        file_path = str(os.path.join(candles_directory, f"{int(time_frame)}.csv"))
         create_directory(candles_directory)
 
         return file_path
