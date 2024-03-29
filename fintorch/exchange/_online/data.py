@@ -30,22 +30,18 @@ class OnlineData(Data, Network, ABC):
 
     def prepare(self, symbols: List[str], time_frames: List[TimeFrame]) -> None:
         super().prepare(symbols=symbols, time_frames=time_frames)
-        self.__last_update_timestamp = math.inf
-        for symbol, time_frame in itertools.product(symbols, time_frames):
-            df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
-            self.__last_update_timestamp = min(self.__last_update_timestamp, df.index[-1])
 
     def next(self, timestamp: int) -> None:
         super().next(timestamp=timestamp)
-        if self.__last_update_timestamp < timestamp:
+        if self.__last_update_timestamp is None or self.__last_update_timestamp < timestamp:
             self.__last_update_timestamp = timestamp
             for symbol in self.symbols:
-                self.update_candles_dataframe(symbol=symbol, time_frame=BASE_TIME_FRAME)
+                self._update_candles_dataframe(symbol=symbol, time_frame=BASE_TIME_FRAME)
 
     def get_ping(self) -> int:
-        local = datetime.now().timestamp() * 1000
+        local = datetime.now().timestamp()
         server = self.get_current_timestamp()
-        ping = round(server - local)
+        ping = round(server - local, 3)
         return ping
 
     def get_symbols(self) -> List[str]:
@@ -53,13 +49,13 @@ class OnlineData(Data, Network, ABC):
 
     def get_symbols_info(self) -> List[SymbolInfo]:
         if 0 == len(self.__symbols_info_dict):
-            self.update_symbols_info(symbol=None)
+            self._update_symbols_info(symbol=None)
 
         return list(self.__symbols_info_dict.values())
 
     def get_symbol_info(self, symbol: str) -> SymbolInfo:
         if symbol not in self.__symbols_info_dict:
-            self.update_symbols_info(symbol=symbol)
+            self._update_symbols_info(symbol=symbol)
 
         return self.__symbols_info_dict[symbol]
 
@@ -88,16 +84,16 @@ class OnlineData(Data, Network, ABC):
 
         return dc
 
-    def update_symbols_info(self, symbol: Union[str, None]):
+    def _update_symbols_info(self, symbol: Union[str, None]) -> None:
         self.__symbols_info_dict = self.__load_symbols_info_dict()
         if 0 == len(self.__symbols_info_dict) or (symbol is not None and symbol not in self.__symbols_info_dict):
             symbols_info_list = self._get_symbols_info()
-            self.__symbols_info_dict = {symbol_info.symbol: symbol_info for symbol_info in symbols_info_list}
             self.__save_symbols_info_dict(symbols_info_dict=self.__symbols_info_dict)
+            self.__symbols_info_dict = {symbol_info.symbol: symbol_info for symbol_info in symbols_info_list}
 
-    def update_candles_dataframe(self, symbol: str, time_frame: TimeFrame, progress: Progress = None):
+    def _update_candles_dataframe(self, symbol: str, time_frame: TimeFrame, progress: Progress = None) -> None:
         symbol_info = self.get_symbol_info(symbol=symbol)
-        df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
+        df = self.__load_candles_dataframe(symbol=symbol, time_frame=time_frame)
 
         # assign value to start timestamp
         if 0 == len(df):
@@ -122,7 +118,7 @@ class OnlineData(Data, Network, ABC):
         create_directory(data_directory)
         return data_directory
 
-    def __symbols_info_path(self):
+    def __symbols_info_path(self) -> str:
         exchange_data_directory = self.__exchange_data_directory()
         file_path = str(os.path.join(exchange_data_directory, "symbols-info.pkl"))
 
@@ -177,8 +173,15 @@ class OnlineData(Data, Network, ABC):
         path = self.__candles_dataframe_path(symbol=symbol, time_frame=time_frame)
         df.to_csv(path_or_buf=path)
 
-    def __send_get_candles_requests(self, symbol: str, time_frame: TimeFrame, start_timestamp: int,
-                                    stop_timestamp: int = None, progress: Union[Progress, bool] = None) -> pd.DataFrame:
+    def __send_get_candles_requests(
+            self,
+            symbol: str,
+            time_frame: TimeFrame,
+            start_timestamp: int,
+            stop_timestamp: int = None,
+            progress: Union[Progress, bool] = None
+        ) -> pd.DataFrame:
+        
         if stop_timestamp is None:
             stop_timestamp = datetime.now().timestamp() // int(time_frame) * int(time_frame) + int(time_frame)
         candles_count = (stop_timestamp - start_timestamp) // int(time_frame)
