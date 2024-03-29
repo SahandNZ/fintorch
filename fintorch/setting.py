@@ -15,7 +15,7 @@ FINTORCH_DATA_DIR = os.environ.get("FINTORCH_DATA_DIR", os.path.join(USER_HOME_D
 FINTORCH_TEMP_DIR = os.path.join(FINTORCH_ROOT_DIR, "/tmp")
 TRANSFORM_DIR = os.path.join(FINTORCH_DATA_DIR, "transform")
 MODULE_DIR = os.path.join(FINTORCH_DATA_DIR, "module")
-CONFIG_DIR = os.path.join(FINTORCH_ROOT_DIR, "config")
+CONFIG_DIR = os.path.join(FINTORCH_ROOT_DIR, "fintorch/config")
 
 # Storage
 FEATURE_BYTES = os.environ.get("FINTORCH_FEATURE_BYTES", 4)
