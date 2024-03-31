@@ -93,7 +93,7 @@ class OnlineData(Data, Network, ABC):
 
     def update_candles_dataframe(self, symbol: str, time_frame: TimeFrame, progress: Progress = None) -> None:
         symbol_info = self.get_symbol_info(symbol=symbol)
-        df = self.__load_candles_dataframe(symbol=symbol, time_frame=time_frame)
+        df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
 
         # assign value to start timestamp
         if 0 == len(df):
