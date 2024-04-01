@@ -1,3 +1,5 @@
+import itertools
+
 from rich.progress import Progress
 
 from fintorch.exchange import ONLINE_EXCHANGE
@@ -9,11 +11,12 @@ def main():
     args = DefaultArgumentParser.parse()
 
     with Progress(*RICH_PROGRESS_COLUMNS) as progress:
-        overall_task = progress.add_task("Overall", total=len(args.symbols))
-        for symbol in args.symbols:
+        items = list(itertools.product(args.symbols, args.time_frames))
+        overall_task = progress.add_task("Overall", total=len(items))
+        for symbol, time_frame in items:
             ONLINE_EXCHANGE.future.data.update_candles_dataframe(
                 symbol=symbol,
-                time_frame=BASE_TIME_FRAME,
+                time_frame=time_frame,
                 progress=progress
             )
 
