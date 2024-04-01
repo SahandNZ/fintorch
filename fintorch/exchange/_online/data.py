@@ -11,7 +11,7 @@ from rich.progress import Progress
 
 from .network import Https, Network, Wss
 from .. import Data
-from ...dtype import Candle, DataCollection, SymbolInfo
+from ...dtype import Ticker, Candle, DataCollection, SymbolInfo
 from ...enum import MarketType, TimeFrame
 from ...setting import BASE_TIME_FRAME, CANDLES_COUNT, FINTORCH_DATA_DIR
 from ...utils.directory import create_directory
@@ -58,6 +58,10 @@ class OnlineData(Data, Network, ABC):
             self._update_symbols_info(symbol=symbol)
 
         return self.__symbols_info_dict[symbol]
+    
+    @abstractmethod
+    def get_symbols_ticker(self, symbols: List[str]) -> Ticker:
+        raise NotImplementedError()
 
     def get_current_candle(self, symbol: str, time_frame: TimeFrame) -> Candle:
         df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)

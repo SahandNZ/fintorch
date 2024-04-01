@@ -1,8 +1,11 @@
 from typing import List, Dict
 
-from ._network.decorator import *
-from ._network.deserializer import candle_deserializer, symbol_info_deserializer
+from fintorch.dtype import Ticker
+
 from ._network.encoder import *
+from ._network.decoder import *
+from ._network.decorator import *
+from ._network.deserializer import *
 from ._network.https import BinanceFutureHttps
 from ... import OnlineData
 from ....dtype import SymbolInfo, Candle
@@ -33,6 +36,13 @@ class BinanceFutureData(OnlineData):
         perpetuals = [item for item in response['symbols'] if 'PERPETUAL' == item['contractType']]
         symbols_info = [symbol_info_deserializer(item) for item in perpetuals]
         return symbols_info
+    
+    @decode_symbol
+    def get_symbols_ticker(self, symbols: List[str]) -> Ticker:
+        endpoint = '/fapi/v1/ticker/price'
+        response = self._https.get(endpoint=endpoint)
+        tickers = [tikcer_deserializer(item) for item in response if symbol_decoder(item["symbol"]) in symbols]
+        return tickers
 
     @encode_symbol
     @encode_time_frame

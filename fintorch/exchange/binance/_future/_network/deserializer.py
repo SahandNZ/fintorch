@@ -1,10 +1,19 @@
 from datetime import datetime
 from typing import Dict
 
-from .....dtype import Candle, Order, SymbolInfo, Position
+from .....dtype import Ticker, Candle, Order, SymbolInfo, Position
 
 
-def candle_deserializer(data: Dict):
+def tikcer_deserializer(data: Dict) -> Ticker:
+    instance = Ticker()
+    
+    instance.symbol = data["symbol"]
+    instance.timestamp = int(int(data["time"]) / 1000)
+    instance.price = float(data["price"])
+    
+    return instance
+    
+def candle_deserializer(data: Dict) -> Candle:
     instance = Candle()
 
     instance.timestamp = int(int(data[0]) / 1000)
@@ -18,7 +27,7 @@ def candle_deserializer(data: Dict):
     return instance
 
 
-def candle_wss_deserializer(data: Dict):
+def candle_wss_deserializer(data: Dict) -> Candle:
     instance = Candle()
 
     instance.timestamp = data["t"] / 1000
