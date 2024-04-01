@@ -10,7 +10,7 @@ def main():
     args = DefaultArgumentParser.parse()
     current_open_timestamp = datetime.now().timestamp() // args.time_frame * args.time_frame
 
-    exchange = OnlineExchange.from_name(name="bingx", interval=TimeFrame.MIN1, proxies=PROXIES)
+    exchange = OnlineExchange.from_name(name="binance", interval=TimeFrame.MIN1, proxies=PROXIES)
     exchange.future.data.prepare(symbols=[args.symbol], time_frames=[args.time_frame])
     exchange.future.data.next(timestamp=current_open_timestamp)
 
@@ -28,9 +28,13 @@ def main():
     first_symbol_info = symbols_info[0]
     print("{:<64}{}".format(f"Symbol info {first_symbol_info.symbol}", first_symbol_info.price_precision))
 
-    # get recent candles
-    candle = exchange.future.data.recent(symbol=args.symbol, time_frame=args.time_frame)
-    print("{:<64}{}".format(f"Current Candle {candle.datetime}", candle.open))
+    # get latest tickers
+    ticker = exchange.future.data.get_symbols_ticker(symbols=args.symbols)[0]
+    print("{:<64}{}".format(f"Last ticker of {ticker.symbol} at {ticker.datetime}", ticker.price))
+    
+    # get last candles
+    candle = exchange.future.data.get_current_candle(symbol=args.symbol, time_frame=args.time_frame)
+    print("{:<64}{}".format(f"Last candle {candle.datetime}", candle.open))
 
 
 if __name__ == '__main__':
