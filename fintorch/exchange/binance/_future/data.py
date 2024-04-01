@@ -39,7 +39,7 @@ class BinanceFutureData(OnlineData):
     
     @decode_symbol
     def get_symbols_ticker(self, symbols: List[str]) -> Ticker:
-        endpoint = '/fapi/v1/ticker/price'
+        endpoint = '/fapi/v2/ticker/price'
         response = self._https.get(endpoint=endpoint)
         tickers = [tikcer_deserializer(item) for item in response if symbol_decoder(item["symbol"]) in symbols]
         return tickers
