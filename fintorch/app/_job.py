@@ -8,8 +8,9 @@ from ._context import Context
 
 
 class Job:
-    def __init__(self, callback: Callable):
+    def __init__(self, callback: Callable, refresh_context: bool):
         self.__callback: callback = callback
+        self.__refresh_context: bool = refresh_context
 
         self.__aps_job: Union[APSJob, None] = None
         self.__removed: bool = False
@@ -23,6 +24,10 @@ class Job:
     def callback(self) -> Callable:
         return self.__callback
 
+    @property
+    def refresh_context(self) -> bool:
+        return self.__refresh_context
+    
     @property
     def aps_job(self) -> Union[APSJob, None]:
         return self.__aps_job
@@ -56,5 +61,6 @@ class Job:
         self.__removed = True
 
     def run(self, context: Context, args: List, kwargs: Dict) -> None:
-        context.refresh()
+        if self.refresh_context:
+            context.refresh()
         self.callback(context, *args, **kwargs)

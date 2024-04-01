@@ -13,7 +13,9 @@ from ..enum import TimeFrame
 class JobQueue:
     def __init__(self, context: Context):
         self.__context: Context = context
-        self.__scheduler = BlockingScheduler(executors={'default': ProcessPoolExecutor(max_workers=8)})
+        self.__scheduler = BlockingScheduler(
+            executors={"default": ProcessPoolExecutor(max_workers=8)}
+        )
 
     @property
     def context(self) -> Context:
@@ -36,10 +38,12 @@ class JobQueue:
 
     @staticmethod
     def _cast_when(interval: int, when: str) -> Union[datetime, None]:
-        if 'any' == when:
+        if "any" == when:
             return None
-        elif 'open' == when:
-            next_timestamp = datetime.now().timestamp() // interval * interval + interval
+        elif "open" == when:
+            next_timestamp = (
+                datetime.now().timestamp() // interval * interval + interval
+            )
             return datetime.fromtimestamp(next_timestamp)
 
     def start(self):
@@ -47,39 +51,41 @@ class JobQueue:
             self.scheduler.start()
 
     def run_once(
-            self,
-            callback: Callable,
-            args: List = None,
-            kwargs: Dict = None,
-            misfire_grace_time: int = None
+        self,
+        callback: Callable,
+        args: List = None,
+        kwargs: Dict = None,
+        refresh_context: bool = True,
+        misfire_grace_time: int = None,
     ) -> Job:
         args = self._cast_args(args)
         kwargs = self._cast_kwargs(kwargs)
 
-        job = Job(callback=callback)
+        job = Job(callback=callback, refresh_context=refresh_context)
         job.aps_job = self.scheduler.add_job(
             func=job.run,
             name=job.name,
             args=(self.__context, args, kwargs),
-            misfire_grace_time=misfire_grace_time
+            misfire_grace_time=misfire_grace_time,
         )
 
         return job
 
     def run_repeating(
-            self,
-            callback: Callable,
-            interval: int,
-            args: List = None,
-            kwargs: Dict = None,
-            when: str = 'any',
-            misfire_grace_time: int = None
+        self,
+        callback: Callable,
+        interval: int,
+        when: str = "any",
+        args: List = None,
+        kwargs: Dict = None,
+        refresh_context: bool = True,
+        misfire_grace_time: int = None,
     ) -> Job:
         args = self._cast_args(args)
         kwargs = self._cast_kwargs(kwargs)
         start_date = self._cast_when(interval=interval, when=when)
 
-        job = Job(callback=callback)
+        job = Job(callback=callback, refresh_context=refresh_context)
         job.aps_job = self.scheduler.add_job(
             func=job.run,
             name=job.name,
@@ -87,7 +93,7 @@ class JobQueue:
             trigger="interval",
             start_date=start_date,
             args=(self.__context, args, kwargs),
-            misfire_grace_time=misfire_grace_time
+            misfire_grace_time=misfire_grace_time,
         )
 
         return job

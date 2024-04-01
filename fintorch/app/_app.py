@@ -10,24 +10,24 @@ from ..utils.function import call_with_dict
 
 class Application:
     def __init__(
-            self,
-            online_exchange: OnlineExchange,
-            market_type: MarketType,
-            symbols: List[str],
-            time_frames: List[TimeFrame]
+        self,
+        online_exchange: OnlineExchange,
+        market_type: MarketType,
+        symbols: List[str],
+        time_frames: List[TimeFrame],
     ):
         self.__context = Context(
             online_exchange=online_exchange,
             market_type=market_type,
             symbols=symbols,
-            time_frames=time_frames
+            time_frames=time_frames,
         )
         self.__job_queue = JobQueue(context=self.context)
 
     @staticmethod
     def from_dict(dct: Dict):
         dct = copy.deepcopy(dct)
-        dct['online-exchange'] = OnlineExchange.from_dict(dct)
+        dct["online-exchange"] = OnlineExchange.from_dict(dct)
         app = call_with_dict(Application, dct)
 
         return app
@@ -40,6 +40,7 @@ class Application:
     def job_queue(self) -> JobQueue:
         return self.__job_queue
 
-    def start(self):
-        self.context.refresh()
+    def start(self, refresh_context: bool = True):
+        if refresh_context:
+            self.context.refresh()
         self.job_queue.start()
