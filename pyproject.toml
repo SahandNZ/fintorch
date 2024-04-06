@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fintorch"
-version = "0.2.17"
+version = "0.2.18"
 description = "Finbright deep learning package"
 authors = ["Sahand Nazarzadeh <sahand.nazarzadeh@gmail.com>"]
 readme = "README.md"
