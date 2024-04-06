@@ -24,17 +24,17 @@ class OnlineData(Data, Network, ABC):
         Data.__init__(self, exchange_name=exchange_name, market_type=market_type, interval=interval)
         Network.__init__(self, https=https, wss=wss)
 
-        self.__symbols_info_dict: Dict[str, SymbolInfo] = {}
-        self.__candles_df_dict: Dict[Tuple[str, TimeFrame], pd.DataFrame] = {}
-        self.__last_update_timestamp: Union[int, None] = None
+        self.__update_timestamp: Union[int, None] = None
+        self.__symbol_to_symbol_info: Dict[str, SymbolInfo] = {}
+        self.__symbol_time_frame_to_candles_df: Dict[Tuple[str, TimeFrame], pd.DataFrame] = {}
 
     def prepare(self, symbols: List[str], time_frames: List[TimeFrame]) -> None:
         super().prepare(symbols=symbols, time_frames=time_frames)
 
     def next(self, timestamp: int) -> None:
         super().next(timestamp=timestamp)
-        if self.__last_update_timestamp is None or self.__last_update_timestamp < timestamp:
-            self.__last_update_timestamp = timestamp
+        if self.__update_timestamp is None or self.__update_timestamp < timestamp:
+            self.__update_timestamp = timestamp
             for symbol in self.symbols:
                 self.update_candles_dataframe(symbol=symbol, time_frame=BASE_TIME_FRAME)
 
@@ -48,16 +48,16 @@ class OnlineData(Data, Network, ABC):
         return [symbol_info.symbol for symbol_info in self.get_symbols_info()]
 
     def get_symbols_info(self) -> List[SymbolInfo]:
-        if 0 == len(self.__symbols_info_dict):
+        if 0 == len(self.__symbol_to_symbol_info):
             self._update_symbols_info(symbol=None)
 
-        return list(self.__symbols_info_dict.values())
+        return list(self.__symbol_to_symbol_info.values())
 
     def get_symbol_info(self, symbol: str) -> SymbolInfo:
-        if symbol not in self.__symbols_info_dict:
+        if symbol not in self.__symbol_to_symbol_info:
             self._update_symbols_info(symbol=symbol)
 
-        return self.__symbols_info_dict[symbol]
+        return self.__symbol_to_symbol_info[symbol]
     
     @abstractmethod
     def get_symbols_ticker(self, symbols: List[str]) -> Ticker:
@@ -68,14 +68,16 @@ class OnlineData(Data, Network, ABC):
         return Candle.from_list(df.iloc[-1].to_list())
 
     def get_candles_dataframe(self, symbol: str, time_frame: TimeFrame) -> pd.DataFrame:
-        key = (symbol, time_frame)
-        if key not in self.__candles_df_dict:
+        key = (symbol, BASE_TIME_FRAME)
+        if key not in self.__symbol_time_frame_to_candles_df:
             df = self.__load_candles_dataframe(symbol=symbol, time_frame=BASE_TIME_FRAME)
-            if BASE_TIME_FRAME != time_frame:
-                df = resample_df(base_df=df, source_timeframe=BASE_TIME_FRAME, destination_timeframe=time_frame)
-            self.__candles_df_dict[key] = df
-
-        return self.__candles_df_dict[key]
+            self.__symbol_time_frame_to_candles_df[key] = df
+            
+        df = self.__symbol_time_frame_to_candles_df[key]
+        if BASE_TIME_FRAME != time_frame:
+            df = resample_df(df=df, source_timeframe=BASE_TIME_FRAME, destination_timeframe=time_frame)
+        
+        return df
 
     def get_data_collection(self, symbols: List[str], time_frames: List[TimeFrame]) -> DataCollection:
         dc = DataCollection()
@@ -89,15 +91,15 @@ class OnlineData(Data, Network, ABC):
         return dc
 
     def _update_symbols_info(self, symbol: Union[str, None]) -> None:
-        self.__symbols_info_dict = self.__load_symbols_info_dict()
-        if 0 == len(self.__symbols_info_dict) or (symbol is not None and symbol not in self.__symbols_info_dict):
+        self.__symbol_to_symbol_info = self.__load_symbols_info_dict()
+        if 0 == len(self.__symbol_to_symbol_info) or (symbol is not None and symbol not in self.__symbol_to_symbol_info):
             symbols_info_list = self._get_symbols_info()
-            self.__save_symbols_info_dict(symbols_info_dict=self.__symbols_info_dict)
-            self.__symbols_info_dict = {symbol_info.symbol: symbol_info for symbol_info in symbols_info_list}
+            self.__save_symbols_info_dict(symbols_info_dict=self.__symbol_to_symbol_info)
+            self.__symbol_to_symbol_info = {symbol_info.symbol: symbol_info for symbol_info in symbols_info_list}
 
     def update_candles_dataframe(self, symbol: str, time_frame: TimeFrame, progress: Progress = None) -> None:
         symbol_info = self.get_symbol_info(symbol=symbol)
-        df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
+        df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)[:-1]
 
         # assign value to start timestamp
         if 0 == len(df):
@@ -115,7 +117,7 @@ class OnlineData(Data, Network, ABC):
         updated_df = pd.concat([df, new_df]) if 0 != len(new_df) and 0 != len(df) else (df if 0 != len(df) else new_df)
         corrected_df = self.__check_candles_dataframe(symbol=symbol, time_frame=time_frame, df=updated_df)
         self.__save_candles_dataframe(symbol=symbol, time_frame=time_frame, df=corrected_df[:-1])
-        self.__candles_df_dict[(symbol, time_frame)] = corrected_df
+        self.__symbol_time_frame_to_candles_df[(symbol, time_frame)] = corrected_df
 
     def __exchange_data_directory(self) -> str:
         data_directory = str(os.path.join(FINTORCH_DATA_DIR, self.exchange_name, str(self.market_type)))
