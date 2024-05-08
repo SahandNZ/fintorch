@@ -1,19 +1,22 @@
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from ._label_transform import LabelTransform
-from ....enum import TimeFrame
+from fintorch.deep.transform.label._label_transform import LabelTransform
+from fintorch.enum import TimeFrame
 
 
 class TripleBarrierLabelTransform(LabelTransform):
-    def __init__(self, symbol: str, time_frame: TimeFrame, forward: int = 10):
+    def __init__(self, symbol: str, time_frame: TimeFrame, dim_sequence: int, forward: int = 10) -> None:
         super().__init__(
             name="Triple Barrier",
             short_name="T-Barrier",
             description="",
             symbol=symbol,
             time_frame=time_frame,
+            dim_sequence=dim_sequence,
             look_ahead=forward,
+            look_back=0,
             classes=["UP", "DOWN"]
         )
 
@@ -24,8 +27,9 @@ class TripleBarrierLabelTransform(LabelTransform):
         return self.__forward
 
     def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["forward-close"] = df.close.shift(periods=-self.forward).ffill()
-        df["label"] = df.close <= df["forward-close"]
+        df["forward-close"] = df.close.shift(periods=-self.forward)
+        df["up"] = df.close <= df["forward-close"]
+        df["label"] = np.where(np.isnan(df["forward-close"]), np.nan, df.up)
 
         return df
 

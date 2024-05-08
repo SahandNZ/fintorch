@@ -10,7 +10,7 @@ from rich.progress import Progress
 from ...component import Component
 from ...dtype import DataCollection
 from ...enum import TimeFrame
-from ...setting import TRANSFORM_DIR
+from ...settings import TRANSFORM_DIR
 from ...utils.directory import create_directory
 from ...utils.hash import static_list_hash
 
@@ -24,13 +24,15 @@ class Transform(Component):
             symbol: str,
             time_frame: TimeFrame,
             dim_sequence: int,
+            dim_feature: int,
             look_back: int,
             look_ahead: int
     ):
         super().__init__(name=name, short_name=short_name, description=description)
         self.__symbol: str = symbol
-        self.__time_frame: TimeFrame = time_frame if isinstance(time_frame, TimeFrame) else TimeFrame(time_frame)
+        self.__time_frame: TimeFrame = TimeFrame(int(time_frame))
         self.__dim_sequence: int = dim_sequence
+        self.__dim_feature: int = dim_feature
         self.__look_back: int = look_back
         self.__look_ahead: int = look_ahead
 
@@ -40,6 +42,7 @@ class Transform(Component):
             self.short_name,
             self.symbol,
             self.time_frame,
+            self.dim_sequence,
             self.look_back,
             self.look_ahead
         ])
@@ -55,6 +58,10 @@ class Transform(Component):
     @property
     def dim_sequence(self) -> int:
         return self.__dim_sequence
+
+    @property
+    def dim_feature(self) -> int:
+        return self.__dim_feature
 
     @property
     def look_back(self) -> int:
@@ -73,12 +80,8 @@ class Transform(Component):
         return self.__static_hash
 
     @property
-    def directory(self) -> str:
-        return os.path.join(TRANSFORM_DIR, self.short_name, self.symbol, str(int(self.time_frame)))
-
-    @property
     def path(self) -> str:
-        return os.path.join(self.directory, f"sequence-length-{self.dim_sequence}.pkl")
+        return os.path.join(TRANSFORM_DIR, f"{str(self.static_hash)}.pkl")
 
     def open(self) -> None:
         try:
@@ -88,7 +91,7 @@ class Transform(Component):
             self.__timestamp_to_sf = {}
 
     def close(self) -> None:
-        create_directory(self.directory)
+        create_directory(TRANSFORM_DIR)
         with open(self.path, "wb+") as file:
             pickle.dump(self.timestamp_to_sf, file)
 
@@ -137,16 +140,22 @@ class Transform(Component):
         if progress is not None:
             progress.update(task_id=task, visible=False)
 
-    def load_sf(self, timestamps: List[int]) -> Generator[Union[np.array, None], None, None]:
+    def load_sf(self, timestamps: List[int]) -> np.array:
+        sf_values = []
         for timestamp in timestamps:
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
-            sf = self.timestamp_to_sf.get(shifted_timestamp, None)
-            yield sf
+            default_nan_sf = np.zeros((self.dim_sequence, self.dim_feature)) * np.nan
+            sf = self.timestamp_to_sf.get(shifted_timestamp, default_nan_sf)
+            sf_values.append(sf)
+
+        sf_values = np.array(sf_values)
+
+        return sf_values
 
     def transform_sf(self, dc: DataCollection, timestamps: List[int]) -> Generator[np.array, None, None]:
         for timestamp in timestamps:
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
-            sf = self.timestamp_to_sf.get(shifted_timestamp, None)
+            sf = self.timestamp_to_sf.get(shifted_timestamp, np.zeros((self.dim_sequence, self.dim_feature)) * np.nan)
             if not self._is_sf_valid(dc=dc, timestamp=shifted_timestamp, sf=sf):
                 sf = self._transform_dc_to_sf(dc=dc, timestamp=shifted_timestamp)
                 self.timestamp_to_sf[shifted_timestamp] = sf
@@ -162,23 +171,25 @@ class Transform(Component):
         raise NotImplementedError()
 
     @abstractmethod
-    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> Union[np.array, None]:
+    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> np.array:
         raise NotImplementedError()
 
-    def _is_sf_valid(self, dc: DataCollection, timestamp: int, sf: Union[np.array, None]) -> bool:
+    def _is_sf_valid(self, dc: DataCollection, timestamp: int, sf: np.array) -> bool:
         start_timestamp = self.get_start_timestamp(dc=dc)
         stop_timestamp = self.get_stop_timestamp(dc=dc)
         is_timestamp_valid = start_timestamp <= timestamp < stop_timestamp
-        is_sf_valid = is_timestamp_valid and sf is not None
+        is_value_valid = not np.isnan(sf).max()
+        is_valid = is_timestamp_valid and is_value_valid
 
-        return is_sf_valid
+        return is_valid
 
     def __enter__(self):
         self.open()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+        if exc_type is None:
+            self.close()
 
     def __str__(self) -> str:
         return "{} - {} - {}".format(self.short_name, self.symbol, str(self.time_frame))

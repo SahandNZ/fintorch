@@ -6,7 +6,7 @@ import torch
 
 from ...deep.transform.feature import FeatureTransform
 from ...deep.transform.label import LabelTransform
-from ...dtype import DataCollection
+from ...typing import DataCollection
 from ...enum import TimeFrame
 from ...utils.hash import static_list_hash
 
@@ -18,9 +18,8 @@ class Dataset(ABC):
         self.__interval: TimeFrame = interval
 
         self.__static_hash: int = static_list_hash([
-            int(self.interval),
             self.feature_transform.static_hash,
-            self.label_transform.static_hash
+            self.label_transform.static_hash,
         ])
 
     @property
@@ -30,6 +29,14 @@ class Dataset(ABC):
     @property
     def label_transform(self) -> LabelTransform:
         return self.__label_transform
+
+    @property
+    def symbol(self) -> str:
+        return self.label_transform.symbol
+
+    @property
+    def time_frame(self) -> TimeFrame:
+        return self.label_transform.time_frame
 
     @property
     def interval(self) -> TimeFrame:
@@ -58,18 +65,13 @@ class Dataset(ABC):
         self.feature_transform.prepare_sf(dc=dc, timestamps=timestamps)
         self.label_transform.prepare_sf(dc=dc, timestamps=timestamps)
 
-    def _load_samples(self, timestamps: List[int]) -> Tuple[torch.Tensor, torch.Tensor]:
-        features_generator = self.feature_transform.load_sf(timestamps=timestamps)
-        labels_generator = self.label_transform.load_sf(timestamps=timestamps)
+    def load(self, timestamps: List[int]) -> Tuple[torch.Tensor, torch.Tensor]:
+        features = self.feature_transform.load_sf(timestamps=timestamps)
+        labels = self.label_transform.load_sf(timestamps=timestamps)
 
-        valid_features, valid_labels = [], []
-        for feature, label in zip(features_generator, labels_generator):
-            if feature is not None and label is not None:
-                valid_features.append(feature)
-                valid_labels.append(label)
-
-        x = torch.from_numpy(np.array(valid_features)).float()
-        y = torch.from_numpy(np.array(valid_labels)).float()
+        # convert to torch.tensor
+        x = torch.from_numpy(np.array(features)).float()
+        y = torch.from_numpy(np.array(labels)).float()
 
         return x, y
 
@@ -82,8 +84,8 @@ class Dataset(ABC):
 
     def __getitem__(self, item: Union[int, List[int]]) -> Tuple[torch.Tensor, torch.Tensor]:
         if isinstance(item, int):
-            return self._load_samples(timestamps=[item])
+            return self.load(timestamps=[item])
         elif isinstance(item, list):
-            return self._load_samples(timestamps=item)
+            return self.load(timestamps=item)
         else:
             raise ValueError("item parameter must be int (single timestamp) or list of ints (multiple timestamps).")

@@ -12,7 +12,7 @@ def resample_df(
     first_timestamp = round_timestamp(timestamp=df.index[0], time_frame=destination_timeframe)
     first_timestamp += destination_timeframe 
     
-    if inplace:
+    if not inplace:
         df = df.copy()
     
     df = df[first_timestamp <= df.index]

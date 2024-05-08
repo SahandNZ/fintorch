@@ -1,8 +1,9 @@
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from ._label_transform import LabelTransform
-from ....enum import TimeFrame
+from .._label_transform import LabelTransform
+from .....enum import TimeFrame
 
 
 class ForwardIchimokuLabelTransform(LabelTransform):
@@ -10,19 +11,20 @@ class ForwardIchimokuLabelTransform(LabelTransform):
             self,
             symbol: str,
             time_frame: TimeFrame,
+            dim_sequence: int,
             forward: int = 10,
             base_length: int = 5,
             conversion_length: int = 20,
-    ):
+    ) -> None:
         super().__init__(
             name="Forward Ichimoku",
             short_name="F-Ichimoku",
-            description="This labeling method works by comparing the base line with the conversion line of "
-                        "the Ichimoku indicator, and then shifting back the comparison values to assign trend "
-                        "labels to the data.",
+            description="",
             symbol=symbol,
             time_frame=time_frame,
+            dim_sequence=dim_sequence,
             look_ahead=forward,
+            look_back=0,
             classes=["UP", "DOWN"]
         )
         self.__forward: int = forward
@@ -42,8 +44,8 @@ class ForwardIchimokuLabelTransform(LabelTransform):
         return self.__conversion_length
 
     def forward_donchian(self, df: pd.DataFrame, length: int) -> pd.Series:
-        forward_highest = df.high.rolling(window=length, min_periods=1).max().shift(periods=-self.forward).ffill()
-        forward_lowest = df.low.rolling(window=length, min_periods=1).min().shift(periods=-self.forward).ffill()
+        forward_highest = df.high.rolling(window=length).max().shift(periods=-self.forward)
+        forward_lowest = df.low.rolling(window=length).min().shift(periods=-self.forward)
         forward_middle = (forward_highest + forward_lowest) / 2
 
         return forward_middle
@@ -51,7 +53,8 @@ class ForwardIchimokuLabelTransform(LabelTransform):
     def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df["forward-base"] = self.forward_donchian(df=df, length=self.base_length)
         df["forward-conversion"] = self.forward_donchian(df=df, length=self.conversion_length)
-        df["label"] = df["forward-conversion"] <= df["forward-base"]
+        df["up"] = df["forward-conversion"] <= df["forward-base"]
+        df["label"] = np.where(np.isnan(df["forward-conversion"]), np.nan, df.up)
 
         return df
 

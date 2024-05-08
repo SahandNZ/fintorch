@@ -1,18 +1,18 @@
 from datetime import datetime
-from typing import List
+from typing import List, Union
 
 import pandas as pd
 
 
 class Candle:
     def __init__(self):
-        self.timestamp: int = None
-        self.open: float = None
-        self.high: float = None
-        self.low: float = None
-        self.close: float = None
-        self.volume: float = None
-        self.trade: int = None
+        self.timestamp: Union[int, None] = None
+        self.open: Union[float, None] = None
+        self.high: Union[float, None] = None
+        self.low: Union[float, None] = None
+        self.close: Union[float, None] = None
+        self.volume: Union[float, None] = None
+        self.trade: Union[int, None] = None
 
     @property
     def datetime(self) -> datetime:
@@ -64,6 +64,3 @@ class Candle:
 
     def to_list(self):
         return [self.timestamp, self.open, self.high, self.low, self.close, self.volume, self.trade]
-
-    def is_touched(self, price: float) -> bool:
-        return self.low <= price <= self.high

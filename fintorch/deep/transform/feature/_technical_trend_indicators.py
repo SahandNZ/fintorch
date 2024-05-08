@@ -14,7 +14,7 @@ class TechnicalTrendIndicatorsFeatureTransform(FeatureTransform):
             symbol=symbol,
             time_frame=time_frame,
             dim_sequence=dim_sequence,
-            look_back=(dim_sequence + backward) * 2,
+            look_back=(dim_sequence + backward) * 5,
             features=["adx", "dpo", "stc", "kst"],
         )
         self.__backward: int = backward
@@ -32,6 +32,3 @@ class TechnicalTrendIndicatorsFeatureTransform(FeatureTransform):
         df["kst"] = ta.trend.kst(df.close, fillna=True)
 
         return df
-
-    def normalize_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        return df / (df.max() - df.min())

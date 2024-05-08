@@ -9,7 +9,6 @@ from matplotlib import pyplot as plt
 from .._transform import Transform
 from ....dtype import DataCollection
 from ....enum import TimeFrame
-from ....setting import NUMPY_LABEL_DTYPE
 from ....utils.plot import draw_candlestick_plot, draw_labels
 from ....utils.timestamp import to_timestamp
 
@@ -22,8 +21,10 @@ class LabelTransform(Transform, ABC):
             description: str,
             symbol: str,
             time_frame: TimeFrame,
+            dim_sequence: int,
             look_ahead: int,
-            classes: List[str]
+            look_back: int,
+            classes: List[str],
     ):
         super().__init__(
             name=name,
@@ -31,9 +32,10 @@ class LabelTransform(Transform, ABC):
             description=description,
             symbol=symbol,
             time_frame=time_frame,
-            dim_sequence=1,
-            look_back=0,
-            look_ahead=look_ahead
+            dim_sequence=dim_sequence,
+            dim_feature=len(classes),
+            look_back=look_back,
+            look_ahead=look_ahead,
         )
         self.__classes: List[str] = classes
         self.__df: Union[pd.DataFrame, None] = None
@@ -43,42 +45,43 @@ class LabelTransform(Transform, ABC):
         return self.__classes
 
     @property
-    def num_classes(self) -> int:
-        return len(self.classes)
-
-    @property
     def df(self) -> Union[pd.DataFrame, None]:
         return self.__df
 
     def _shift_timestamp(self, timestamp: int) -> int:
         return math.ceil(timestamp / self.time_frame) * self.time_frame
 
-    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> Union[np.array, None]:
+    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> np.array:
         if self.df is None or timestamp not in self.df.index:
             df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
-            self.__df = self.transform_df(df=df)
+            df = self.transform_df(df=df)
+            df = df.dropna()
+            self.__df = df
 
+        return self._transform_df_to_sf(df=self.df, timestamp=timestamp)
+
+    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> np.array:
         # forward cropping label dataframe with timestamp and sequence length
-        ldf = self.df[timestamp <= self.df.index]
-        ldf = ldf.iloc[:self.dim_sequence]
+        ldf = df[timestamp <= self.df.index]
+        ldf = ldf.iloc[: self.dim_sequence]
 
         # make sure there is enough time steps and there is no nan values
         if self.dim_sequence != len(ldf):
-            return None
+            return np.zeros((self.dim_sequence, self.dim_feature)) * np.nan
 
         # one hot encoding
-        labels = ldf.label.to_numpy().astype(int)
-        one_hot = np.zeros(self.num_classes)
-        one_hot[labels] = 1
-
-        # reshape one hot encoding
-        sf = one_hot.astype(dtype=NUMPY_LABEL_DTYPE)
-        sf = sf.reshape(self.dim_sequence, 2)
+        label = ldf.label.to_numpy().astype(int)
+        sf = np.zeros((self.dim_sequence, self.dim_feature))
+        sf[range(self.dim_sequence), label] = 1
 
         return sf
 
-    def draw_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str) \
-            -> Tuple[plt.Figure, plt.Axes, pd.DataFrame]:
+    def draw_ohlc_plot(
+            self,
+            dc: DataCollection,
+            start_date: str,
+            stop_date: str
+    ) -> Tuple[plt.Figure, plt.Axes, pd.DataFrame]:
         # create start and stop timestamps
         start_timestamp = to_timestamp(date=start_date)
         stop_timestamp = to_timestamp(date=stop_date)

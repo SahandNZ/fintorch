@@ -1,6 +1,6 @@
 import math
 from abc import ABC, abstractmethod
-from typing import List, Union
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -8,7 +8,6 @@ import pandas as pd
 from .._transform import Transform
 from ....dtype import DataCollection
 from ....enum import TimeFrame
-from ....setting import NUMPY_FEATURE_DTYPE
 
 
 class FeatureTransform(Transform, ABC):
@@ -29,6 +28,7 @@ class FeatureTransform(Transform, ABC):
             symbol=symbol,
             time_frame=time_frame,
             dim_sequence=dim_sequence,
+            dim_feature=len(features),
             look_back=look_back,
             look_ahead=0
         )
@@ -45,11 +45,10 @@ class FeatureTransform(Transform, ABC):
     def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError()
 
-    @abstractmethod
     def normalize_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        raise NotImplementedError()
+        return df / (df.max() - df.min())
 
-    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> Union[np.array, None]:
+    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> np.array:
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
 
         # backward cropping feature dataframe with timestamp and sequence length
@@ -59,9 +58,9 @@ class FeatureTransform(Transform, ABC):
         fdf = fdf[self.features]
 
         if self.dim_sequence != len(fdf):
-            return None
+            return np.array((self.dim_sequence, self.dim_feature))
 
         ndf = self.normalize_df(df=fdf)
-        sf = ndf.to_numpy().astype(dtype=NUMPY_FEATURE_DTYPE)
+        sf = ndf.to_numpy()
 
         return sf

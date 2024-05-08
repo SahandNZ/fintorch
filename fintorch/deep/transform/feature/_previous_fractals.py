@@ -2,11 +2,11 @@ import pandas as pd
 
 from ._feature_transform import FeatureTransform
 from ....enum import TimeFrame
-from ....utils.preprocess import remove_price_dependency
+from ....utils.preprocess import remove_price_dependency, add_fractals
 
 
 class PreviousFractalsFeatureTransform(FeatureTransform):
-    def __init__(self, symbol: str, time_frame: TimeFrame, dim_sequence: int, length: int = 5):
+    def __init__(self, symbol: str, time_frame: TimeFrame, dim_sequence: int, length: int = 10):
         super().__init__(
             name="Previous Fractals Feature Transform",
             short_name="PREFC",
@@ -14,7 +14,7 @@ class PreviousFractalsFeatureTransform(FeatureTransform):
             time_frame=time_frame,
             dim_sequence=dim_sequence,
             look_back=length * dim_sequence * 2,
-            features=["open", "high", "low", "close"]
+            features=["close", "volume", "trade", "distance"]
         )
         self.__length: int = length
 
@@ -24,14 +24,9 @@ class PreviousFractalsFeatureTransform(FeatureTransform):
 
     def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df = remove_price_dependency(df=df)
-
-        df["center-max"] = df.close.rolling(window=self.length, min_periods=1, center=True).max()
-        df["center-min"] = df.close.rolling(window=self.length, min_periods=1, center=True).min()
-        df["fractal"] = (df.close == df["center-max"]) | (df.close == df["center-min"])
-        df = df[df.fractal]
+        df = add_fractals(df=df, length=self.length)
+        df = df[df["is-fractal"]]
+        df["distance"] = df.index.to_series().diff() // self.time_frame
         df = df.dropna()
 
         return df
-
-    def normalize_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        return df - df.low.min() / (df.high.max() - df.low.min())

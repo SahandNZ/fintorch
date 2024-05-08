@@ -1,12 +1,7 @@
 from ._feature_transform import FeatureTransform
 from ._previous_fractals import PreviousFractalsFeatureTransform
+from ._previous_fractals_with_funding_rate import PreviousFractalsWithFundingRateFeatureTransform
 from ._rmstd_tr_roc import RollingMeanStdTrRocFeatureTransform
 from ._stft_tr_roc import StftTrRocFeatureTransform
 from ._technical_trend_indicators import TechnicalTrendIndicatorsFeatureTransform
-
-FEATURE_TRANSFORM_TYPES = [
-    PreviousFractalsFeatureTransform,
-    RollingMeanStdTrRocFeatureTransform,
-    # TechnicalTrendIndicatorsFeatureTransform,
-    StftTrRocFeatureTransform,
-]
+from ._square_log_tr_roc import SquareLogTrRocFeatureTransform
