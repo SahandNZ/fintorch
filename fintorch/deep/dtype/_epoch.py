@@ -1,5 +1,6 @@
-import math
-from typing import Dict, List
+from typing import Dict, List, Union
+
+import numpy as np
 
 from fintorch.deep.criterion import Criterion
 
@@ -24,7 +25,7 @@ class Epoch:
         self.test_batch_losses: List[float] = []
         self.test_batch_accuracies: List[int] = []
 
-        self.model_state_dict: Dict = None
+        self.model_state_dict: Union[Dict, None] = None
         self.completed: bool = False
 
     @property
@@ -37,105 +38,77 @@ class Epoch:
 
     @property
     def train_elapsed_time(self) -> float:
-        return sum(self.train_batch_times)
+        return np.round(np.array(self.train_batch_times).sum(), 2)
 
     @property
     def train_total_time(self) -> float:
-        if 0 < len(self.train_batch_times):
-            return self.train_elapsed_time * (self.train_batch_count / len(self.train_batch_times))
-        else:
-            return 0
+        return np.round(np.array(self.train_batch_times).mean() * self.train_batch_count, 2)
 
     @property
     def train_remaining_time(self) -> float:
-        return self.train_total_time - self.train_elapsed_time
+        return np.round(self.train_total_time - self.train_elapsed_time, 2)
 
     @property
     def train_loss(self) -> float:
-        # TODO Define worst case value in criterion to use it in such cases
-        if 0 < len(self.train_batch_losses):
-            return sum(self.train_batch_losses) / len(self.train_batch_losses)
-        else:
-            return math.inf
+        return np.round(np.array(self.train_batch_losses).mean(), 4)
 
     @property
     def train_accuracy(self) -> float:
-        if 0 < len(self.train_batch_accuracies):
-            return sum(self.train_batch_accuracies) / len(self.train_batch_accuracies)
-        else:
-            return 0
+        return np.round(np.array(self.train_batch_accuracies).mean(), 2)
 
     @property
     def val_elapsed_time(self) -> float:
-        return sum(self.val_batch_times)
+        return np.round(np.array(self.val_batch_times).sum(), 2)
 
     @property
     def val_total_time(self) -> float:
-        if 0 < len(self.val_batch_times):
-            return self.val_elapsed_time * (self.val_batch_count / len(self.val_batch_times))
-        else:
-            return 0
+        return np.round(np.array(self.val_batch_times).mean() * self.val_batch_count, 2)
 
     @property
     def val_remaining_time(self) -> float:
-        return self.val_total_time - self.val_elapsed_time
+        return np.round(self.val_total_time - self.val_elapsed_time, 2)
 
     @property
     def val_loss(self) -> float:
-        if 0 < len(self.val_batch_losses):
-            return sum(self.val_batch_losses) / len(self.val_batch_losses)
-        else:
-            return math.inf
+        return np.round(np.array(self.val_batch_losses).mean(), 4)
 
     @property
     def val_accuracy(self) -> float:
-        if 0 < len(self.val_batch_accuracies):
-            return sum(self.val_batch_accuracies) / len(self.val_batch_accuracies)
-        else:
-            return 0
+        return np.round(np.array(self.val_batch_accuracies).mean(), 2)
 
     @property
     def test_elapsed_time(self) -> float:
-        return sum(self.test_batch_times)
+        return np.round(np.array(self.test_batch_times).sum(), 2)
 
     @property
     def test_total_time(self) -> float:
-        if 0 < len(self.test_batch_times):
-            return self.test_elapsed_time * (self.test_batch_count / len(self.test_batch_times))
-        else:
-            return 0
+        return np.round(np.array(self.test_batch_times).mean() * self.test_batch_count, 2)
 
     @property
     def test_remaining_time(self) -> float:
-        return self.test_total_time - self.test_elapsed_time
+        return np.round(self.test_total_time - self.test_elapsed_time, 2)
 
     @property
     def test_loss(self) -> float:
-        if 0 < len(self.test_batch_losses):
-            return sum(self.test_batch_losses) / len(self.test_batch_losses)
-        else:
-            return math.inf
+        return np.round(np.array(self.test_batch_losses).mean(), 4)
 
     @property
     def test_accuracy(self) -> float:
-        if 0 < len(self.test_batch_accuracies):
-            return sum(self.test_batch_accuracies) / len(self.test_batch_accuracies)
-        else:
-            return 0
+        return np.round(np.array(self.test_batch_accuracies).mean(), 2)
 
     @property
     def elapsed_time(self) -> float:
-        return self.train_elapsed_time + self.val_elapsed_time + self.test_elapsed_time
+        return np.round(self.train_elapsed_time + self.val_elapsed_time + self.test_elapsed_time, 2)
 
     @property
     def total_time(self) -> float:
-        return self.train_total_time + self.val_total_time + self.test_total_time
+        return np.round(self.train_total_time + self.val_total_time + self.test_total_time, 2)
 
     @property
     def remaining_time(self) -> float:
-        return self.total_time - self.elapsed_time
+        return np.round(self.total_time - self.elapsed_time, 2)
 
-    def compare(self, other, mode: str) -> bool:
-        self_loss = getattr(self, f"{mode}_loss")
-        other_loss = getattr(other, f"{mode}_loss")
-        return self.criterion.compare(self_loss, other_loss)
+    def compare(self, other, mode: str, metric: str) -> bool:
+        self_metric = getattr(self, f"{mode}_{metric}")
+        other_metric = getattr(other, f"{mode}_{metric}")
+        return self_metric <= other_metric

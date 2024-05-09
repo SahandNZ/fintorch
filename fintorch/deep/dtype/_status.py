@@ -22,6 +22,10 @@ class Status:
         return self.__folds
 
     @property
+    def completed_folds(self) -> List[Fold]:
+        return [fold for fold in self.folds if fold.completed]
+
+    @property
     def fold_elapsed_times(self) -> List[float]:
         return self.__fold_elapsed_times
 
@@ -31,7 +35,7 @@ class Status:
 
     @property
     def completed_folds_count(self) -> int:
-        return sum(1 for fold in self.folds if fold.completed)
+        return len(self.completed_folds)
 
     @property
     def remaining_folds_count(self) -> int:
@@ -52,21 +56,6 @@ class Status:
     def remaining_time(self) -> float:
         return self.total_time - self.elapsed_time
 
-    @property
-    def overall_vot_accuracy(self) -> float:
-        accuracy_values = [fold.best_val_epoch.test_accuracy for fold in self.folds]
-        return sum(accuracy_values) / len(accuracy_values)
-
-    @property
-    def overall_vot_loss(self) -> float:
-        loss_values = [fold.best_val_epoch.test_loss for fold in self.folds]
-        valid_loss_values = [value for value in loss_values if not np.isinf(value) and not np.isinf(value)]
-        return sum(valid_loss_values) / len(valid_loss_values) if 0 < len(valid_loss_values) else 0
-
-    @property
-    def overall_vot_str(self) -> str:
-        return "Overall VoT  {:<6.4f}  {:<5.1f}%".format(self.overall_vot_loss, self.overall_vot_accuracy)
-
     def append_fold(self, fold: Fold) -> None:
         self.folds.append(fold)
         self.fold_elapsed_times.append(0)
@@ -79,13 +68,96 @@ class Status:
         remaining_time = datetime.strftime(datetime.utcfromtimestamp(self.remaining_time), '%H:%M:%S')
         total_time = datetime.strftime(datetime.utcfromtimestamp(self.total_time), '%H:%M:%S')
 
-        return "Fold ({}/{}) ({} {} {})\n{}\n{}" \
+        overall_vot_losses = [f.best_val_epoch.test_loss for f in self.folds]
+        overall_vot_accuracies = [f.best_val_epoch.test_accuracy for f in self.folds]
+
+        overall_vot_losses = [item for item in overall_vot_losses if not np.isnan(item)]
+        overall_vot_accuracies = [item for item in overall_vot_accuracies if not np.isnan(item)]
+        overall_vot_loss = np.round(np.array(overall_vot_losses).mean(), 4)
+        overall_vot_accuracy = np.round(np.array(overall_vot_accuracies).mean(), 2)
+
+        return (
+            (
+                "Fold ({}/{}) Epoch({}/{}) ({} {} {})\n\n"
+                "{:<6} | {:^14} | {:^20} | {:^20}\n"
+                "{:<6} | {:^6} {:^7} | {:^6} {:^7} {:^5} | {:^6} {:^7} {:^5}\n"
+                "{:<6} | {:^6} {:^7} | {:^6} {:^7} {:^5} | {:^6} {:^7} {:^5}\n"
+                "{:<6} | {:^6} {:^7} | {:^6} {:^7} {:^5} | {:^6} {:^7} {:^5}\n"
+                "{:<6} | {:^6} {:^7} | {:^6} {:^7} {:^5} | {:^6} {:^7} {:^5}\n"
+                "{:<6} | {:^6} {:^7} | {:^6} {:^7} {:^5} | {:^6} {:^7} {:^5}\n"
+                "{:<6} | {:^6} {:^7} | {:^6} {:^7} {:^5} | {:^6} {:^7} {:^5}\n"
+            )
             .format(
-            self.completed_folds_count,
-            self.total_folds_count,
-            elapsed_time,
-            remaining_time,
-            total_time,
-            self.overall_vot_str,
-            str(self.last_fold)
+                self.last_fold.index, self.total_folds_count,
+                self.last_fold.last_epoch.index, self.last_fold.epochs_count,
+                elapsed_time, remaining_time, total_time,
+
+                "", "Last", "Best", "Overall",
+                "", "obj", "acc", "obj", "acc", "idx", "obj", "acc", "idx",
+
+                "Train",
+                # last epoch of last fold
+                self.last_fold.last_epoch.train_loss,
+                self.last_fold.last_epoch.train_accuracy,
+                # best epoch of last fold
+                self.last_fold.best_train_epoch.train_loss,
+                self.last_fold.best_train_epoch.train_accuracy,
+                self.last_fold.best_train_epoch.index,
+                # overall of folds
+                np.round(np.array([f.best_train_epoch.train_loss for f in self.folds]).mean(), 4),
+                np.round(np.array([f.best_train_epoch.train_accuracy for f in self.folds]).mean(), 2),
+                int(np.round(np.array([f.best_train_epoch.index for f in self.folds]).mean())),
+
+                "Val",
+                # last epoch of last fold
+                self.last_fold.last_epoch.val_loss,
+                self.last_fold.last_epoch.val_accuracy,
+                # best epoch of last fold
+                self.last_fold.best_val_epoch.val_loss,
+                self.last_fold.best_val_epoch.val_accuracy,
+                self.last_fold.best_val_epoch.index,
+                # overall of folds
+                np.round(np.array([f.best_val_epoch.val_loss for f in self.folds]).mean(), 4),
+                np.round(np.array([f.best_val_epoch.val_accuracy for f in self.folds]).mean(), 2),
+                int(np.round(np.array([f.best_val_epoch.index for f in self.folds]).mean())),
+
+                "Test",
+                # last epoch of last fold
+                self.last_fold.last_epoch.test_loss,
+                self.last_fold.last_epoch.test_accuracy,
+                # best epoch of last fold
+                self.last_fold.best_test_epoch.test_loss,
+                self.last_fold.best_test_epoch.test_accuracy,
+                self.last_fold.best_test_epoch.index,
+                # overall of folds
+                np.round(np.array([f.best_test_epoch.test_loss for f in self.folds]).mean(), 4),
+                np.round(np.array([f.best_test_epoch.test_accuracy for f in self.folds]).mean(), 2),
+                int(np.round(np.array([f.best_test_epoch.index for f in self.folds]).mean())),
+
+                "ToV",
+                # last epoch of last fold
+                "-",
+                "-",
+                # best epoch of last fold
+                self.last_fold.best_train_epoch.val_loss,
+                self.last_fold.best_train_epoch.val_accuracy,
+                "-",
+                # overall of folds
+                np.round(np.array([f.best_train_epoch.val_loss for f in self.folds]).mean(), 4),
+                np.round(np.array([f.best_train_epoch.val_accuracy for f in self.folds]).mean(), 2),
+                "-",
+
+                "VoT",
+                # last epoch of last fold
+                "-",
+                "-",
+                # best epoch of last fold
+                self.last_fold.best_val_epoch.test_loss,
+                self.last_fold.best_val_epoch.test_accuracy,
+                "-",
+                # overall of folds
+                overall_vot_loss,
+                overall_vot_accuracy,
+                "-",
+            )
         )
