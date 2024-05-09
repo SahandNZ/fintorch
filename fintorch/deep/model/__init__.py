@@ -6,12 +6,3 @@ from ._lstm import LSTM
 from ._model import Model
 from ._resnet1d import ResNet1D
 from ._transformer import Transformer
-
-MODEL_TYPES = [
-    FeedForward,
-    GRU,
-    LSTM,
-    Hybrid,
-    ResNet1D,
-    Transformer
-]

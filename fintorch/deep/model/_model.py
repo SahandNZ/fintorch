@@ -13,9 +13,10 @@ class Model(nn.Module, Component, ABC):
             self,
             name: str,
             short_name: str,
-            dim_sequence: int,
-            dim_feature: int,
-            dim_output: int,
+            dim_input_sequence: int,
+            dim_input_feature: int,
+            dim_output_sequence: int,
+            dim_output_feature: int,
             num_hidden_layers: int,
             dropout: float,
             batch_norm: bool,
@@ -24,9 +25,10 @@ class Model(nn.Module, Component, ABC):
         nn.Module.__init__(self)
         Component.__init__(self, name=name, short_name=short_name, description="")
 
-        self.__dim_sequence: int = dim_sequence
-        self.__dim_feature: int = dim_feature
-        self.__dim_output: int = dim_output
+        self.__dim_input_sequence: int = dim_input_sequence
+        self.__dim_input_feature: int = dim_input_feature
+        self.__dim_output_sequence: int = dim_output_sequence
+        self.__dim_output_feature: int = dim_output_feature
         self.__num_hidden_layers: int = num_hidden_layers
         self.__dropout: float = dropout
         self.__batch_norm: bool = batch_norm
@@ -35,25 +37,30 @@ class Model(nn.Module, Component, ABC):
         self.__device: torch.device = torch.device("cpu")
         self.__static_hash: int = static_list_hash([
             self.name,
-            self.dim_sequence,
-            self.dim_feature,
-            self.dim_output,
+            self.dim_input_sequence,
+            self.dim_input_feature,
+            self.dim_output_sequence,
+            self.dim_output_feature,
             self.num_hidden_layers,
-            self.batch_norm,
             int(self.dropout * 10 ** 2),
+            self.batch_norm,
         ])
 
     @property
-    def dim_sequence(self) -> int:
-        return self.__dim_sequence
+    def dim_input_sequence(self) -> int:
+        return self.__dim_input_sequence
 
     @property
-    def dim_feature(self) -> int:
-        return self.__dim_feature
+    def dim_input_feature(self) -> int:
+        return self.__dim_input_feature
 
     @property
-    def dim_output(self) -> int:
-        return self.__dim_output
+    def dim_output_sequence(self) -> int:
+        return self.__dim_output_sequence
+
+    @property
+    def dim_output_feature(self) -> int:
+        return self.__dim_output_feature
 
     @property
     def num_hidden_layers(self) -> int:
@@ -81,7 +88,7 @@ class Model(nn.Module, Component, ABC):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if torch.isnan(x).max() or torch.isinf(x).max():
-            raise RuntimeError("NaN or Inf values found in the output of the model.")
+            raise RuntimeError("NaN or Inf values found in the input of the model.")
 
         output = self._forward(x)
         if torch.isnan(output).max() or torch.isinf(output).max():
