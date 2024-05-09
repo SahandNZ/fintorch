@@ -3,15 +3,15 @@ import torch
 from ._criterion import Criterion
 
 
-class FocalMSE(Criterion):
+class MSE(Criterion):
     def __init__(self):
-        super().__init__(name="Focal MSE", reduction='mean', classification_criterion=True)
+        super().__init__(name="MSE", reduction='mean', classification_criterion=True)
 
     def _forward(self, input: torch.Tensor, target: torch.Tensor):
-        return ((target - input) ** 2).mean()
+        return torch.nn.functional.mse_loss(input=input, target=target, reduction=self.reduction)
 
     def to_str(self, value: float) -> str:
-        return "Focal MSE: {:.6f}".format(value)
+        return "MSE: {:.6f}".format(value)
 
     def compare(self, first: float, second: float) -> bool:
         return second < first

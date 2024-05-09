@@ -9,10 +9,7 @@ class CE(Criterion):
         super().__init__(name="CE", reduction=reduction, classification_criterion=True)
 
     def _forward(self, input: torch.Tensor, target: torch.Tensor):
-        weight = torch.sum(target, dim=0) / len(target)
-        loss = F.cross_entropy(input=input, target=target, weight=weight, reduction=self.reduction)
-
-        return loss
+        return F.cross_entropy(input=input, target=target, reduction=self.reduction)
 
     def to_str(self, value: float) -> str:
         return "CE: {:.6f}".format(value)

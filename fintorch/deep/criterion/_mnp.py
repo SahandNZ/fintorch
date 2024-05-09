@@ -13,9 +13,7 @@ class MNP(Criterion):
         return self.__fee_rate
 
     def _forward(self, input: torch.Tensor, target: torch.Tensor):
-        pnl = torch.sum(target * input - self.fee_rate * torch.abs(input), dim=-1, keepdim=True)
-
-        return pnl.mean()
+        return torch.sum(target * input - self.fee_rate * torch.abs(input), dim=-1, keepdim=True).mean()
 
     def to_str(self, value: float):
         return "MNP: {:.6f}".format(value)
