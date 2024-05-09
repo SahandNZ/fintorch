@@ -6,7 +6,7 @@ import pandas as pd
 
 class Candle:
     def __init__(self):
-        self.timestamp: Union[int, None] = None
+        self.timestamp: Union[float, None] = None
         self.open: Union[float, None] = None
         self.high: Union[float, None] = None
         self.low: Union[float, None] = None
@@ -17,23 +17,6 @@ class Candle:
     @property
     def datetime(self) -> datetime:
         return datetime.fromtimestamp(self.timestamp) if self.timestamp is not None else None
-
-    @staticmethod
-    def from_csv(path: str) -> List:
-        candles = []
-        with open(path, 'r') as file:
-            lines = file.readlines()
-            for line in lines[1:]:
-                tokens = line.replace("\n", "").split(',')
-                candle = Candle.from_list(tokens)
-                candles.append(candle)
-
-        return candles
-
-    @staticmethod
-    def to_csv(candles: List, path: str):
-        df = Candle.to_dataframe(candles)
-        df.to_csv(path)
 
     @staticmethod
     def to_dataframe(candles: List) -> pd.DataFrame:
@@ -64,3 +47,9 @@ class Candle:
 
     def to_list(self):
         return [self.timestamp, self.open, self.high, self.low, self.close, self.volume, self.trade]
+
+    def is_touched(self, price: float) -> bool:
+        return self.low <= price <= self.high
+
+    def __str__(self):
+        return str(self.datetime)

@@ -1,3 +1,4 @@
+from ._aggregated_trade import AggregatedTrade
 from ._balance import Balance
 from ._candle import Candle
 from ._data_collection import DataCollection

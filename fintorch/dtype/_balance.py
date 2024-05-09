@@ -1,9 +1,7 @@
+from typing import Union
+
+
 class Balance:
     def __init__(self):
-        self.asset: str = None
-        self.total: float = None
-        self.frozen: float = None
-
-    @property
-    def available(self) -> float:
-        return self.total - self.frozen
+        self.asset: Union[str, None] = None
+        self.available: Union[float, None] = None
