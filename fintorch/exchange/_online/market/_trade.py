@@ -3,20 +3,13 @@ from typing import List
 from ..._exchange.market import MarketTrade
 from ....api import API
 from ....dtype import Order, Position
-from ....enum import TimeFrame, MarketType
+from ....enum import MarketType
 
 
 class OnlineMarketTrade(MarketTrade):
     def __init__(self, api: API, market_type: MarketType):
-        super().__init__()
+        super().__init__(market_type=market_type)
         self.__api: API = api
-        self.__market_type: MarketType = market_type
-
-    def prepare(self, symbols: List[str], time_frames: List[TimeFrame]) -> None:
-        raise NotImplementedError()
-
-    def next(self, timestamp: int) -> None:
-        raise NotImplementedError()
 
     def get_leverage(self, symbol: str) -> int:
         raise NotImplementedError()

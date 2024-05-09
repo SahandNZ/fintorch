@@ -1,24 +1,13 @@
-from typing import Dict
-
-from .wallet import Wallet
-from .. import Exchange, Market
-from ...enum import TimeFrame
-from ...utils.function import call_with_dict, import_class
+from .market import OnlineMarket
+from .. import Exchange
+from ...api import API
+from ...enum import MarketType
 
 
 class OnlineExchange(Exchange):
-    def __init__(self, name: str, wallet: Wallet, spot: Market, future: Market):
-        super().__init__(name=name, wallet=wallet, spot=spot, future=future)
-
-    @staticmethod
-    def from_name(name: str, interval: TimeFrame, proxies: Dict[str, str] = None):
-        dct = {"exchange-name": name, "interval": interval, "proxies": proxies}
-        exchange = OnlineExchange.from_dict(dct=dct)
-
-        return exchange
-
-    @staticmethod
-    def from_dict(dct: Dict):
-        name = dct["exchange-name"]
-        exchange_cls = import_class(module=f"fintorch.exchange.{name}", contains=f"{name}exchange")
-        return call_with_dict(exchange_cls, dct)
+    def __init__(self, api: API):
+        name = f"Online {api.name.title()} Exchange"
+        account = None
+        spot = None
+        future = OnlineMarket(api=api, market_type=MarketType.FUTURE)
+        super().__init__(name=name, account=account, spot=spot, future=future)

@@ -1,22 +1,26 @@
-from abc import ABC, abstractmethod
-from typing import List
+from abc import abstractmethod, ABC
+from typing import List, Union
 
-from fintorch.api import API
-from fintorch.dtype import Order, Position
-from fintorch.enum import TimeFrame
+from ._element import MarketElement
+from ....dtype import Order, Position
+from ....enum import MarketType, OrderSide
+from ....utils.event import Event
 
 
-class MarketTrade(ABC):
-    def __init__(self, api: API, interval: TimeFrame) -> None:
-        super().__init__(exchange_name=exchange_name, market_type=market_type, interval=interval)
+class MarketTrade(MarketElement, ABC):
+    def __init__(self, market_type: MarketType):
+        super().__init__(market_type=market_type)
 
-    @abstractmethod
-    def prepare(self, symbols: List[str], time_frames: List[TimeFrame]) -> None:
-        raise NotImplementedError()
+        self.__opened_position_event: Event = Event()
+        self.__closed_position_event: Event = Event()
 
-    @abstractmethod
-    def next(self, timestamp: int) -> None:
-        raise NotImplementedError()
+    @property
+    def opened_position_event(self) -> Event:
+        return self.__opened_position_event
+
+    @property
+    def closed_position_event(self) -> Event:
+        return self.__closed_position_event
 
     @abstractmethod
     def get_leverage(self, symbol: str) -> int:
@@ -39,8 +43,56 @@ class MarketTrade(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def set_order(self, order: Order) -> Order:
+    def set_order(
+            self,
+            symbol: str,
+            side: OrderSide,
+            percentage: float,
+            reduce_only: bool,
+            price: Union[float, None] = None,
+            stop_price: Union[float, None] = None,
+            comment: Union[str, None] = None
+    ) -> Order:
         raise NotImplementedError()
+
+    def set_entry_order(
+            self,
+            symbol: str,
+            side: OrderSide,
+            percentage: float,
+            price: Union[float, None] = None,
+            stop_price: Union[float, None] = None,
+            comment: Union[str, None] = None
+    ) -> Order:
+        return self.set_order(
+            symbol=symbol,
+            side=side,
+            percentage=percentage,
+            reduce_only=False,
+            price=price,
+            stop_price=stop_price,
+            comment=comment
+        )
+
+    def set_exit_order(
+            self,
+            symbol: str,
+            percentage: float,
+            price: Union[float, None] = None,
+            stop_price: Union[float, None] = None,
+            comment: Union[str, None] = None
+    ) -> Order:
+        position = self.get_position(symbol=symbol)
+        reversed_order_side = OrderSide(position.side * -1)
+        return self.set_order(
+            symbol=symbol,
+            side=reversed_order_side,
+            percentage=percentage,
+            reduce_only=True,
+            price=price,
+            stop_price=stop_price,
+            comment=comment
+        )
 
     @abstractmethod
     def cancel_order(self, symbol: str, order_id: str) -> None:

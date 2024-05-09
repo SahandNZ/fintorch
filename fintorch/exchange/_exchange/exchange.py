@@ -1,15 +1,16 @@
+import os
 from abc import ABC
 from typing import List
 
+from .account import Account
 from .market import Market
-from .wallet import Wallet
 from ...enum import TimeFrame
 
 
 class Exchange(ABC):
-    def __init__(self, name: str, wallet: Wallet, spot: Market, future: Market):
+    def __init__(self, name: str, account: Account, spot: Market, future: Market):
         self.__name: str = name
-        self.__wallet: Wallet = wallet
+        self.__account: Account = account
         self.__spot: Market = spot
         self.__future: Market = future
 
@@ -18,8 +19,8 @@ class Exchange(ABC):
         return self.__name
 
     @property
-    def wallet(self) -> Wallet:
-        return self.__wallet
+    def account(self) -> Account:
+        return self.__account
 
     @property
     def spot(self) -> Market:
@@ -29,10 +30,16 @@ class Exchange(ABC):
     def future(self) -> Market:
         return self.__future
 
-    def prepare(self, symbols: List[str], time_frames: List[TimeFrame]) -> None:
-        # self.spot.prepare(symbols=symbols, time_frames=time_frames)
-        self.future.prepare(symbols=symbols, time_frames=time_frames)
+    def open(self, directory: str) -> None:
+        directory = os.path.join(directory, self.name.replace(" ", "-").lower())
+        # TODO call open methods of account and spot
+        self.future.open(directory=directory)
 
-    def next(self, timestamp: int) -> None:
-        # self.spot.next(timestamp=timestamp)
+    def next(self, timestamp: float) -> None:
+        # TODO call next methods of account and spot
         self.future.next(timestamp=timestamp)
+
+    def close(self, directory: str) -> None:
+        directory = os.path.join(directory, self.name.replace(" ", "-").lower())
+        # TODO call close methods of account and spot
+        self.future.close(directory=directory)

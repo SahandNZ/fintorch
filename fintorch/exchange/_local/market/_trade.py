@@ -1,71 +1,95 @@
 import copy
+import logging
+import math
 import uuid
-from typing import Dict, List
+from typing import Dict, List, Union
 
-from fintorch.dtype import Order, Position
-from fintorch.enum import MarketType, OrderStatus, PositionType, TimeFrame
-from fintorch.exchange import Data, Trade, Wallet
+from ._data import LocalMarketData
+from ..._exchange.market import MarketTrade
+from ....dtype import Order, Position
+from ....enum import MarketType, OrderStatus, TimeFrame, PositionType, PositionSide, OrderSide
+
+_logger = logging.getLogger("fintorch")
 
 
-class LocalTrade(Trade):
-    def __init__(self, market_type: MarketType, wallet: Wallet, data: Data, interval: TimeFrame) -> None:
-        super().__init__(exchange_name="Local Exchange", market_type=market_type, interval=interval)
-        self.__wallet: Wallet = wallet
-        self.__data: Data = data
+class LocalMarketTrade(MarketTrade):
+    def __init__(self, interval: TimeFrame, data: LocalMarketData, market_type: MarketType, ) -> None:
+        super().__init__(market_type=market_type)
+        self.__interval: TimeFrame = interval
+        self.__data: LocalMarketData = data
 
-        self.__symbol_to_leverage: Dict[str, int] = {}
-        self.__symbol_to_all_orders_dict: Dict[str, Dict[str, Order]] = {}
-        self.__symbol_to_open_orders_dict: Dict[str, Dict[str, Order]] = {}
-        self.__symbol_to_position: Dict[str, Position] = {}
+        self.__symbol_to_leverage_dict: Union[Dict[str, int], None] = None
+        self.__symbol_to_all_orders_dict: Union[Dict[str, Dict[str, Order]], None] = None
+        self.__symbol_to_open_orders_dict: Union[Dict[str, Dict[str, Order]], None] = None
+        self.__symbol_to_all_positions_dict: Union[Dict[str, Dict[str, Position]], None] = None
+        self.__symbol_to_open_position_dict: Union[Dict[str, Position], None] = None
 
-        self.__symbol_to_closed_position: Dict[str, List[Position]] = {}
-
-    def next(self, timestamp: int) -> None:
-        super().next(timestamp=timestamp)
-        self.__handle_open_orders()
+        self.__order_logs: List[(str, Order)] = []
+        self.__position_logs: List[(str, Position)] = []
 
     def get_leverage(self, symbol: str) -> int:
-        if symbol not in self.__symbol_to_leverage:
-            self.__symbol_to_leverage[symbol] = 1
-
-        return self.__symbol_to_leverage[symbol]
+        self.__symbol_to_leverage_dict.setdefault(symbol, 1)
+        return self.__symbol_to_leverage_dict[symbol]
 
     def set_leverage(self, symbol: str, leverage: int) -> None:
-        self.__symbol_to_leverage[symbol] = leverage
+        self.__symbol_to_leverage_dict[symbol] = leverage
 
     def get_order(self, symbol: str, order_id: str) -> Order:
-        all_orders_dict = self.__get_all_orders_dict(symbol=symbol)
-        return all_orders_dict[order_id]
-
-    def __get_open_orders_dict(self, symbol: str) -> Dict[str, Order]:
-        if symbol not in self.__symbol_to_open_orders_dict:
-            self.__symbol_to_open_orders_dict[symbol] = {}
-
-        return self.__symbol_to_open_orders_dict[symbol]
+        self.__symbol_to_all_orders_dict.setdefault(symbol, {})
+        return self.__symbol_to_all_orders_dict[symbol][order_id]
 
     def get_open_orders(self, symbol: str) -> List[Order]:
-        return list(self.__get_open_orders_dict(symbol=symbol).values())
-
-    def __get_all_orders_dict(self, symbol: str) -> Dict[str, Order]:
-        if symbol not in self.__symbol_to_all_orders_dict:
-            self.__symbol_to_all_orders_dict[symbol] = {}
-
-        return self.__symbol_to_all_orders_dict[symbol]
+        self.__symbol_to_open_orders_dict.setdefault(symbol, {})
+        return list(self.__symbol_to_open_orders_dict[symbol].values())
 
     def get_orders_history(self, symbol: str) -> List[Order]:
-        return list(self.__get_all_orders_dict(symbol=symbol).values())
+        self.__symbol_to_all_orders_dict.setdefault(symbol, {})
+        return list(self.__symbol_to_all_orders_dict[symbol].values())
 
-    def set_order(self, order: Order) -> Order:
+    def set_order(
+            self,
+            symbol: str,
+            side: OrderSide,
+            percentage: float,
+            reduce_only: bool,
+            price: Union[float, None] = None,
+            stop_price: Union[float, None] = None,
+            comment: Union[str, None] = None
+    ) -> Order:
+        symbol_info = self.__data.get_symbol_info(symbol=symbol)
+
+        order = Order()
+        order.symbol = symbol
+        order.side = OrderSide(side)
+        order.percentage = percentage
+        order.reduce_only = reduce_only
+
+        order.price = price
+        order.stop_price = stop_price
+        order.comment = comment
+
+        # round order properties
+        order.percentage = math.floor(order.percentage * 10 ** 2) / 10 ** 2
+        if order.price is not None:
+            order.price = round(order.price, symbol_info.price_precision)
+        if order.stop_price is not None:
+            order.stop_price = round(order.stop_price, symbol_info.price_precision)
+
+        # set order post processing properties
         order.id = str(uuid.uuid4())
-        order.timestamp = self.__data.get_current_timestamp()
+        order.timestamp = self.timestamp
+        order.status = OrderStatus.OPEN
 
-        # add to all orders dict
-        all_orders_dict = self.__get_all_orders_dict(symbol=order.symbol)
-        all_orders_dict[order.id] = order
+        if order.percentage < 0:
+            raise RuntimeError("Percentage of order must be greater than zero.")
+        if 100 < order.percentage:
+            raise RuntimeError("Percentage of order must not exceed 100.")
 
-        # add to open orders dict
-        open_orders_dict = self.__get_open_orders_dict(symbol=order.symbol)
-        open_orders_dict[order.id] = order
+        # add to all orders dict add open orders dict
+        self.__symbol_to_all_orders_dict.setdefault(order.symbol, {})
+        self.__symbol_to_open_orders_dict.setdefault(order.symbol, {})
+        self.__symbol_to_all_orders_dict[order.symbol][order.id] = order
+        self.__symbol_to_open_orders_dict[order.symbol][order.id] = order
 
         return order
 
@@ -74,110 +98,219 @@ class LocalTrade(Trade):
         self.__handle_canceled_order(order=order)
 
     def cancel_all_orders(self, symbol: str) -> None:
-        open_orders_dict = self.__get_open_orders_dict(symbol=symbol)
+        self.__symbol_to_open_orders_dict.setdefault(symbol, {})
+        open_orders_dict = self.__symbol_to_open_orders_dict[symbol].copy()
         for order_id in list(open_orders_dict.keys()):
             self.cancel_order(symbol=symbol, order_id=order_id)
 
     def get_position(self, symbol: str) -> Position:
-        if symbol not in self.__symbol_to_position:
-            position = Position()
-            position.symbol = symbol
-            position.type = PositionType.ISOLATED
-            position.quantity = 0
+        # set default position if it's not exists
+        default_position = Position()
+        default_position.id = str(uuid.uuid4())
+        default_position.symbol = symbol
+        default_position.type = PositionType.CROSS
+        default_position.entry_percentage = 0
+        default_position.exit_percentage = 0
+        self.__symbol_to_open_position_dict.setdefault(symbol, default_position)
 
-            self.__symbol_to_position[symbol] = position
-
-        position = self.__symbol_to_position[symbol]
-        position.leverage = self.get_leverage(symbol)
-        position.current_price = self.__data.get_current_candle(symbol=symbol, time_frame=self.interval).open
+        # update position properties
+        position = self.__symbol_to_open_position_dict[symbol]
+        position.leverage = self.get_leverage(symbol=symbol)
+        position.current_timestamp = self.timestamp
+        position.current_price = self.__data.get_current_candle(symbol=symbol, time_frame=self.__interval).close
 
         return position
 
     def get_positions_history(self, symbol: str) -> List[Position]:
-        if symbol not in self.__symbol_to_position:
-            self.__symbol_to_closed_position[symbol] = []
+        self.__symbol_to_all_positions_dict.setdefault(symbol, {})
+        return list(self.__symbol_to_all_positions_dict[symbol].values())
 
-        return self.__symbol_to_closed_position[symbol]
+    def state_dict(self) -> Dict:
+        state_dict = super().state_dict()
+        state_dict.update({
+            "symbol_to_leverage_dict": self.__symbol_to_leverage_dict,
+            "symbol_to_all_orders_dict": self.__symbol_to_all_orders_dict,
+            "symbol_to_open_orders_dict": self.__symbol_to_open_orders_dict,
+            "symbol_to_all_positions_dict": self.__symbol_to_all_positions_dict,
+            "symbol_to_open_position_dict": self.__symbol_to_open_position_dict,
+        })
+
+        return state_dict
+
+    def load_state_dict(self, state_dict: Dict) -> None:
+        self.__symbol_to_leverage_dict = state_dict.get("symbol_to_leverage_dict", {})
+        self.__symbol_to_all_orders_dict = state_dict.get("symbol_to_all_orders_dict", {})
+        self.__symbol_to_open_orders_dict = state_dict.get("symbol_to_open_orders_dict", {})
+        self.__symbol_to_all_positions_dict = state_dict.get("symbol_to_all_positions_dict", {})
+        self.__symbol_to_open_position_dict = state_dict.get("symbol_to_open_position_dict", {})
+
+    def next(self, timestamp: int) -> None:
+        super().next(timestamp=timestamp)
+        self.__order_logs = []
+        self.__position_logs = []
+
+        self.__handle_open_orders()
+        self.__handle_open_positions()
+        self.__handle_logs()
 
     def __handle_open_orders(self):
-        for symbol in self.__symbol_to_open_orders_dict.keys():
-            for open_order in self.get_open_orders(symbol=symbol):
-                current_candle = self.__data.get_current_candle(symbol=symbol, time_frame=self.interval)
-                if not open_order.is_active:
-                    if not open_order.type.is_stop or current_candle.is_touched(open_order.stop_price):
-                        self.__handle_activated_order(order=open_order)
+        for open_orders_dict in self.__symbol_to_open_orders_dict.values():
+            for open_order in open_orders_dict.copy().values():
+                if open_order.id in open_orders_dict:
+                    candle = self.__data.get_current_candle(symbol=open_order.symbol, time_frame=self.__interval)
+                    if not open_order.is_activated:
+                        if not open_order.type.is_stop or candle.is_touched(open_order.stop_price):
+                            self.__handle_activated_order(order=open_order)
 
-                elif open_order.type.is_market or current_candle.is_touched(open_order.price):
-                    self.__handle_filled_order(order=open_order)
+                    if open_order.is_activated:
+                        if open_order.type.is_market or candle.is_touched(open_order.price):
+                            self.__handle_filled_order(order=open_order)
 
     def __handle_activated_order(self, order: Order) -> None:
-        current_candle = self.__data.get_current_candle(symbol=order.symbol, time_frame=self.interval)
+        symbol_info = self.__data.get_symbol_info(symbol=order.symbol)
+        current_candle = self.__data.get_current_candle(symbol=order.symbol, time_frame=self.__interval)
 
         # update order properties
-        order.activated_timestamp = self.__data.get_current_timestamp()
-        order.activated_price = order.stop_price or current_candle.open
+        order.activated_timestamp = self.timestamp
+        order.activated_price = round(order.stop_price or current_candle.close, symbol_info.price_precision)
 
-        # update balance
-        order_price = order.price or current_candle.open
-        order_margin = round(order.quantity * order_price / self.get_leverage(symbol=order.symbol), 2)
-        balance = self.__wallet.get_balance(market_type=self.market_type, asset=order.base_asset)
-        if balance.available < order_margin:
-            raise Exception("Insufficient balance (available: {:.2f} required: {:.2f})."
-                            .format(balance.available, order_margin))
-        else:
-            if order.type.is_market:
-                balance.total -= order_margin
-            else:
-                balance.total -= order_margin
-                balance.frozen += order_margin
+        # TODO order percentage validation
+
+        self.__order_logs.append(("activated", copy.deepcopy(order)))
 
     def __handle_filled_order(self, order: Order) -> None:
         symbol_info = self.__data.get_symbol_info(symbol=order.symbol)
-        current_candle = self.__data.get_current_candle(symbol=order.symbol, time_frame=self.interval)
+        current_candle = self.__data.get_current_candle(symbol=order.symbol, time_frame=self.__interval)
 
         # update order properties
-        order.filled_timestamp = self.__data.get_current_timestamp()
-        order.filled_price = order.price or current_candle.open
+        order.filled_timestamp = self.timestamp
+        order.filled_price = round(order.price or current_candle.close, symbol_info.price_precision)
         order.status = OrderStatus.FILLED
 
-        # remove order it open orders
-        del self.__symbol_to_open_orders_dict[order.symbol][order.id]
+        # remove it from open orders dict
+        open_orders_dict = self.__symbol_to_open_orders_dict[order.symbol]
+        open_orders_dict.pop(order.id)
 
-        # update position and balance
-        position = self.get_position(symbol=order.symbol)
-
-        # handle closed position
-        if position.is_open and position.side != order.side:
-            closed_position = copy.deepcopy(position)
-            closed_position.quantity = round(int(closed_position.side) * order.quantity, symbol_info.quantity_precision)
-            closed_position.exit_timestamp = self.__data.get_current_timestamp()
-            closed_position.exit_price = order.price
-
-            # add closed position to position history
-            position_history = self.get_position_history(symbol=position.symbol)
-            position_history.append(closed_position)
-
-            # update total balance
-            balance = self.__wallet.get_balance(market_type=self.market_type, asset=order.base_asset)
-            balance.total += closed_position.realized_profit
-
-        # handle new position
-        if not position.is_open:
-            position.entry_timestamp = self.__data.get_current_timestamp()
+        self.__order_logs.append(("filled", copy.deepcopy(order)))
 
         # update position
-        position.quantity = round(position.quantity + int(order.side) * order.quantity, symbol_info.quantity_precision)
+        self.__handle_position(order=order)
 
     def __handle_canceled_order(self, order: Order) -> None:
         # update order properties
-        order.cancel_timestamp = self.__data.get_current_timestamp()
+        order.canceled_timestamp = self.timestamp
         order.status = OrderStatus.CANCELED
 
-        # remove it from open orders
-        del self.__symbol_to_open_orders_dict[order.symbol][order.id]
+        # remove it from open orders dict
+        open_orders_dict = self.__symbol_to_open_orders_dict[order.symbol]
+        open_orders_dict.pop(order.id)
 
-        # update balance
-        order_margin = round(order.quantity * order.price / self.get_leverage(symbol=order.symbol), 2)
-        balance = self.__wallet.get_balance(market_type=self.market_type, asset=order.base_asset)
-        balance.total += order_margin
-        balance.frozen -= order_margin
+        self.__order_logs.append(("canceled", copy.deepcopy(order)))
+
+    def __handle_position(self, order: Order):
+        symbol_info = self.__data.get_symbol_info(symbol=order.symbol)
+        position = self.get_position(symbol=order.symbol)
+
+        if not position.is_open:
+            if order.reduce_only:
+                raise RuntimeError("There is no open position to reduce its size.")
+            else:
+                position.side = PositionSide(order.side)
+                position.entry_price = round(order.filled_price, symbol_info.price_precision)
+                position.entry_timestamp = order.filled_timestamp
+                position.entry_percentage = math.floor(order.percentage * 10 ** 2) / 10 ** 2
+                position.highest_met_price = position.entry_price
+                position.lowest_met_price = position.entry_price
+
+                self.__symbol_to_all_positions_dict.setdefault(position.symbol, {})
+                self.__symbol_to_all_positions_dict[position.symbol][position.id] = position
+
+                self.__position_logs.append(("opened", copy.deepcopy(position)))
+
+                self.opened_position_event.trigger(args=(position,))
+
+        else:
+            if order.reduce_only:
+                exit_price = position.exit_price or 0
+                numerator = exit_price * position.exit_percentage + order.filled_price * order.percentage
+                denominator = position.exit_percentage + order.percentage
+                new_exit_price = numerator / denominator
+                new_exit_percentage = position.exit_percentage + order.percentage
+
+                position.exit_price = round(new_exit_price, symbol_info.price_precision)
+                position.exit_percentage = math.floor(new_exit_percentage * 10 ** 2) / 10 ** 2
+
+                if position.is_closed:
+                    position.exit_timestamp = order.filled_timestamp
+                    self.__symbol_to_all_positions_dict.setdefault(position.symbol, {})
+                    self.__symbol_to_all_positions_dict[position.symbol][position.id] = position
+                    self.__symbol_to_open_position_dict.pop(position.symbol)
+
+                    self.__position_logs.append(("closed", copy.deepcopy(position)))
+                    self.closed_position_event.trigger(args=(position,))
+
+                else:
+                    self.__position_logs.append(("reduced", copy.deepcopy(position)))
+
+            else:
+                numerator = position.entry_price * position.entry_percentage + order.filled_price * order.percentage
+                denominator = position.entry_percentage + order.percentage
+                new_entry_price = numerator / denominator
+                new_percentage = position.entry_percentage + order.percentage
+
+                position.entry_price = round(new_entry_price, symbol_info.price_precision)
+                position.entry_percentage = math.floor(new_percentage * 10 ** 2) / 10 ** 2
+
+                self.__position_logs.append(("extended", copy.deepcopy(position)))
+
+    def __handle_open_positions(self) -> None:
+        for symbol, position in self.__symbol_to_open_position_dict.items():
+            if position.is_open:
+                current_candle = self.__data.get_current_candle(symbol=symbol, time_frame=self.__interval)
+                position.highest_met_price = max(position.highest_met_price, current_candle.high)
+                position.lowest_met_price = min(position.lowest_met_price, current_candle.low)
+
+    def __handle_logs(self) -> None:
+        if 0 < len(self.__order_logs) + len(self.__position_logs):
+            _logger.debug("")
+            _logger.debug(f"{str(self.datetime)}")
+            _logger.debug(f"open orders count: {len(self.__symbol_to_open_orders_dict['BTC-USDT'])}")
+
+            for title, order in self.__order_logs:
+                self.__order_log_fn(title=title, order=order)
+            for title, position in self.__position_logs:
+                self.__position_log_fn(title=title, position=position)
+
+    def __order_log_fn(self, title: str, order: Order) -> None:
+        log = (
+            "order {:<12}  ({:<8} - {:<6} - {:<4} - {:<6} - {:^8} - {:^8}) ({:^8} - {:^8})"
+            .format(
+                title,
+                order.symbol,
+                str(order.type),
+                str(order.side),
+                order.percentage,
+                order.price or "nan",
+                order.stop_price or "nan",
+                order.activated_price or "nan",
+                order.filled_price or "nan"
+            )
+        )
+        _logger.debug(log)
+
+    def __position_log_fn(self, title: str, position: Position) -> None:
+        log = (
+            "position {:<10} ({:<8} - {:<5}) ({} - {:<8} - {:<6}) ({:^8} - {:^6} - {:<4})."
+            .format(
+                title,
+                position.symbol,
+                str(position.side),
+                position.entry_datetime,
+                position.entry_price,
+                position.entry_percentage,
+                position.exit_price or "nan",
+                position.exit_percentage or "nan",
+                position.profit_percentage,
+            )
+        )
+        _logger.debug(log)

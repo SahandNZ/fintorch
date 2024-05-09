@@ -1,9 +1,10 @@
+import os
 from abc import ABC
-from typing import List
 
+from fintorch.enum import MarketType
+from fintorch.utils.directory import create_directory
 from ._data import MarketData
-from .trade import MarketTrade
-from fintorch.enum import MarketType, TimeFrame
+from ._trade import MarketTrade
 
 
 class Market(ABC):
@@ -24,10 +25,17 @@ class Market(ABC):
     def market_type(self) -> MarketType:
         return self.__market_type
 
-    def prepare(self, symbols: List[str], time_frames: List[TimeFrame]) -> None:
-        self.data.prepare(symbols=symbols, time_frames=time_frames)
-        self.trade.prepare(symbols=symbols, time_frames=time_frames)
+    def open(self, directory: str):
+        directory = os.path.join(directory, str(self.market_type))
+        self.data.open(path=os.path.join(directory, "data.pkl"))
+        self.trade.open(path=os.path.join(directory, "trade.pkl"))
 
-    def next(self, timestamp: int) -> None:
+    def next(self, timestamp: float) -> None:
         self.data.next(timestamp=timestamp)
         self.trade.next(timestamp=timestamp)
+
+    def close(self, directory: str):
+        directory = os.path.join(directory, str(self.market_type))
+        create_directory(directory)
+        self.data.close(path=os.path.join(directory, "data.pkl"))
+        self.trade.close(path=os.path.join(directory, "trade.pkl"))

@@ -1,10 +1,3 @@
-from ._exchange import *
-from ._local import *
-from ._online import *
-from ..setting import EXCHANGE_NAME, PROXIES, INTERVAL
-
-ONLINE_EXCHANGE: OnlineExchange = OnlineExchange.from_name(
-    name=EXCHANGE_NAME,
-    interval=INTERVAL,
-    proxies=PROXIES
-)
+from ._exchange import Exchange, Market, MarketData, MarketTrade
+from ._local import LocalExchange
+from ._online import OnlineExchange, OnlineMarketData
