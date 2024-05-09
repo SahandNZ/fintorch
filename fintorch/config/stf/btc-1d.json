@@ -1,8 +1,9 @@
 {
   "time-frames": [
-    60
+    86400
   ],
   "symbols": [
     "BTC-USDT"
   ]
 }
+

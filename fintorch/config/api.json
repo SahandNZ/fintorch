@@ -1,5 +1,6 @@
 {
-  "exchange-name": "binance",
+  "api-key": "",
+  "secret-key": "",
   "proxies": {
     "http": "http://tracker:nlOv5rC7cL3q3bYR@95.216.41.71:3128",
     "https": "http://tracker:nlOv5rC7cL3q3bYR@95.216.41.71:3128",
