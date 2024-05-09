@@ -10,6 +10,7 @@ class BackwardForwardFftLabelTransform(BackwardForwardLabelTransform):
             self,
             symbol: str,
             time_frame: TimeFrame,
+            dim_sequence: int,
             backward: int = 10,
             forward: int = 10,
             muting_percentage: int = 95
@@ -20,6 +21,7 @@ class BackwardForwardFftLabelTransform(BackwardForwardLabelTransform):
             description="",
             symbol=symbol,
             time_frame=time_frame,
+            dim_sequence=dim_sequence,
             backward=backward,
             forward=forward,
             classes=["UP", "DOWN"]

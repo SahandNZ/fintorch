@@ -1,4 +1,3 @@
-import math
 from abc import ABC, abstractmethod
 from typing import Tuple, Union, List
 
@@ -10,7 +9,7 @@ from .._transform import Transform
 from ....dtype import DataCollection
 from ....enum import TimeFrame
 from ....utils.plot import draw_candlestick_plot, draw_labels
-from ....utils.timestamp import to_timestamp
+from ....utils.timestamp import to_timestamp, ceil_timestamp
 
 
 class LabelTransform(Transform, ABC):
@@ -48,10 +47,10 @@ class LabelTransform(Transform, ABC):
     def df(self) -> Union[pd.DataFrame, None]:
         return self.__df
 
-    def _shift_timestamp(self, timestamp: int) -> int:
-        return math.ceil(timestamp / self.time_frame) * self.time_frame
+    def _shift_timestamp(self, timestamp: float) -> float:
+        return ceil_timestamp(timestamp=timestamp, time_frame=self.time_frame)
 
-    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> np.array:
+    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: float) -> np.ndarray:
         if self.df is None or timestamp not in self.df.index:
             df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
             df = self.transform_df(df=df)
@@ -60,7 +59,7 @@ class LabelTransform(Transform, ABC):
 
         return self._transform_df_to_sf(df=self.df, timestamp=timestamp)
 
-    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> np.array:
+    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: float) -> np.ndarray:
         # forward cropping label dataframe with timestamp and sequence length
         ldf = df[timestamp <= self.df.index]
         ldf = ldf.iloc[: self.dim_sequence]

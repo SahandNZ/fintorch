@@ -1,4 +1,3 @@
-import math
 from abc import ABC, abstractmethod
 from typing import List
 
@@ -8,6 +7,7 @@ import pandas as pd
 from .._transform import Transform
 from ....dtype import DataCollection
 from ....enum import TimeFrame
+from ....utils.timestamp import floor_timestamp
 
 
 class FeatureTransform(Transform, ABC):
@@ -38,8 +38,8 @@ class FeatureTransform(Transform, ABC):
     def features(self) -> List[str]:
         return self.__features
 
-    def _shift_timestamp(self, timestamp: int) -> int:
-        return math.floor(timestamp / self.time_frame) * self.time_frame
+    def _shift_timestamp(self, timestamp: float) -> float:
+        return floor_timestamp(timestamp=timestamp, time_frame=self.time_frame)
 
     @abstractmethod
     def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -48,7 +48,7 @@ class FeatureTransform(Transform, ABC):
     def normalize_df(self, df: pd.DataFrame) -> pd.DataFrame:
         return df / (df.max() - df.min())
 
-    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> np.array:
+    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: float) -> np.ndarray:
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
 
         # backward cropping feature dataframe with timestamp and sequence length

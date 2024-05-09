@@ -13,6 +13,7 @@ from ...enum import TimeFrame
 from ...settings import TRANSFORM_DIR
 from ...utils.directory import create_directory
 from ...utils.hash import static_list_hash
+from ...utils.timestamp import ceil_timestamp, floor_timestamp
 
 
 class Transform(Component):
@@ -30,18 +31,18 @@ class Transform(Component):
     ):
         super().__init__(name=name, short_name=short_name, description=description)
         self.__symbol: str = symbol
-        self.__time_frame: TimeFrame = TimeFrame(int(time_frame))
+        self.__time_frame: TimeFrame = time_frame
         self.__dim_sequence: int = dim_sequence
         self.__dim_feature: int = dim_feature
         self.__look_back: int = look_back
         self.__look_ahead: int = look_ahead
 
-        self.__timestamp_to_sf: Dict[int, List] = {}
+        self.__timestamp_to_sf: Dict[float, np.ndarray] = {}
 
         self.__static_hash: int = static_list_hash([
             self.short_name,
             self.symbol,
-            self.time_frame,
+            int(self.time_frame * 1000),
             self.dim_sequence,
             self.look_back,
             self.look_ahead
@@ -72,7 +73,7 @@ class Transform(Component):
         return self.__look_ahead
 
     @property
-    def timestamp_to_sf(self) -> Dict[int, List]:
+    def timestamp_to_sf(self) -> Dict[float, np.ndarray]:
         return self.__timestamp_to_sf
 
     @property
@@ -95,30 +96,32 @@ class Transform(Component):
         with open(self.path, "wb+") as file:
             pickle.dump(self.timestamp_to_sf, file)
 
-    def get_start_timestamp(self, dc: DataCollection) -> int:
+    def get_start_timestamp(self, dc: DataCollection) -> float:
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
         start_timestamp = df.index[0]
-        start_timestamp = int(start_timestamp + self.look_back * int(self.time_frame))
+        start_timestamp = start_timestamp + self.look_back * float(self.time_frame)
+        start_timestamp = floor_timestamp(timestamp=start_timestamp, time_frame=self.time_frame)
 
         return start_timestamp
 
-    def get_stop_timestamp(self, dc: DataCollection) -> int:
+    def get_stop_timestamp(self, dc: DataCollection) -> float:
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
         stop_timestamp = df.index[-1]
-        stop_timestamp = int(stop_timestamp - self.look_ahead * int(self.time_frame)) + int(self.time_frame)
+        stop_timestamp = stop_timestamp - self.look_ahead * float(self.time_frame)
+        stop_timestamp = ceil_timestamp(timestamp=stop_timestamp, time_frame=self.time_frame)
 
         return stop_timestamp
 
-    def get_timestamps(self, dc: DataCollection) -> List[int]:
+    def get_timestamps(self, dc: DataCollection) -> List[float]:
         start_timestamp = self.get_start_timestamp(dc=dc)
         stop_timestamp = self.get_stop_timestamp(dc=dc)
-        timestamps = list(range(start_timestamp, stop_timestamp, int(self.time_frame)))
+        timestamps = list(np.arange(start_timestamp, stop_timestamp, float(self.time_frame)))
 
         return timestamps
 
     def prepare_sf(
             self, dc: DataCollection,
-            timestamps: Union[List[int], None] = None,
+            timestamps: Union[List[float], None] = None,
             progress: Union[Progress, None] = None
     ) -> None:
         if timestamps is None:
@@ -140,7 +143,7 @@ class Transform(Component):
         if progress is not None:
             progress.update(task_id=task, visible=False)
 
-    def load_sf(self, timestamps: List[int]) -> np.array:
+    def load_sf(self, timestamps: List[float]) -> np.ndarray:
         sf_values = []
         for timestamp in timestamps:
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
@@ -152,7 +155,7 @@ class Transform(Component):
 
         return sf_values
 
-    def transform_sf(self, dc: DataCollection, timestamps: List[int]) -> Generator[np.array, None, None]:
+    def transform_sf(self, dc: DataCollection, timestamps: List[float]) -> Generator[np.ndarray, None, None]:
         for timestamp in timestamps:
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
             sf = self.timestamp_to_sf.get(shifted_timestamp, np.zeros((self.dim_sequence, self.dim_feature)) * np.nan)
@@ -167,14 +170,14 @@ class Transform(Component):
         raise NotImplementedError()
 
     @abstractmethod
-    def _shift_timestamp(self, timestamp: int) -> int:
+    def _shift_timestamp(self, timestamp: float) -> float:
         raise NotImplementedError()
 
     @abstractmethod
-    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> np.array:
+    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: float) -> np.ndarray:
         raise NotImplementedError()
 
-    def _is_sf_valid(self, dc: DataCollection, timestamp: int, sf: np.array) -> bool:
+    def _is_sf_valid(self, dc: DataCollection, timestamp: float, sf: np.ndarray) -> bool:
         start_timestamp = self.get_start_timestamp(dc=dc)
         stop_timestamp = self.get_stop_timestamp(dc=dc)
         is_timestamp_valid = start_timestamp <= timestamp < stop_timestamp
