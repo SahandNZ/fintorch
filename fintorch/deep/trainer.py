@@ -9,6 +9,7 @@ import torch
 from .criterion import Criterion
 from .data_loader import DataLoader
 from .dtype import Dataset, Epoch, Fold
+from .error import NanValueInBatchError
 from .lr_scheduler import LrScheduler
 from .model import Model
 from .optimizer import Optimizer
@@ -18,23 +19,22 @@ from ..utils.hash import static_list_hash
 class Trainer:
     def __init__(
             self,
-            epochs_count: int,
             data_loader: DataLoader,
             criterion: Criterion,
             optimizer: Optimizer,
             lr_scheduler: LrScheduler,
-            shuffle: bool = True,
-            auto_cuda: bool = True,
-            half_precision: bool = True,
-            gradient_clipping_threshold: float = None,
+            epochs_count: int,
+            shuffle: bool,
+            auto_cuda: bool,
+            half_precision: bool,
+            gradient_clipping_threshold: float,
     ) -> None:
-
-        self.__epochs_count: int = epochs_count
         self.__data_loader: DataLoader = data_loader
         self.__criterion: Criterion = criterion
         self.__optimizer: Optimizer = optimizer
         self.__lr_scheduler: LrScheduler = lr_scheduler
 
+        self.__epochs_count: int = epochs_count
         self.__shuffle: bool = shuffle
         self.__auto_cuda: bool = auto_cuda
         self.__half_precision: bool = half_precision
@@ -160,33 +160,42 @@ class Trainer:
     def ___batched_common_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: Epoch, mode: str) -> Generator:
         optimize = "train" == mode
         shuffle = self.shuffle and optimize
+        catch_nan_in_test_set = "test" == mode
         timestamps = getattr(fold, f"{mode}_timestamps")
         iterator = self.data_loader(dataset=dataset, timestamps=timestamps, shuffle=shuffle)
         setattr(epoch, f"{mode}_batch_count", self.data_loader.batch_count)
 
-        start_time = time.time()
-        for index, (batch_x, batch_y) in enumerate(iterator):
-            # move to cuda if it's available
-            batch_x = batch_x.to(self.device)
-            batch_y = batch_y.to(self.device)
-
-            if 0 == len(batch_x) or 0 == len(batch_y):
-                continue
-
-            batch_loss, batch_y_hat = self.___common_step(model, batch_x, batch_y, optimize)
-            batch_actual = torch.argmax(batch_y, dim=-1)
-            batch_prediction = torch.argmax(batch_y_hat, dim=-1)
-            batch_accuracy = (batch_actual == batch_prediction).sum() / len(batch_y) * 100
-
-            # remove batch_x, batch_y, batch_y_hat
-            del batch_x, batch_y, batch_y_hat
-
-            getattr(epoch, f"{mode}_batch_times").append(time.time() - start_time)
-            getattr(epoch, f"{mode}_batch_losses").append(batch_loss.clone().cpu().item())
-            getattr(epoch, f"{mode}_batch_accuracies").append(batch_accuracy.cpu().item())
-            yield
-
+        try:
             start_time = time.time()
+            for index, (batch_x, batch_y) in enumerate(iterator):
+                # move to cuda if it's available
+                batch_x = batch_x.to(self.device)
+                batch_y = batch_y.to(self.device)
+
+                if 0 == len(batch_x) or 0 == len(batch_y):
+                    continue
+
+                if optimize and len(batch_x) < 2:
+                    continue
+
+                batch_loss, batch_y_hat = self.___common_step(model, batch_x, batch_y, optimize)
+                batch_actual = torch.argmax(batch_y, dim=-1)
+                batch_prediction = torch.argmax(batch_y_hat, dim=-1)
+                batch_accuracy = (batch_actual == batch_prediction).sum() / batch_y.shape[0] / batch_y.shape[1] * 100
+
+                # remove batch_x, batch_y, batch_y_hat
+                del batch_x, batch_y, batch_y_hat
+
+                getattr(epoch, f"{mode}_batch_times").append(time.time() - start_time)
+                getattr(epoch, f"{mode}_batch_losses").append(batch_loss.clone().cpu().item())
+                getattr(epoch, f"{mode}_batch_accuracies").append(batch_accuracy.cpu().item())
+                yield
+
+                start_time = time.time()
+
+        except NanValueInBatchError as e:
+            if not catch_nan_in_test_set:
+                raise e
 
         # remove cache
         gc.collect()
@@ -198,7 +207,11 @@ class Trainer:
             model.train()
 
             # forward prop
-            with torch.autocast(device_type=self.device_type, dtype=self.dtype):
+            if self.half_precision:
+                with torch.autocast(device_type=self.device_type, dtype=self.dtype):
+                    y_hat = model(x)
+                    loss = self.criterion(y_hat, y)
+            else:
                 y_hat = model(x)
                 loss = self.criterion(y_hat, y)
 

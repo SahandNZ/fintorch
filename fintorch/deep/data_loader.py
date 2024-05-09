@@ -1,12 +1,14 @@
 import copy
 import math
 import random
-from typing import Callable, Iterator, Tuple, List
+from datetime import datetime
+from typing import Callable, Iterator, Tuple, List, Union
 
 import torch
 
-from fintorch.deep.dtype import Dataset
-from fintorch.utils.hash import static_hash
+from .dtype import Dataset
+from .error import NanValueInBatchError
+from ..utils.hash import static_hash
 
 
 class DataLoader:
@@ -14,12 +16,12 @@ class DataLoader:
         self.__batch_size: int = batch_size
         self.__post_load_fn: Callable = post_load_fn
 
-        self.__dataset: Dataset = None
-        self.__timestamps: List[int] = None
-        self.__batch_count: int = None
+        self.__dataset: Union[Dataset, None] = None
+        self.__timestamps: Union[List[float], None] = None
+        self.__batch_count: Union[int, None] = None
 
-        self.__shuffle: bool = None
-        self._index: int = -1
+        self.__shuffle: Union[bool, None] = None
+        self._index: Union[int, None] = None
 
         self.__static_hash: int = static_hash(self.batch_size)
 
@@ -44,7 +46,7 @@ class DataLoader:
         return self.__dataset
 
     @property
-    def timestamps(self) -> List[int]:
+    def timestamps(self) -> List[float]:
         return self.__timestamps
 
     @property
@@ -83,9 +85,22 @@ class DataLoader:
                 if self.post_load_fn is not None:
                     batch_x, batch_y = self.post_load_fn(batch_x, batch_y)
 
-                if (torch.isnan(batch_x).max().item() or torch.isnan(batch_y).max().item() or
-                        torch.isinf(batch_x).max().item() or torch.isinf(batch_y).max().item()):
-                    raise RuntimeError("NaN or Inf values found in the batch data.")
+                if len(batch_x) != len(batch_y):
+                    raise Exception("X and Y must have the same lengths.")
+
+                if torch.isnan(batch_x).max().item() or torch.isinf(batch_x).max().item():
+                    first_nan_datetime = datetime.fromtimestamp(batch_timestamps[0])
+                    last_nan_datetime = datetime.fromtimestamp(batch_timestamps[-1])
+                    message = "NaN or Inf values found in the features of batch data. (first: {} last:{})" \
+                        .format(first_nan_datetime, last_nan_datetime)
+                    raise NanValueInBatchError(message)
+
+                if torch.isnan(batch_y).max().item() or torch.isinf(batch_y).max().item():
+                    first_nan_datetime = datetime.fromtimestamp(batch_timestamps[0])
+                    last_nan_datetime = datetime.fromtimestamp(batch_timestamps[-1])
+                    message = "NaN or Inf values found in the labels of batch data. (first: {} last:{})" \
+                        .format(first_nan_datetime, last_nan_datetime)
+                    raise NanValueInBatchError(message)
 
             return batch_x, batch_y
         else:

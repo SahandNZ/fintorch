@@ -1,5 +1,3 @@
-from typing import List
-
 import torch
 from torch import nn
 
@@ -145,5 +143,5 @@ class Metrics:
             self.f1(label=1)
         )
 
-        def __lt__(self, other):
-            return self.__criterion.less_than(self.objective, other.objective)
+    def __lt__(self, other):
+        return self.__criterion.less_than(self.objective, other.objective)

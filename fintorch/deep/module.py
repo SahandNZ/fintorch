@@ -1,11 +1,9 @@
 import copy
 import gc
-import itertools
 import os.path
 import pickle
 import time
 from abc import ABC
-from datetime import datetime
 from typing import Any, Dict, Generator, List, Tuple, Type, Union
 
 import matplotlib.pyplot as plt
@@ -13,86 +11,70 @@ import numpy as np
 import pandas as pd
 import torch
 
-from .criterion import CE
 from .cross_validation import CrossValidation
 from .data_loader import DataLoader
 from .dtype import Dataset, Fold, Status
 from .lr_scheduler import LrScheduler
-from .model import MODEL_TYPES, Model
+from .model import Model
 from .optimizer import Optimizer
 from .trainer import Trainer
-from .transform.feature import FEATURE_TRANSFORM_TYPES, FeatureTransform
-from .transform.label import LABEL_TRANSFORM_TYPES, LabelTransform
+from .transform.feature import FeatureTransform
+from .transform.label import LabelTransform
 from ..dtype import DataCollection
 from ..enum import TimeFrame
-from ..setting import (
-    MODULE_DIR,
-
-    SYMBOL,
-    TIME_FRAME,
-
-    INTERVAL,
-    MODEL_KWARGS,
-    TRANSFORM_KWARGS,
-
-    LR,
-    SHUFFLE,
-    BATCH_SIZE,
-    VAL_LENGTH,
-    TEST_LENGTH,
-    TRAIN_LENGTH,
-    EPOCHS_COUNT,
-    WEIGHT_DECAY,
-    GRADIENT_CLIPPING_THRESHOLD,
-)
-from ..utils.args import DefaultNamespace
+from ..settings import MODULE_DIR
 from ..utils.directory import create_directory
 from ..utils.function import call_with_dict
+from ..utils.hash import static_list_hash
 from ..utils.plot import draw_predictions
-from ..utils.timestamp import to_timestamp
+from ..utils.timestamp import to_timestamp, floor_timestamp, ceil_timestamp
 
 
 class Module(ABC):
     def __init__(
             self,
-            dataset: Dataset,
+            feature_transform: FeatureTransform,
+            label_transform: LabelTransform,
             model_type: Type[Model],
-            model_kwargs: Dict[str, Any] = MODEL_KWARGS,
-            lr: float = LR,
-            shuffle: bool = SHUFFLE,
-            batch_size: int = BATCH_SIZE,
-            val_length: int = VAL_LENGTH,
-            test_length: int = TEST_LENGTH,
-            train_length: int = TRAIN_LENGTH,
-            epochs_count: int = EPOCHS_COUNT,
-            weight_decay: float = WEIGHT_DECAY,
-            gradient_clipping_threshold: float = GRADIENT_CLIPPING_THRESHOLD
+            model_kwargs: Dict[str, Any],
+            cross_validation_kwargs: Dict[str, Any],
+            data_loader_kwargs: Dict[str, Any],
+            optimizer_kwargs: Dict[str, Any],
+            lr_scheduler_kwargs: Dict[str, Any],
+            trainer_kwargs: Dict[str, Any],
     ):
-        self.__dataset: Dataset = dataset
-
         self.__model_type: Type[Model] = model_type
         self.__model_kwargs: Dict[str, Any] = model_kwargs
+
+        self.__dataset: Dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform)
         self.__model: Union[Model, None] = None
-
-        self.__cross_validation = CrossValidation(
-            interval=self.dataset.interval,
-            train_length=train_length,
-            val_length=val_length,
-            test_length=test_length
-        )
+        self.__cross_validation = CrossValidation(time_frame=self.time_frame, **cross_validation_kwargs)
         self.__trainer: Trainer = Trainer(
-            data_loader=DataLoader(batch_size=batch_size, post_load_fn=Module._post_load_fn),
-            criterion=CE(),
-            optimizer=Optimizer(torch_optimizer_type=torch.optim.Adam, lr=lr, weight_decay=weight_decay),
-            lr_scheduler=LrScheduler(torch_lr_scheduler_type=torch.optim.lr_scheduler.StepLR, step_size=1, gamma=0.9),
-            shuffle=shuffle,
-            epochs_count=epochs_count,
-            gradient_clipping_threshold=gradient_clipping_threshold,
+            data_loader=DataLoader(post_load_fn=Module._post_load_fn, **data_loader_kwargs),
+            optimizer=Optimizer(**optimizer_kwargs),
+            lr_scheduler=LrScheduler(**lr_scheduler_kwargs),
+            **trainer_kwargs
         )
 
-        self.__directory: str = ""
-        self.__folds_dict_path: str = ""
-        self.__folds_dict: Dict[Tuple[int, int], Fold] = {}
+        # calculate static_hash value
+        model_static_hash: int = static_list_hash([
+            self.__model_type.__name__,
+            self.__model_kwargs["num_hidden_layers"],
+            int(self.__model_kwargs["dropout"] * 10 ** 2),
+            self.__model_kwargs["batch_norm"]
+        ])
+        self.__static_hash: int = static_list_hash([
+            self.dataset.static_hash,
+            self.cross_validation.static_hash,
+            self.trainer.static_hash,
+            model_static_hash
+        ])
+
+        # states
+        self.__directory: Union[str, None] = None
+        self.__open_mode: Union[str, None] = None
+        self.__folds_dict: Union[Dict[Tuple[int, int], Fold], None] = None
+        self.__y_hats_dict: Union[Dict[int, np.array], None] = None
 
     @property
     def dataset(self) -> Dataset:
@@ -112,76 +94,82 @@ class Module(ABC):
 
     @property
     def symbol(self) -> str:
-        return self.dataset.label_transform.symbol
+        return self.dataset.symbol
 
     @property
     def time_frame(self) -> TimeFrame:
-        return self.dataset.label_transform.time_frame
+        return self.dataset.time_frame
+
+    @property
+    def static_hash(self) -> int:
+        return self.__static_hash
 
     @property
     def directory(self) -> str:
         return self.__directory
 
     @property
-    def folds_dict_path(self) -> str:
-        return self.__folds_dict_path
-
-    @property
     def folds_dict(self) -> Dict[Tuple[int, int], Fold]:
         return self.__folds_dict
 
+    @property
+    def y_hats_dict(self) -> Dict[int, np.array]:
+        return {k: v for k, v in sorted(self.__y_hats_dict.items(), key=lambda item: item[0], reverse=True)}
+
     @staticmethod
     def _post_load_fn(x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        y = y.squeeze(-2)
         return x, y
 
+    def state_dict(self) -> Dict:
+        return {
+            "folds_dict": self.folds_dict,
+            "y_hats_dict": self.y_hats_dict
+        }
+
+    def load_state_dict(self, state_dict: Dict) -> None:
+        self.__folds_dict = state_dict.get("folds_dict", {})
+        self.__y_hats_dict = state_dict.get("y_hats_dict", {})
+
     def open(self) -> None:
-        # open dataset files from disk and create model
+        # open dataset files from
         self.dataset.open()
+
+        # create model
+        self.__model_kwargs.update({
+            "dim_input_sequence": self.dataset.feature_transform.dim_sequence,
+            "dim_input_feature": self.dataset.feature_transform.dim_feature,
+            "dim_output_sequence": self.dataset.label_transform.dim_sequence,
+            "dim_output_feature": self.dataset.label_transform.dim_feature,
+        })
         self.__model = call_with_dict(self.__model_type, self.__model_kwargs)
 
-        # assign values to directory and folds_dict_path
-        self.__directory = os.path.join(
-            MODULE_DIR,
-            str(self.dataset.static_hash),
-            str(self.model.static_hash),
-            str(self.cross_validation.static_hash),
-            str(self.trainer.static_hash)
-        )
-        self.__folds_dict_path = os.path.join(self.directory, "folds-dict.pkl")
-
-        # safe load self.folds_dict
+        # safe load state dict
+        self.__directory = os.path.join(MODULE_DIR, str(self.static_hash))
+        state_dict_path = os.path.join(self.directory, "state-dict.pkl")
         try:
-            with open(self.folds_dict_path, "rb") as file:
-                self.__folds_dict = pickle.load(file)
+            with open(state_dict_path, "rb") as file:
+                state_dict = pickle.load(file)
         except (FileNotFoundError, EOFError, pickle.UnpicklingError):
-            self.__folds_dict = {}
+            state_dict = {}
 
-        # remove uncompleted folds from self.folds_dict
-        uncompleted_keys = []
-        for key, fold in self.folds_dict.items():
-            if len(fold.epochs) < self.trainer.epochs_count:
-                uncompleted_keys.append(key)
-
-        for key in uncompleted_keys:
-            del self.folds_dict[key]
+        self.load_state_dict(state_dict=state_dict)
 
     def close(self) -> None:
         self.dataset.close()
 
-        # dump self.fold_dict
+        # store state dict
         create_directory(self.directory)
-        with open(self.folds_dict_path, "wb+") as file:
-            completed_folds_dict = {k: v for k, v in self.folds_dict.items() if v.epochs_count == len(v.epochs)}
-            pickle.dump(completed_folds_dict, file)
+        state_dict_path = os.path.join(self.directory, "state-dict.pkl")
+        with open(state_dict_path, "wb+") as file:
+            pickle.dump(self.state_dict(), file)
 
         # remove model
         self.__model = None
         gc.collect()
 
-    def get_start_timestamp(self, dc: DataCollection) -> int:
+    def get_start_timestamp(self, dc: DataCollection) -> float:
         first_timestamp = self.dataset.feature_transform.get_start_timestamp(dc=dc)
-        last_timestamp = self.dataset.feature_transform.get_stop_timestamp(dc=dc)
+        last_timestamp = self.dataset.label_transform.get_stop_timestamp(dc=dc)
 
         tmp_cross_validation = copy.deepcopy(self.cross_validation)
         tmp_cross_validation(first_timestamp=first_timestamp, last_timestamp=last_timestamp)
@@ -190,7 +178,7 @@ class Module(ABC):
 
         return start_timestamp
 
-    def get_stop_timestamp(self, dc: DataCollection) -> int:
+    def get_stop_timestamp(self, dc: DataCollection) -> float:
         return self.dataset.feature_transform.get_stop_timestamp(dc=dc)
 
     def get_timestamps(
@@ -198,16 +186,18 @@ class Module(ABC):
             dc: DataCollection,
             start_date: Union[str, None] = None,
             stop_date: Union[str, None] = None
-    ) -> List[int]:
+    ) -> List[float]:
         start_timestamp = self.get_start_timestamp(dc=dc)
         stop_timestamp = self.get_stop_timestamp(dc=dc)
 
         if start_date is not None:
-            start_timestamp = max(start_timestamp, to_timestamp(date=start_date))
+            start_timestamp = max(start_timestamp, int(to_timestamp(date=start_date)))
         if stop_date is not None:
-            stop_timestamp = min(stop_timestamp, to_timestamp(date=stop_date))
+            stop_timestamp = min(stop_timestamp, int(to_timestamp(date=stop_date)))
 
-        return list(range(start_timestamp, stop_timestamp, self.time_frame))
+        start_timestamp = floor_timestamp(timestamp=start_timestamp, time_frame=self.time_frame)
+        stop_timestamp = ceil_timestamp(timestamp=stop_timestamp, time_frame=self.time_frame)
+        return list(np.arange(start_timestamp, stop_timestamp, float(self.time_frame)))
 
     def optimize(
             self,
@@ -248,25 +238,34 @@ class Module(ABC):
                     status.update_elapsed_time(elapsed_time=elapsed_time)
                     yield status
 
-    def predict(self, dc: DataCollection, timestamps: List[int], mode="val") -> Dict[int, List[float]]:
-        # predict timestamps
-        y_hats_dict = {}
-        self.model.eval()
-        with torch.no_grad():
-            for key, fold in self.folds_dict.items():
-                self.model.load_state_dict(getattr(fold, f"best_{mode}_epoch").model_state_dict)
-                fold_timestamps = [ts for ts in timestamps if key[0] <= ts <= key[1]]
-                if 0 < len(fold_timestamps):
-                    x = self.dataset.preprocess(dc=dc, timestamps=fold_timestamps)
-                    y_hats = self.model(x).tolist()
-                    y_hats_dict.update({ts: y_hats[index] for index, ts in enumerate(fold_timestamps)})
+    def predict(self, dc: DataCollection, timestamps: List[float], mode="val") -> Dict[float, np.array]:
+        # load from y_hats_dict
+        output = {ts: self.y_hats_dict[ts] for ts in timestamps if ts in self.y_hats_dict}
+        output = {ts: y_hat for ts, y_hat in output.items() if not np.isnan(y_hat).max()}
+        missing_timestamps = [ts for ts in timestamps if ts not in output]
 
-        # set missed timestamps to None
-        missed_timestamps = [ts for ts in timestamps if ts not in y_hats_dict]
-        y_hats_dict.update({ts: None for ts in missed_timestamps})
-        y_hats_dict = {k: v for k, v in sorted(y_hats_dict.items(), key=lambda item: item[0])}
+        # predict missing timestamps
+        if 0 < len(missing_timestamps):
+            self.model.eval()
+            with torch.no_grad():
+                for key, fold in self.folds_dict.items():
+                    self.model.load_state_dict(getattr(fold, f"best_{mode}_epoch").model_state_dict)
+                    fold_timestamps = [ts for ts in missing_timestamps if key[0] <= ts <= key[1]]
+                    if 0 < len(fold_timestamps):
+                        x = self.dataset.preprocess(dc=dc, timestamps=fold_timestamps)
+                        y_hats = self.model(x).numpy()
+                        output.update({ts: y_hats[index] for index, ts in enumerate(fold_timestamps)})
 
-        return y_hats_dict
+            # update and sort y_hats_dict
+            self.y_hats_dict.update(output)
+
+        # set missed timestamps to array of np.nan values
+        nan_y_hat = np.zeros((self.model.dim_output_sequence, self.model.dim_output_feature)) * np.nan
+        missing_timestamps = [ts for ts in timestamps if ts not in output]
+        output.update({ts: nan_y_hat for ts in missing_timestamps})
+        sorted_output = {k: v for k, v in sorted(output.items(), key=lambda item: item[0])}
+
+        return sorted_output
 
     def draw_ohlc_plot(
             self,
@@ -274,7 +273,7 @@ class Module(ABC):
             start_date: str,
             stop_date: str,
             mode: str = "val"
-        ) -> Tuple[plt.Figure, plt.Axes, pd.DataFrame]:
+    ) -> Tuple[plt.Figure, plt.Axes, pd.DataFrame]:
         # draw ohlc and labels
         fig, ohlc_ax, df = self.dataset.label_transform.draw_ohlc_plot(
             dc=dc,
@@ -284,8 +283,7 @@ class Module(ABC):
 
         # add prediction column to df
         y_hats_dict = self.predict(dc=dc, timestamps=df.index.to_list(), mode=mode)
-        prediction_dict = {k: np.argmax(v) for k, v in y_hats_dict.items() if v is not None}
-        prediction_dict.update({k: np.nan for k, v in y_hats_dict.items() if v is None})
+        prediction_dict = {k: np.argmax(v) for k, v in y_hats_dict.items()}
         df["prediction"] = prediction_dict.values()
 
         # draw predictions
@@ -309,95 +307,17 @@ class Module(ABC):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+        if exc_type is None:
+            self.close()
 
     def __str__(self):
-        return "{} {} {} {} {}" \
+        return (
+            "{} {} {} {} {}"
             .format(
-            self.dataset.label_transform.symbol,
-            self.dataset.label_transform.time_frame,
-            self.dataset.feature_transform.short_name,
-            self.dataset.label_transform.short_name,
-            self.__model_type.__name__
+                self.dataset.symbol,
+                self.dataset.time_frame,
+                self.dataset.feature_transform.short_name,
+                self.dataset.label_transform.short_name,
+                self.__model_type.__name__
+            )
         )
-
-
-def create_default_module(
-        feature_transform_type: Type[FeatureTransform],
-        label_transform_type: Type[LabelTransform],
-        model_type: Type[Model],
-        symbol: str = SYMBOL,
-        time_frame: TimeFrame = TIME_FRAME
-) -> Module:
-    transform_kwargs = copy.deepcopy(TRANSFORM_KWARGS)
-    transform_kwargs.update({"symbol": symbol, "time_frame": time_frame})
-    feature_transform = call_with_dict(feature_transform_type, transform_kwargs)
-    label_transform = call_with_dict(label_transform_type, transform_kwargs)
-    dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=INTERVAL)
-    module = Module(dataset=dataset, model_type=model_type, model_kwargs=MODEL_KWARGS)
-
-    return module
-
-
-def create_module_from_args(
-        feature_transform_type: Type[FeatureTransform],
-        label_transform_type: Type[LabelTransform],
-        model_type: Type[Model],
-        args: DefaultNamespace
-) -> Module:
-    feature_transform = call_with_dict(feature_transform_type, args.transform_kwargs)
-    label_transform = call_with_dict(label_transform_type, args.transform_kwargs)
-    dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=args.interval)
-
-    kwargs = {"dataset": dataset, "model_type": model_type}
-    kwargs.update(args.__dict__)
-    module = call_with_dict(Module, kwargs)
-
-    return module
-
-
-def create_default_modules(symbols: List[str], time_frames: List[TimeFrame]) -> List[Module]:
-    modules = []
-    items = itertools.product(
-        symbols,
-        time_frames,
-        FEATURE_TRANSFORM_TYPES,
-        LABEL_TRANSFORM_TYPES,
-        MODEL_TYPES
-    )
-    for symbol, time_frame, ft_type, lt_type, model_type in items:
-        module = create_default_module(
-            feature_transform_type=ft_type,
-            label_transform_type=lt_type,
-            model_type=model_type,
-            symbol=symbol,
-            time_frame=time_frame
-        )
-
-        modules.append(module)
-
-    return modules
-
-
-def create_default_modules_from_args(args: DefaultNamespace) -> List[Module]:
-    modules = []
-    items = itertools.product(
-        args.symbols,
-        args.time_frames,
-        FEATURE_TRANSFORM_TYPES,
-        LABEL_TRANSFORM_TYPES,
-        MODEL_TYPES
-    )
-    for symbol, time_frame, ft_type, lt_type, model_type in items:
-        transform_kwargs = {"symbol": symbol, "time_frame": time_frame, "dim_sequence": args.dim_sequence}
-        feature_transform = call_with_dict(ft_type, transform_kwargs)
-        label_transform = call_with_dict(lt_type, transform_kwargs)
-        dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform, interval=args.interval)
-
-        kwargs = {"dataset": dataset, "model_type": model_type}
-        kwargs.update(args.__dict__)
-        module = call_with_dict(Module, kwargs)
-
-        modules.append(module)
-
-    return modules
