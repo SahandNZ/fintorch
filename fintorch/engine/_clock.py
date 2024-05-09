@@ -1,81 +1,72 @@
 import math
-import time
+import os
+import pickle
 from datetime import datetime
-from typing import Iterator
+from typing import Dict, Union
 
-from fintorch.enum import TimeFrame
+from ..enum import TimeFrame
+from ..exchange import OnlineExchange
+from ..strategy import Strategy
+from ..utils.timestamp import to_timestamp, floor_timestamp, ceil_timestamp
 
 
 class Clock:
-    def __init__(self, interval: TimeFrame, speed: int):
+    def __init__(self, online_exchange: OnlineExchange, strategy: Strategy, interval: TimeFrame):
         self.__interval: TimeFrame = interval
-        self.__speed: int = speed
 
-        self.__start_timestamp: int = None
-        self.__stop_timestamp: int = None
-        self.__timestamp: int = None
+        symbol_info = online_exchange.future.data.get_symbol_info(symbol=strategy.symbol)
+        self.__start_timestamp: float = symbol_info.on_board_timestamp
+        self.__start_timestamp: float = to_timestamp(date="2021-01-01")
+
+        # state
+        self.__timestamp: Union[float, None] = None
 
     @property
     def interval(self) -> TimeFrame:
         return self.__interval
 
     @property
-    def speed(self) -> int:
-        return self.__speed
-
-    @property
-    def simulated_wait_time(self) -> float:
-        return self.interval / self.speed if self.speed is None else 0
-
-    @property
-    def start_timestamp(self) -> int:
+    def start_timestamp(self) -> float:
         return self.__start_timestamp
 
     @property
-    def stop_timestamp(self) -> int:
-        return self.__stop_timestamp
+    def start_datetime(self) -> datetime:
+        return datetime.fromtimestamp(self.start_timestamp)
 
     @property
-    def timestamp(self) -> int:
+    def timestamp(self) -> float:
         return self.__timestamp
 
-    def __call__(self, start_date: str, stop_date: str = None) -> Iterator:
-        if isinstance(start_date, str):
-            start_date = datetime.strptime(start_date, "%Y-%m-%d")
-        if isinstance(stop_date, str):
-            stop_date = datetime.strptime(stop_date, "%Y-%m-%d")
+    def next(self) -> Union[float, None]:
+        current_timestamp = datetime.now().timestamp()
+        current_open_timestamp = floor_timestamp(timestamp=current_timestamp, time_frame=self.interval)
+        if self.timestamp < current_open_timestamp:
+            self.__timestamp = self.timestamp + self.interval
+            return self.timestamp
 
-        self.__start_timestamp = start_date.timestamp()
-        self.__stop_timestamp = stop_date.timestamp() if stop_date is not None else None
+    def state_dict(self) -> Dict:
+        state_dict = {"timestamp": self.timestamp}
+        return state_dict
 
-        return self.__iter__()
+    def load_state_dict(self, state_dict: Dict) -> None:
+        self.__timestamp = state_dict.get("timestamp", self.start_timestamp)
+
+    def open(self, directory: str) -> None:
+        path = os.path.join(directory, "clock.pkl")
+        try:
+            with open(path, "rb") as file:
+                state_dict = pickle.load(file)
+        except (FileNotFoundError, EOFError, pickle.UnpicklingError):
+            state_dict = {}
+
+        self.load_state_dict(state_dict=state_dict)
+
+    def close(self, directory: str) -> None:
+        path = os.path.join(directory, "clock.pkl")
+        with open(path, "wb+") as file:
+            pickle.dump(self.state_dict(), file)
 
     def __len__(self):
-        return math.floor((self.stop_timestamp - self.start_timestamp) / self.interval)
-
-    def __iter__(self):
-        self.__timestamp = self.start_timestamp - self.interval
-        return self
-
-    def __next__(self):
-        self.__timestamp += self.interval
-        # used in backtest mode
-        if self.stop_timestamp is not None:
-            if self.timestamp < self.stop_timestamp:
-                time.sleep(self.simulated_wait_time)
-                return int(self.timestamp)
-            else:
-                raise StopIteration()
-
-        # used in livetest mode
-        else:
-            current_timestamp = datetime.now().timestamp()
-            current_open_timestamp = current_timestamp // int(self.interval) * int(self.interval)
-            if self.timestamp < current_open_timestamp:
-                time.sleep(self.simulated_wait_time)
-                return int(self.timestamp)
-            else:
-                next_open_timestamp = current_open_timestamp + int(self.interval)
-                wait_time = math.ceil(next_open_timestamp - current_timestamp)
-                time.sleep(wait_time)
-                return int(self.timestamp)
+        current_timestamp = int(datetime.now().timestamp())
+        current_open_timestamp = ceil_timestamp(timestamp=current_timestamp, time_frame=self.interval)
+        return math.floor((current_open_timestamp - self.timestamp) / self.interval)
