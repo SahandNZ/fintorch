@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import IntEnum
 
 
-class OrderStatus(Enum):
+class OrderStatus(IntEnum):
     OPEN = 1
     PARTIALLY_FILLED = 2
     FILLED = 4

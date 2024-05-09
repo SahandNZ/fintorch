@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import IntEnum
 
 
-class PositionType(Enum):
+class PositionType(IntEnum):
     ISOLATED = 1
     CROSS = 2
 
