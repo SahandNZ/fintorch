@@ -13,14 +13,15 @@ def main():
 
     dc = args.online_exchange.future.data.get_data_collection(
         symbols=[args.module.symbol],
-        time_frames=[args.module.time_frame]
+        time_frames=args.module.dataset.time_frames
     )
 
     # create y and y_hat values
     with args.module:
         stop_timestamp = args.module.dataset.label_transform.get_stop_timestamp(dc=dc)
         stop_date = datetime.fromtimestamp(min(stop_timestamp, to_timestamp(args.stop_date)))
-        timestamps = create_timestamps(start_date=args.start_date, stop_date=stop_date, interval=args.module.time_frame)
+        timestamps = create_timestamps(start_date=args.start_date, stop_date=stop_date,
+                                       time_frame=args.module.time_frame)
 
         sf_generator = args.module.dataset.label_transform.transform_sf(dc=dc, timestamps=timestamps)
         y_array = np.concatenate([sf for sf in sf_generator])

@@ -4,11 +4,11 @@ from fintorch.utils.args import DefaultArgumentParser
 def main():
     args = DefaultArgumentParser.parse()
 
-    dc = args.online_exchange.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
+    dc = args.online_exchange.future.data.get_data_collection(symbols=[args.symbol], time_frames=args.time_frames)
 
     # create fold iterator
-    first_timestamp = args.dataset.feature_transform.get_start_timestamp(dc=dc)
-    last_timestamp = args.dataset.label_transform.get_stop_timestamp(dc=dc)
+    first_timestamp = args.dataset.get_start_timestamp(dc=dc)
+    last_timestamp = args.dataset.get_stop_timestamp(dc=dc)
     fold_iterator = args.cross_validation(first_timestamp=first_timestamp, last_timestamp=last_timestamp)
 
     # iterate over folds

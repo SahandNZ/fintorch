@@ -13,12 +13,11 @@ from fintorch.deep.module import Module
 from fintorch.defaults import RICH_PROGRESS_COLUMNS
 from fintorch.utils.args import DefaultArgumentParser, DefaultNamespace
 
-
 def target(queue: Queue, module: Module, args: DefaultNamespace):
     try:
         dc = args.online_exchange.future.data.get_data_collection(
             symbols=[module.symbol],
-            time_frames=[module.time_frame]
+            time_frames=args.time_frames
         )
 
         with module:

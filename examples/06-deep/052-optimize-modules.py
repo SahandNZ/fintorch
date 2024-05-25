@@ -20,7 +20,7 @@ def main():
             # load data collection
             dc = args.online_exchange.future.data.get_data_collection(
                 symbols=[module.symbol],
-                time_frames=[module.time_frame]
+                time_frames=module.time_frames
             )
 
             # optimize folds

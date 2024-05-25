@@ -7,7 +7,7 @@ from fintorch.utils.args import DefaultArgumentParser
 def main():
     args = DefaultArgumentParser.parse()
 
-    dc = args.online_exchange.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
+    dc = args.online_exchange.future.data.get_data_collection(symbols=[args.symbol], time_frames=args.time_frames)
 
     # optimize folds
     with Live(refresh_per_second=2) as live, args.module:
