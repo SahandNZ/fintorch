@@ -25,7 +25,7 @@ class Position:
 
         # closing properties
         self.exit_price: Union[float, None] = None
-        self.exit_timestamp: Union[float, None] = None
+        self.exit_timestamp: Union[int, None] = None
         self.exit_percentage: Union[float, None] = None
 
         # last phase properties
