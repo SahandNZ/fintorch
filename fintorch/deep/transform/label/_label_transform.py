@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Tuple, Union, List
 
 import numpy as np
@@ -47,10 +48,10 @@ class LabelTransform(Transform, ABC):
     def df(self) -> Union[pd.DataFrame, None]:
         return self.__df
 
-    def _shift_timestamp(self, timestamp: float) -> float:
+    def _shift_timestamp(self, timestamp: int) -> int:
         return ceil_timestamp(timestamp=timestamp, time_frame=self.time_frame)
 
-    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: float) -> np.ndarray:
+    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> np.ndarray:
         if self.df is None or timestamp not in self.df.index:
             df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
             df = self.transform_df(df=df)
@@ -59,7 +60,7 @@ class LabelTransform(Transform, ABC):
 
         return self._transform_df_to_sf(df=self.df, timestamp=timestamp)
 
-    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: float) -> np.ndarray:
+    def _transform_df_to_sf(self, df: pd.DataFrame, timestamp: int) -> np.ndarray:
         # forward cropping label dataframe with timestamp and sequence length
         ldf = df[timestamp <= self.df.index]
         ldf = ldf.iloc[: self.dim_sequence]
@@ -78,8 +79,8 @@ class LabelTransform(Transform, ABC):
     def draw_ohlc_plot(
             self,
             dc: DataCollection,
-            start_date: str,
-            stop_date: str
+            start_date: Union[str, datetime],
+            stop_date: Union[str, datetime]
     ) -> Tuple[plt.Figure, plt.Axes, pd.DataFrame]:
         # create start and stop timestamps
         start_timestamp = to_timestamp(date=start_date)

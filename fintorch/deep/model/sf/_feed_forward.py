@@ -5,32 +5,35 @@ import numpy as np
 import torch
 from torch import nn
 
-from fintorch.deep.model._model import Model
+from ._model import SFModel
 
 
-class FeedForward(Model):
+class SFFeedForward(SFModel):
     def __init__(
             self,
+            dropout: float,
+            batch_norm: bool,
+            activation_fn: nn.Module,
+
             dim_input_sequence: int,
             dim_input_feature: int,
             dim_output_sequence: int,
             dim_output_feature: int,
             num_hidden_layers: int,
-            dropout: float,
-            batch_norm: bool,
-            activation_fn: nn.Module
     ):
         super().__init__(
-            name="Feed Forward",
-            short_name="FF",
+            name="SF Feed Forward",
+            short_name="SF FF",
+            dropout=dropout,
+            batch_norm=batch_norm,
+            activation_fn=activation_fn,
+
             dim_input_sequence=dim_input_sequence,
             dim_input_feature=dim_input_feature,
             dim_output_sequence=dim_output_sequence,
             dim_output_feature=dim_output_feature,
+
             num_hidden_layers=num_hidden_layers,
-            dropout=dropout,
-            batch_norm=batch_norm,
-            activation_fn=activation_fn
         )
 
         input_layer = self.dim_input_sequence * self.dim_input_feature

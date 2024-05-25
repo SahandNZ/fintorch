@@ -1,34 +1,38 @@
 from torch import nn
 
-from fintorch.deep.model.sf._feed_forward import FeedForward
-from fintorch.deep.model.sf._model import Model
+from ._feed_forward import SFFeedForward
+from ._model import SFModel
 
 
-class Transformer(Model):
+class SFTransformer(SFModel):
     def __init__(
             self,
+            dropout: float,
+            batch_norm: bool,
+            activation_fn: nn.Module,
+
             dim_input_sequence: int,
             dim_input_feature: int,
             dim_output_sequence: int,
             dim_output_feature: int,
+
             num_hidden_layers: int,
-            dropout: float,
-            batch_norm: bool,
-            activation_fn: nn.Module = None,
             num_head: int = 2,
             num_layers: int = 2
     ):
         super().__init__(
-            name="Transformer",
-            short_name="TRAN",
+            name="SF Transformer",
+            short_name="SF TRAN",
+            dropout=dropout,
+            batch_norm=batch_norm,
+            activation_fn=activation_fn,
+
             dim_input_sequence=dim_input_sequence,
             dim_input_feature=dim_input_feature,
             dim_output_sequence=dim_output_sequence,
             dim_output_feature=dim_output_feature,
+
             num_hidden_layers=num_hidden_layers,
-            dropout=dropout,
-            batch_norm=batch_norm,
-            activation_fn=activation_fn
         )
 
         encoder_layer = nn.TransformerEncoderLayer(
@@ -39,15 +43,17 @@ class Transformer(Model):
         )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
 
-        self.ff = FeedForward(
+        self.ff = SFFeedForward(
+            dropout=dropout,
+            batch_norm=batch_norm,
+            activation_fn=activation_fn,
+
             dim_input_sequence=dim_input_sequence,
             dim_input_feature=dim_input_feature,
             dim_output_sequence=dim_output_sequence,
             dim_output_feature=dim_output_feature,
+
             num_hidden_layers=num_hidden_layers,
-            batch_norm=batch_norm,
-            dropout=dropout,
-            activation_fn=activation_fn
         )
 
     def _forward(self, x):

@@ -2,7 +2,7 @@ from typing import Dict, List, Union
 
 import numpy as np
 
-from fintorch.deep.criterion import Criterion
+from ..criterion import Criterion
 
 
 class Epoch:
@@ -111,4 +111,4 @@ class Epoch:
     def compare(self, other, mode: str, metric: str) -> bool:
         self_metric = getattr(self, f"{mode}_{metric}")
         other_metric = getattr(other, f"{mode}_{metric}")
-        return self_metric <= other_metric
+        return other_metric <= self_metric if "loss" == metric else self_metric <= other_metric

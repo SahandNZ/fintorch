@@ -3,7 +3,7 @@ from torch import nn
 from ._block import Block
 
 
-class Residual1D(Block):
+class Residual1DBlock(Block):
     def __init__(self, input_dim: int, output_dim: int, batch_norm: bool = True):
         super().__init__()
 

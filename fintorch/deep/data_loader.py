@@ -6,7 +6,7 @@ from typing import Callable, Iterator, Tuple, List, Union
 
 import torch
 
-from .dtype import Dataset
+from .dataset import Dataset
 from .error import NanValueInBatchError
 from ..utils.hash import static_hash
 
@@ -17,7 +17,7 @@ class DataLoader:
         self.__post_load_fn: Callable = post_load_fn
 
         self.__dataset: Union[Dataset, None] = None
-        self.__timestamps: Union[List[float], None] = None
+        self.__timestamps: Union[List[int], None] = None
         self.__batch_count: Union[int, None] = None
 
         self.__shuffle: Union[bool, None] = None
@@ -46,7 +46,7 @@ class DataLoader:
         return self.__dataset
 
     @property
-    def timestamps(self) -> List[float]:
+    def timestamps(self) -> List[int]:
         return self.__timestamps
 
     @property

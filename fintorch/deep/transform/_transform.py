@@ -37,7 +37,7 @@ class Transform(Component):
         self.__look_back: int = look_back
         self.__look_ahead: int = look_ahead
 
-        self.__timestamp_to_sf: Dict[float, np.ndarray] = {}
+        self.__timestamp_to_sf: Dict[int, np.ndarray] = {}
 
         self.__static_hash: int = static_list_hash([
             self.short_name,
@@ -73,7 +73,7 @@ class Transform(Component):
         return self.__look_ahead
 
     @property
-    def timestamp_to_sf(self) -> Dict[float, np.ndarray]:
+    def timestamp_to_sf(self) -> Dict[int, np.ndarray]:
         return self.__timestamp_to_sf
 
     @property
@@ -96,32 +96,32 @@ class Transform(Component):
         with open(self.path, "wb+") as file:
             pickle.dump(self.timestamp_to_sf, file)
 
-    def get_start_timestamp(self, dc: DataCollection) -> float:
+    def get_start_timestamp(self, dc: DataCollection) -> int:
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
         start_timestamp = df.index[0]
-        start_timestamp = start_timestamp + self.look_back * float(self.time_frame)
+        start_timestamp = start_timestamp + self.look_back * int(self.time_frame)
         start_timestamp = floor_timestamp(timestamp=start_timestamp, time_frame=self.time_frame)
 
         return start_timestamp
 
-    def get_stop_timestamp(self, dc: DataCollection) -> float:
+    def get_stop_timestamp(self, dc: DataCollection) -> int:
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
         stop_timestamp = df.index[-1]
-        stop_timestamp = stop_timestamp - self.look_ahead * float(self.time_frame)
+        stop_timestamp = stop_timestamp - self.look_ahead * int(self.time_frame)
         stop_timestamp = ceil_timestamp(timestamp=stop_timestamp, time_frame=self.time_frame)
 
         return stop_timestamp
 
-    def get_timestamps(self, dc: DataCollection) -> List[float]:
+    def get_timestamps(self, dc: DataCollection) -> List[int]:
         start_timestamp = self.get_start_timestamp(dc=dc)
         stop_timestamp = self.get_stop_timestamp(dc=dc)
-        timestamps = list(np.arange(start_timestamp, stop_timestamp, float(self.time_frame)))
+        timestamps = list(range(start_timestamp, stop_timestamp, int(self.time_frame)))
 
         return timestamps
 
     def prepare_sf(
             self, dc: DataCollection,
-            timestamps: Union[List[float], None] = None,
+            timestamps: Union[List[int], None] = None,
             progress: Union[Progress, None] = None
     ) -> None:
         if timestamps is None:
@@ -143,7 +143,7 @@ class Transform(Component):
         if progress is not None:
             progress.update(task_id=task, visible=False)
 
-    def load_sf(self, timestamps: List[float]) -> np.ndarray:
+    def load_sf(self, timestamps: List[int]) -> np.ndarray:
         sf_values = []
         for timestamp in timestamps:
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
@@ -155,7 +155,7 @@ class Transform(Component):
 
         return sf_values
 
-    def transform_sf(self, dc: DataCollection, timestamps: List[float]) -> Generator[np.ndarray, None, None]:
+    def transform_sf(self, dc: DataCollection, timestamps: List[int]) -> Generator[np.ndarray, None, None]:
         for timestamp in timestamps:
             shifted_timestamp = self._shift_timestamp(timestamp=timestamp)
             sf = self.timestamp_to_sf.get(shifted_timestamp, np.zeros((self.dim_sequence, self.dim_feature)) * np.nan)
@@ -170,14 +170,14 @@ class Transform(Component):
         raise NotImplementedError()
 
     @abstractmethod
-    def _shift_timestamp(self, timestamp: float) -> float:
+    def _shift_timestamp(self, timestamp: int) -> int:
         raise NotImplementedError()
 
     @abstractmethod
-    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: float) -> np.ndarray:
+    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> np.ndarray:
         raise NotImplementedError()
 
-    def _is_sf_valid(self, dc: DataCollection, timestamp: float, sf: np.ndarray) -> bool:
+    def _is_sf_valid(self, dc: DataCollection, timestamp: int, sf: np.ndarray) -> bool:
         start_timestamp = self.get_start_timestamp(dc=dc)
         stop_timestamp = self.get_stop_timestamp(dc=dc)
         is_timestamp_valid = start_timestamp <= timestamp < stop_timestamp

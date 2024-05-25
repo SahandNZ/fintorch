@@ -1,56 +1,65 @@
 import torch
 from torch import nn
 
-from fintorch.deep.model._feed_forward import FeedForward
-from fintorch.deep.model._model import Model
+from ._feed_forward import SFFeedForward
+from ._model import SFModel
 
 
-class AutoEncoder(Model):
+class SFAutoEncoder(SFModel):
     def __init__(
             self,
+            dropout: float,
+            batch_norm: bool,
+            activation_fn: nn.Module,
+
             dim_input_sequence: int,
             dim_input_feature: int,
-            dim_latent_sequence: int,
             dim_latent_feature: int,
+            dim_latent_sequence: int,
             dim_output_sequence: int,
             dim_output_feature: int,
+
             num_hidden_layers: int,
-            dropout: float,
-            batch_norm: bool
     ) -> None:
         super().__init__(
-            name="Auto Encoder",
-            short_name="AE",
+            name="SF Auto Encoder",
+            short_name="SF AE",
+            dropout=dropout,
+            batch_norm=batch_norm,
+            activation_fn=activation_fn,
+
             dim_input_sequence=dim_input_sequence,
             dim_input_feature=dim_input_feature,
             dim_output_sequence=dim_output_sequence,
             dim_output_feature=dim_output_feature,
+
             num_hidden_layers=num_hidden_layers,
-            dropout=dropout,
-            batch_norm=batch_norm,
-            activation_fn=nn.Tanh()
         )
 
-        self.__encoder: FeedForward = FeedForward(
+        self.__encoder: SFFeedForward = SFFeedForward(
+            dropout=dropout,
+            batch_norm=batch_norm,
+            activation_fn=activation_fn,
+
             dim_input_sequence=dim_input_sequence,
             dim_input_feature=dim_input_feature,
             dim_output_sequence=dim_latent_sequence,
             dim_output_feature=dim_latent_feature,
+
             num_hidden_layers=num_hidden_layers,
-            batch_norm=batch_norm,
-            dropout=dropout,
-            activation_fn=self.activation_fn
         )
 
-        self.__decoder: FeedForward = FeedForward(
+        self.__decoder: SFFeedForward = SFFeedForward(
+            dropout=dropout,
+            batch_norm=batch_norm,
+            activation_fn=activation_fn,
+
             dim_input_sequence=dim_latent_sequence,
             dim_input_feature=dim_latent_feature,
             dim_output_sequence=dim_output_sequence,
             dim_output_feature=dim_output_feature,
+
             num_hidden_layers=num_hidden_layers,
-            batch_norm=batch_norm,
-            dropout=dropout,
-            activation_fn=self.activation_fn
         )
 
         self.__dim_latent_sequence: int = dim_latent_sequence
@@ -65,11 +74,11 @@ class AutoEncoder(Model):
         return self.__dim_latent_feature
 
     @property
-    def encoder(self) -> Model:
+    def encoder(self) -> SFModel:
         return self.__encoder
 
     @property
-    def decoder(self) -> Model:
+    def decoder(self) -> SFModel:
         return self.__decoder
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:

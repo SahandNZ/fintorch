@@ -2,9 +2,7 @@ import math
 from datetime import datetime, timedelta
 from typing import Iterator, Union
 
-import numpy as np
-
-from .dtype import Fold
+from .status import Fold
 from ..enum import TimeFrame
 from ..utils.hash import static_list_hash
 from ..utils.timestamp import floor_timestamp, ceil_timestamp
@@ -126,10 +124,10 @@ class CrossValidation:
 
     def __call__(
             self,
-            first_timestamp: float,
-            last_timestamp: float,
-            start_timestamp: Union[float, None] = None,
-            stop_timestamp: Union[float, None] = None
+            first_timestamp: int,
+            last_timestamp: int,
+            start_timestamp: Union[int, None] = None,
+            stop_timestamp: Union[int, None] = None
     ) -> Iterator:
         # replace none values
         start_timestamp = start_timestamp if start_timestamp is not None else 0
@@ -171,23 +169,23 @@ class CrossValidation:
     def __next__(self) -> Fold:
         self.__index += 1
         if self.index < self.folds_count:
-            test_start_timestamp = int(self.start_timestamp + self.index * self.test_length * self.time_frame)
-            test_stop_timestamp = int(test_start_timestamp + self.test_length * self.time_frame)
+            test_start_timestamp = int(self.start_timestamp + self.index * self.test_length * int(self.time_frame))
+            test_stop_timestamp = int(test_start_timestamp + self.test_length * int(self.time_frame))
             test_start_timestamp = floor_timestamp(timestamp=test_start_timestamp, time_frame=self.time_frame)
             test_stop_timestamp = ceil_timestamp(timestamp=test_stop_timestamp, time_frame=self.time_frame)
-            test_timestamps = list(np.arange(test_start_timestamp, test_stop_timestamp, float(self.time_frame)))
+            test_timestamps = list(range(test_start_timestamp, test_stop_timestamp, int(self.time_frame)))
 
             val_stop_timestamp = test_start_timestamp
-            val_start_timestamp = int(val_stop_timestamp - self.val_length * self.time_frame)
+            val_start_timestamp = int(val_stop_timestamp - self.val_length * int(self.time_frame))
             val_start_timestamp = floor_timestamp(timestamp=val_start_timestamp, time_frame=self.time_frame)
             val_stop_timestamp = floor_timestamp(timestamp=val_stop_timestamp, time_frame=self.time_frame)
-            val_timestamps = list(np.arange(val_start_timestamp, val_stop_timestamp, float(self.time_frame)))
+            val_timestamps = list(range(val_start_timestamp, val_stop_timestamp, int(self.time_frame)))
 
             train_stop_timestamp = val_start_timestamp
-            train_start_timestamp = int(train_stop_timestamp - self.train_length * self.time_frame)
+            train_start_timestamp = int(train_stop_timestamp - self.train_length * int(self.time_frame))
             train_start_timestamp = floor_timestamp(timestamp=train_start_timestamp, time_frame=self.time_frame)
             train_stop_timestamp = floor_timestamp(timestamp=train_stop_timestamp, time_frame=self.time_frame)
-            train_timestamps = list(np.arange(train_start_timestamp, train_stop_timestamp, float(self.time_frame)))
+            train_timestamps = list(range(train_start_timestamp, train_stop_timestamp, int(self.time_frame)))
 
             if 0 < len(set(train_timestamps).intersection(val_timestamps)):
                 raise RuntimeError("Common timestamps found between the train and validation sets.")

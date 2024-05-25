@@ -32,8 +32,9 @@ class Criterion(nn.Module, ABC):
         return self.__static_hash
 
     def forward(self, input: torch.Tensor, target: torch.Tensor):
-        if (torch.isnan(input).max() or torch.isinf(input).max()
-                or torch.isnan(target).max() or torch.isinf(target).max()):
+        if torch.isnan(input).max() or torch.isinf(input).max():
+            raise RuntimeError("NaN or Inf values found in the input of the criterion.")
+        if torch.isnan(target).max() or torch.isinf(target).max():
             raise RuntimeError("NaN or Inf values found in the target of the criterion.")
 
         output = self._forward(input=input, target=target)

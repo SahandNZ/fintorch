@@ -8,10 +8,11 @@ import torch
 
 from .criterion import Criterion
 from .data_loader import DataLoader
-from .dtype import Dataset, Epoch, Fold
+from .dataset import Dataset
+from .status import Epoch, Fold
 from .error import NanValueInBatchError
 from .lr_scheduler import LrScheduler
-from .model import Model
+from fintorch.deep.model import Model
 from .optimizer import Optimizer
 from ..utils.hash import static_list_hash
 

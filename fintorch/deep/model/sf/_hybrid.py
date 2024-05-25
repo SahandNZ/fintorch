@@ -1,48 +1,54 @@
 import torch
 from torch import nn
 
-from fintorch.deep.model.sf._feed_forward import FeedForward
-from fintorch.deep.model._model import Model
+from ._feed_forward import SFFeedForward
+from ._model import SFModel
 
 
-class Hybrid(Model):
+class SFHybrid(SFModel):
     def __init__(
             self,
+            dropout: float,
+            batch_norm: bool,
+            activation_fn: nn.Module,
+
             dim_input_sequence: int,
             dim_input_feature: int,
             dim_output_sequence: int,
             dim_output_feature: int,
+
             num_hidden_layers: int,
-            dropout: float,
-            batch_norm: bool,
-            activation_fn: nn.Module = None
     ):
         super().__init__(
-            name="Hybrid",
-            short_name="HYB",
+            name="SF Hybrid",
+            short_name="SF HYB",
+            dropout=dropout,
+            batch_norm=batch_norm,
+            activation_fn=activation_fn,
+
             dim_input_sequence=dim_input_sequence,
             dim_input_feature=dim_input_feature,
             dim_output_sequence=dim_output_sequence,
             dim_output_feature=dim_output_feature,
+
             num_hidden_layers=num_hidden_layers,
-            dropout=dropout,
-            batch_norm=batch_norm,
-            activation_fn=activation_fn
         )
 
         self.q_linear = nn.Linear(self.dim_input_feature, self.dim_input_feature)
         self.k_linear = nn.Linear(self.dim_input_feature, self.dim_input_feature)
         self.v_linear = nn.Linear(self.dim_input_feature, self.dim_input_feature)
 
-        self.ff = FeedForward(
+        self.ff = SFFeedForward(
+            dropout=dropout,
+            batch_norm=batch_norm,
+            activation_fn=activation_fn,
+
             dim_input_sequence=dim_input_sequence,
             dim_input_feature=dim_input_feature,
             dim_output_sequence=dim_output_sequence,
             dim_output_feature=dim_output_feature,
+
             num_hidden_layers=num_hidden_layers,
-            batch_norm=batch_norm,
-            dropout=dropout,
-            activation_fn=activation_fn
         )
 
     def _forward(self, x):

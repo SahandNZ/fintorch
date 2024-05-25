@@ -139,8 +139,11 @@ class Module(ABC):
 
         # create model
         self.__model_kwargs.update({
+            "dim_input_time_frame": self.dataset.dim_input_time_frame,
             "dim_input_sequence": self.dataset.dim_input_sequence,
             "dim_input_feature": self.dataset.dim_input_feature,
+
+            "dim_output_time_frame": self.dataset.dim_output_time_frame,
             "dim_output_sequence": self.dataset.dim_output_sequence,
             "dim_output_feature": self.dataset.dim_output_feature,
         })
@@ -186,7 +189,7 @@ class Module(ABC):
             dc: DataCollection,
             start_date: Union[str, None] = None,
             stop_date: Union[str, None] = None
-    ) -> List[float]:
+    ) -> List[int]:
         start_timestamp = self.get_start_timestamp(dc=dc)
         stop_timestamp = self.get_stop_timestamp(dc=dc)
 
@@ -197,7 +200,7 @@ class Module(ABC):
 
         start_timestamp = floor_timestamp(timestamp=start_timestamp, time_frame=self.time_frame)
         stop_timestamp = ceil_timestamp(timestamp=stop_timestamp, time_frame=self.time_frame)
-        return list(np.arange(start_timestamp, stop_timestamp, float(self.time_frame)))
+        return list(range(start_timestamp, stop_timestamp, int(self.time_frame)))
 
     def optimize(
             self,

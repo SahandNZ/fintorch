@@ -38,7 +38,7 @@ class FeatureTransform(Transform, ABC):
     def features(self) -> List[str]:
         return self.__features
 
-    def _shift_timestamp(self, timestamp: float) -> float:
+    def _shift_timestamp(self, timestamp: int) -> int:
         return floor_timestamp(timestamp=timestamp, time_frame=self.time_frame)
 
     @abstractmethod
@@ -48,7 +48,7 @@ class FeatureTransform(Transform, ABC):
     def normalize_df(self, df: pd.DataFrame) -> pd.DataFrame:
         return df / (df.max() - df.min())
 
-    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: float) -> np.ndarray:
+    def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> np.ndarray:
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
 
         # backward cropping feature dataframe with timestamp and sequence length
