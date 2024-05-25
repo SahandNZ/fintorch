@@ -1,12 +1,13 @@
-from typing import List
+from typing import List, Union
 
 from ..._exchange.market import MarketTrade
 from ....api import API
 from ....dtype import Order, Position
-from ....enum import MarketType
+from ....enum import MarketType, OrderSide
 
 
 class OnlineMarketTrade(MarketTrade):
+
     def __init__(self, api: API, market_type: MarketType):
         super().__init__(market_type=market_type)
         self.__api: API = api
@@ -26,7 +27,37 @@ class OnlineMarketTrade(MarketTrade):
     def get_orders_history(self, symbol: str) -> List[Order]:
         raise NotImplementedError()
 
-    def set_order(self, order: Order) -> Order:
+    def set_order(
+            self,
+            symbol: str,
+            side: OrderSide,
+            percentage: float,
+            reduce_only: bool,
+            price: Union[float, None] = None,
+            stop_price: Union[float, None] = None,
+            comment: Union[str, None] = None
+    ) -> Order:
+        raise NotImplementedError()
+
+    def set_entry_order(
+            self,
+            symbol: str,
+            side: OrderSide,
+            percentage: float,
+            price: Union[float, None] = None,
+            stop_price: Union[float, None] = None,
+            comment: Union[str, None] = None
+    ) -> Order:
+        raise NotImplementedError()
+
+    def set_exit_order(
+            self,
+            position: Position,
+            percentage: float,
+            price: Union[float, None] = None,
+            stop_price: Union[float, None] = None,
+            comment: Union[str, None] = None
+    ) -> Order:
         raise NotImplementedError()
 
     def cancel_order(self, symbol: str, order_id: str) -> None:

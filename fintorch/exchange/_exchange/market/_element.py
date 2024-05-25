@@ -11,19 +11,19 @@ class MarketElement(ABC):
         self.__market_type: MarketType = market_type
 
         # states
-        self.__timestamp: Union[float, None] = None
+        self.__timestamp: Union[int, None] = None
 
     @property
     def market_type(self) -> MarketType:
         return self.__market_type
 
     @property
-    def timestamp(self) -> float:
+    def timestamp(self) -> int:
         return self.__timestamp
 
     @property
     def datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.timestamp / 1000)
+        return datetime.fromtimestamp(self.timestamp)
 
     def state_dict(self) -> Dict:
         return {"timestamp": self.timestamp}
@@ -40,7 +40,7 @@ class MarketElement(ABC):
 
         self.load_state_dict(state_dict=state_dict)
 
-    def next(self, timestamp: float) -> None:
+    def next(self, timestamp: int) -> None:
         self.__timestamp = timestamp
 
     def close(self, path: str):

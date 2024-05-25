@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple, Dict
 
 import pandas as pd
 
@@ -13,6 +13,9 @@ class LocalMarketData(MarketData):
         super().__init__(market_type=market_type)
         self.__online_exchange: OnlineExchange = online_exchange
         self.__online_market_data: OnlineMarketData = getattr(self.__online_exchange, str(self.market_type)).data
+
+        self.__current_candle_dict: Dict[Tuple[str, TimeFrame], Candle] = {}
+        self.__candles_dataframe_dict: Dict[Tuple[str, TimeFrame], pd.DataFrame] = {}
 
     def get_current_timestamp(self) -> float:
         return self.timestamp
@@ -33,14 +36,24 @@ class LocalMarketData(MarketData):
         raise NotImplementedError()
 
     def get_current_candle(self, symbol: str, time_frame: TimeFrame) -> Candle:
-        df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
-        last_row = [df.index[-1]] + df.iloc[-1].to_list()
-        return Candle.from_list(data=last_row)
+        key = (symbol, time_frame)
+        if key not in self.__current_candle_dict:
+            df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
+            last_row = [df.index[-1]] + df.iloc[-1].to_list()
+            current_candle = Candle.from_list(data=last_row)
+
+            self.__current_candle_dict[key] = current_candle
+
+        return self.__current_candle_dict[key]
 
     def get_candles_dataframe(self, symbol: str, time_frame: TimeFrame) -> pd.DataFrame:
-        df = self.__online_market_data.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
-        filtered_df = df[df.index < self.timestamp]
-        return filtered_df
+        key = (symbol, time_frame)
+        if key not in self.__candles_dataframe_dict:
+            df = self.__online_market_data.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
+            df = df[df.index < self.timestamp]
+            self.__candles_dataframe_dict[key] = df
+
+        return self.__candles_dataframe_dict[key]
 
     def get_data_collection(self, symbols: List[str], time_frames: List[TimeFrame]) -> DataCollection:
         dc = DataCollection()
@@ -58,3 +71,8 @@ class LocalMarketData(MarketData):
 
     def get_top_long_short_ratios_account_dataframe(self, symbol: str, time_frame: TimeFrame) -> pd.DataFrame:
         raise NotImplementedError()
+
+    def next(self, timestamp: int) -> None:
+        super().next(timestamp=timestamp)
+        self.__current_candle_dict.clear()
+        self.__candles_dataframe_dict.clear()

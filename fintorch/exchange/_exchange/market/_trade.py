@@ -55,6 +55,7 @@ class MarketTrade(MarketElement, ABC):
     ) -> Order:
         raise NotImplementedError()
 
+    @abstractmethod
     def set_entry_order(
             self,
             symbol: str,
@@ -64,35 +65,18 @@ class MarketTrade(MarketElement, ABC):
             stop_price: Union[float, None] = None,
             comment: Union[str, None] = None
     ) -> Order:
-        return self.set_order(
-            symbol=symbol,
-            side=side,
-            percentage=percentage,
-            reduce_only=False,
-            price=price,
-            stop_price=stop_price,
-            comment=comment
-        )
+        raise NotImplementedError()
 
+    @abstractmethod
     def set_exit_order(
             self,
-            symbol: str,
+            position: Position,
             percentage: float,
             price: Union[float, None] = None,
             stop_price: Union[float, None] = None,
             comment: Union[str, None] = None
     ) -> Order:
-        position = self.get_position(symbol=symbol)
-        reversed_order_side = OrderSide(position.side * -1)
-        return self.set_order(
-            symbol=symbol,
-            side=reversed_order_side,
-            percentage=percentage,
-            reduce_only=True,
-            price=price,
-            stop_price=stop_price,
-            comment=comment
-        )
+        raise NotImplementedError()
 
     @abstractmethod
     def cancel_order(self, symbol: str, order_id: str) -> None:

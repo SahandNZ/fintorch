@@ -212,12 +212,12 @@ class OnlineMarketData(MarketData):
                 self.update_candles_dataframe(symbol=symbol)
 
         # update funding rates
-        funding_rate_time_frame = self.market_data_end_points.funding_rates_interval
-        funding_rate_open_timestamp = floor_timestamp(timestamp=timestamp, time_frame=funding_rate_time_frame)
-        for symbol in self.__funding_rates_df_dict.keys():
-            df = self.get_funding_rates_dataframe(symbol=symbol)
-            if force_update or funding_rate_open_timestamp not in df.index:
-                self.update_funding_rates_dataframe(symbol=symbol)
+        # funding_rate_time_frame = self.market_data_end_points.funding_rates_interval
+        # funding_rate_open_timestamp = floor_timestamp(timestamp=timestamp, time_frame=funding_rate_time_frame)
+        # for symbol in self.__funding_rates_df_dict.keys():
+        #     df = self.get_funding_rates_dataframe(symbol=symbol)
+        #     if force_update or funding_rate_open_timestamp not in df.index:
+        #         self.update_funding_rates_dataframe(symbol=symbol)
 
     # region private timeseries methods
     def __time_series_path(self, symbol: str, time_frame: TimeFrame, attribute_name: str) -> str:
@@ -262,7 +262,7 @@ class OnlineMarketData(MarketData):
             start_timestamp = df.index[-1] + time_frame
 
         # calculate stop timestamp
-        current_timestamp = datetime.now().timestamp()
+        current_timestamp = int(datetime.now().timestamp())
         stop_timestamp = ceil_timestamp(timestamp=current_timestamp, time_frame=time_frame)
 
         attribute_get_fn_kwargs = {

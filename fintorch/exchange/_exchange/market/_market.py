@@ -30,7 +30,7 @@ class Market(ABC):
         self.data.open(path=os.path.join(directory, "data.pkl"))
         self.trade.open(path=os.path.join(directory, "trade.pkl"))
 
-    def next(self, timestamp: float) -> None:
+    def next(self, timestamp: int) -> None:
         self.data.next(timestamp=timestamp)
         self.trade.next(timestamp=timestamp)
 
