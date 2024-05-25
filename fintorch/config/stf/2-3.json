@@ -1,0 +1,12 @@
+{
+  "time-frames": [
+    86400,
+    14400,
+    3600
+  ],
+  "symbols": [
+    "BTC-USDT",
+    "ETH-USDT"
+  ]
+}
+
