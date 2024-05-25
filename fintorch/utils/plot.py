@@ -7,7 +7,6 @@ import pandas as pd
 from matplotlib.patches import Rectangle
 
 from fintorch.dtype import Order, Position
-from fintorch.enum import OrderSide, PositionSide
 
 
 def prepare_dataframe_for_mpf(df: pd.DataFrame) -> pd.DataFrame:
@@ -25,17 +24,18 @@ def draw_candlestick_plot(ax: plt.Axes, df: pd.DataFrame) -> None:
 
 
 def draw_order(ax: plt.Axes, df: pd.DataFrame, order: Order) -> None:
-    df = df.reset_index()
-    df.loc[df.timestamp == order.timestamp, "price"] = order.price
-    color = 'g' if OrderSide.BUY == order.side else 'r'
-    ax.axhline(y=df.close.mean(), xmin=xmin, xmax=len(df), color=color, linestyle='-')
+    pass
 
 
 def draw_position(ax: plt.Axes, df: pd.DataFrame, position: Position) -> None:
+    entry_price = position.entry_price
+    entry_timestamp = position.entry_timestamp
+    exit_timestamp = position.exit_timestamp or position.current_timestamp
+
     df = df.reset_index()
-    xmin = df[df.timestamp == position.entry_timestamp].index[0]
-    color = 'g' if PositionSide.LONG == position.side else 'r'
-    ax.axhline(y=df.close.mean(), xmin=xmin, xmax=len(df), color=color, linestyle='-')
+    xmin = min([i for i in range(len(df)) if entry_timestamp <= df.timestamp.iloc[i]])
+    xmax = max([i for i in range(len(df)) if df.timestamp.iloc[i] <= exit_timestamp])
+    ax.axhline(y=entry_price, xmin=xmin, xmax=xmax, color="gray", linestyle='-')
 
 
 def draw_rectangle(ax: plt.Axes, x1: int, y1: int, x2: int, y2: int, color: str = None, alpha: float = 0.25):

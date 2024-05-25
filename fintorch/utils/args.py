@@ -11,7 +11,7 @@ from ..api.binance import BinanceAPI
 from ..app import Application
 from ..deep.cross_validation import CrossValidation
 from ..deep.data_loader import DataLoader
-from ..deep.dtype import Dataset
+from ..deep.model import Model
 from ..deep.module import Module
 from ..deep.transform import Transform
 from ..deep.transform.label import LabelTransform
@@ -20,7 +20,6 @@ from ..engine import SimulationEngine
 from ..enum import TimeFrame, MarketType
 from ..exchange import OnlineExchange
 from ..settings import CONFIG_DIR
-from ..strategy.deep import DeepStrategy
 
 
 class DefaultNamespace(argparse.Namespace):
@@ -47,11 +46,11 @@ class DefaultNamespace(argparse.Namespace):
         self.stop_timestamp: float = to_timestamp(self.stop_date)
 
         # set symbols and time frames
-        self.symbol: str = stf_config_dict["symbols"][0]
-        self.time_frame: TimeFrame = TimeFrame(max(stf_config_dict["time-frames"]))
-
         self.symbols: List[str] = stf_config_dict["symbols"]
         self.time_frames: List[TimeFrame] = [TimeFrame(tf) for tf in stf_config_dict["time-frames"]]
+
+        self.symbol: str = stf_config_dict["symbols"][0]
+        self.time_frame: TimeFrame = TimeFrame(max(stf_config_dict["time-frames"]))
 
         # add default kwargs and instances of api and exchange
         self.proxies = self.api_kwargs["proxies"]
@@ -61,39 +60,92 @@ class DefaultNamespace(argparse.Namespace):
         self.api = call_with_dict(BinanceAPI, self.api_kwargs)
         self.online_exchange = OnlineExchange(api=self.api)
 
-        # deep types
-        self.feature_transform_type = FEATURE_TRANSFORM_TYPES[0]
-        self.label_transform_type = LABEL_TRANSFORM_TYPES[0]
-        self.model_type = MODEL_TYPES[0]
-
+        # transform types and kwargs
         self.feature_transform_types: List[Type[FeatureTransform]] = FEATURE_TRANSFORM_TYPES
         self.label_transform_types: List[Type[LabelTransform]] = LABEL_TRANSFORM_TYPES
-        self.transform_types: List[Type[Transform]] = TRANSFORM_TYPES
-        self.model_types: List[Type[Model]] = MODEL_TYPES
+        self.transform_types: List[Type[Transform]] = self.feature_transform_types + self.label_transform_types
 
-        # deep kwargs
-        self.transform_kwargs = {
-            "symbol": self.symbol,
-            "time_frame": self.time_frame,
-            "dim_input_sequence": self.dim_input_sequence,
-            "dim_output_sequence": self.dim_output_sequence
+        self.feature_transform_type = FEATURE_TRANSFORM_TYPES[0]
+        self.label_transform_type = LABEL_TRANSFORM_TYPES[0]
+
+        self.feature_transform_kwargs = {"dim_sequence": self.dim_input_sequence}
+        self.label_transform_kwargs = {"dim_sequence": self.dim_output_sequence}
+
+        # transform instances
+        self.feature_transforms = []
+        for s, tf, ft_type in itertools.product(self.symbols, self.time_frames, self.feature_transform_types):
+            ft_kwargs = self.feature_transform_kwargs.copy()
+            ft_kwargs.update({"symbol": s, "time_frame": tf})
+            feature_transform = call_with_dict(ft_type, ft_kwargs)
+            self.feature_transforms.append(feature_transform)
+
+        self.label_transforms = []
+        for s, tf, lt_type in itertools.product(self.symbols, self.time_frames, self.label_transform_types):
+            lt_kwargs = self.label_transform_kwargs.copy()
+            lt_kwargs.update({"symbol": s, "time_frame": tf})
+            label_transform = call_with_dict(lt_type, lt_kwargs)
+            self.label_transforms.append(label_transform)
+
+        self.transforms = self.feature_transforms + self.label_transforms
+
+        self.label_transform = self.label_transforms[0]
+        self.feature_transform = self.feature_transforms[0]
+        self.transform = self.transforms[0]
+
+        # dataset type, kwargs, and instance
+        self.dataset_type = DATASET_TYPE
+        self.dataset_kwargs = {
+            "feature_symbol": self.symbol,
+            "feature_time_frame": self.time_frame,
+            "feature_time_frames": self.time_frames,
+            "feature_transform_kwargs": self.feature_transform_kwargs,
+            "feature_transform_type": self.feature_transform_type,
+            "label_symbol": self.symbol,
+            "label_time_frame": self.time_frame,
+            "label_transform_kwargs": self.label_transform_kwargs,
+            "label_transform_type": self.label_transform_type
         }
+        self.dataset = call_with_dict(self.dataset_type, self.dataset_kwargs)
 
-        self.model_kwargs = {
-            "num_hidden_layers": self.num_hidden_layers,
-            "dropout": self.dropout,
-            "batch_norm": self.batch_norm,
-            "activation_fn": ACTIVATION_FN
-        }
-
+        # cross validation kwargs, and instance
         self.cross_validation_kwargs = {
             "train_period": self.train_period,
             "val_period": self.val_period,
             "test_period": self.test_period,
         }
+        self.cross_validation = CrossValidation(time_frame=self.dataset.time_frame, **self.cross_validation_kwargs)
 
+        # data loader, kwargs and instance
         self.data_loader_kwargs = {"batch_size": self.batch_size}
+        self.data_loader = DataLoader(**self.data_loader_kwargs)
 
+        # model types, kwargs, and instances
+        self.model_types: List[Type[Model]] = MODEL_TYPES
+        self.model_type = self.model_types[0]
+
+        self.model_kwargs = {
+            "dropout": self.dropout,
+            "batch_norm": self.batch_norm,
+            "activation_fn": ACTIVATION_FN,
+
+            "dim_input_time_frame": self.dataset.dim_input_time_frame,
+            "dim_input_sequence": self.dataset.dim_input_sequence,
+            "dim_input_feature": self.dataset.dim_input_feature,
+
+            "dim_latent_sequence": self.dim_latent_sequence,
+            "dim_latent_feature": self.dim_latent_feature,
+
+            "dim_output_time_frame": self.dataset.dim_output_time_frame,
+            "dim_output_sequence": self.label_transform.dim_sequence,
+            "dim_output_feature": self.label_transform.dim_feature,
+
+            "num_hidden_layers": self.num_hidden_layers,
+        }
+
+        self.models = [call_with_dict(model_type, self.model_kwargs) for model_type in self.model_types]
+        self.model = self.models[0]
+
+        # module kwargs, and instances
         self.optimizer_kwargs = {
             "torch_optimizer_type": OPTIM_TYPE,
             "lr": self.lr,
@@ -115,39 +167,23 @@ class DefaultNamespace(argparse.Namespace):
             "gradient_clipping_threshold": self.gct,
         }
 
-        # deep instances
-        self.feature_transforms = []
-        for s, tf, ft_type in itertools.product(self.symbols, self.time_frames, self.feature_transform_types):
-            ft_kwargs = self.transform_kwargs.copy()
-            ft_kwargs.update({"dim_sequence": self.dim_input_sequence, "symbol": s, "time_frame": tf})
-            feature_transform = call_with_dict(ft_type, ft_kwargs)
-            self.feature_transforms.append(feature_transform)
-
-        self.label_transforms = []
-        for s, tf, lt_type in itertools.product(self.symbols, self.time_frames, self.label_transform_types):
-            lt_kwargs = self.transform_kwargs.copy()
-            lt_kwargs.update({"dim_sequence": self.dim_output_sequence, "symbol": s, "time_frame": tf})
-            label_transform = call_with_dict(lt_type, lt_kwargs)
-            self.label_transforms.append(label_transform)
-
-        self.transforms = self.feature_transforms + self.label_transforms
-
-        # create modules
-        items = itertools.product(self.symbols, self.time_frames, self.label_transform_types,
+        items = itertools.product(self.symbols, self.time_frames[:2], self.label_transform_types,
                                   self.feature_transform_types, self.model_types)
         self.modules = []
-        for s, tf, lt_type, ft_type, model_type in items:
-            ft_kwargs = self.transform_kwargs.copy()
-            ft_kwargs.update({"dim_sequence": self.dim_input_sequence, "symbol": s, "time_frame": tf})
-            feature_transform = call_with_dict(ft_type, ft_kwargs)
-
-            lt_kwargs = self.transform_kwargs.copy()
-            lt_kwargs.update({"dim_sequence": self.dim_output_sequence, "symbol": s, "time_frame": tf})
-            label_transform = call_with_dict(lt_type, lt_kwargs)
+        for symbol, time_frame, lt_type, ft_type, model_type in items:
+            dataset_kwargs = self.dataset_kwargs.copy()
+            dataset_kwargs.update({
+                "feature_symbol": symbol,
+                "feature_time_frame": time_frame,
+                "feature_transform_type": ft_type,
+                "label_symbol": symbol,
+                "label_time_frame": time_frame,
+                "label_transform_type": lt_type,
+            })
+            dataset = call_with_dict(self.dataset_type, dataset_kwargs)
 
             module = Module(
-                feature_transform=feature_transform,
-                label_transform=label_transform,
+                dataset=dataset,
                 model_type=model_type,
                 model_kwargs=self.model_kwargs,
                 cross_validation_kwargs=self.cross_validation_kwargs,
@@ -158,60 +194,32 @@ class DefaultNamespace(argparse.Namespace):
             )
             self.modules.append(module)
 
-        self.label_transform = self.label_transforms[0]
-        self.feature_transform = self.feature_transforms[0]
-        self.dataset = Dataset(feature_transform=self.feature_transform, label_transform=self.label_transform)
-        self.cross_validation = CrossValidation(time_frame=self.dataset.time_frame, **self.cross_validation_kwargs)
-        self.data_loader = DataLoader(**self.data_loader_kwargs)
-        self.module = Module(
-            feature_transform=self.feature_transform,
-            label_transform=self.label_transform,
-            model_type=self.model_type,
-            model_kwargs=self.model_kwargs,
-            cross_validation_kwargs=self.cross_validation_kwargs,
-            data_loader_kwargs=self.data_loader_kwargs,
-            optimizer_kwargs=self.optimizer_kwargs,
-            lr_scheduler_kwargs=self.lr_scheduler_kwargs,
-            trainer_kwargs=self.trainer_kwargs
-        )
+        self.module: Module = self.modules[0]
 
-        model_kwargs = self.model_kwargs.copy()
-        model_kwargs.update({
-            "dim_input_sequence": self.feature_transform.dim_sequence,
-            "dim_input_feature": self.feature_transform.dim_feature,
-            "dim_output_sequence": self.label_transform.dim_sequence,
-            "dim_output_feature": self.label_transform.dim_feature,
-        })
-        self.models = [call_with_dict(mt, model_kwargs) for mt in self.model_types]
-        self.model = self.models[0]
+        # strategy types, kwargs, and instances
+        self.strategy_types: List[Type[Strategy]] = STRATEGY_TYPES
+        self.strategy_type: Type[Strategy] = self.strategy_types[0]
 
-        # add default deep strategy types and kwargs and instances
-        self.deep_strategy_type: Type[DeepStrategy] = DEEP_STRATEGY_TYPES[0]
-        self.deep_strategy_kwargs = {"module": self.module}
-        self.deep_strategy = call_with_dict(self.deep_strategy_type, self.deep_strategy_kwargs)
-
-        self.deep_strategy_types: List[Type[DeepStrategy]] = DEEP_STRATEGY_TYPES
-        self.deep_strategies = []
-        for deep_strategy_type, module in itertools.product(self.deep_strategy_types, self.modules):
+        self.strategy_kwargs = {"module": self.module}
+        self.strategies = []
+        for strategy_type, module in itertools.product(self.strategy_types, self.modules):
             if TimeFrame.DAY1 == module.time_frame:
-                deep_strategy = deep_strategy_type(module=module)
-                self.deep_strategies.append(deep_strategy)
+                strategy = strategy_type(module=module)
+                self.strategies.append(strategy)
 
-        # create engine instances
-        self.engine: SimulationEngine = SimulationEngine(
-            online_exchange=self.online_exchange,
-            strategy=self.deep_strategy,
-            interval=self.interval
-        )
+        self.strategy: Strategy = self.strategies[0]
 
+        # engine instances
         self.engines: List[SimulationEngine] = []
-        for strategy in self.deep_strategies:
+        for strategy in self.strategies:
             engine = SimulationEngine(
                 online_exchange=self.online_exchange,
                 strategy=strategy,
                 interval=self.interval
             )
             self.engines.append(engine)
+
+        self.engine: SimulationEngine = self.engines[0]
 
         # add app instance
         self.app_kwargs = {
@@ -238,12 +246,17 @@ class DefaultArgumentParser(argparse.ArgumentParser):
         self.add_argument("--max-workers", action="store", type=int, required=False, default=MAX_WORKERS)
 
         # deep learning args
-        self.add_argument("--dim-input-sequence", action="store", type=int, required=False, default=DIM_INPUT_SEQUENCE)
-        self.add_argument("--dim-output-sequence", action="store", type=int, required=False,
-                          default=DIM_OUTPUT_SEQUENCE)
-        self.add_argument("--num-hidden-layers", action="store", type=int, required=False, default=NUM_HIDDEN_LAYERS)
         self.add_argument("--dropout", action="store", type=float, required=False, default=DROPOUT)
         self.add_argument("--batch-norm", action="store", type=bool, required=False, default=BATCH_NORM)
+
+        self.add_argument("--dim-input-sequence", action="store", type=int, required=False, default=DIM_INPUT_SEQUENCE)
+        self.add_argument("--dim-latent-sequence", action="store", type=int, required=False,
+                          default=DIM_LATENT_SEQUENCE)
+        self.add_argument("--dim-latent-feature", action="store", type=int, required=False, default=DIM_LATENT_FEATURE)
+        self.add_argument("--dim-output-sequence", action="store", type=int, required=False,
+                          default=DIM_OUTPUT_SEQUENCE)
+
+        self.add_argument("--num-hidden-layers", action="store", type=int, required=False, default=NUM_HIDDEN_LAYERS)
 
         # cross validation args
         self.add_argument("--train-period", action="store", type=int, required=False, default=TRAIN_PERIOD)
@@ -258,7 +271,7 @@ class DefaultArgumentParser(argparse.ArgumentParser):
         self.add_argument("--weight-decay", action="store", type=float, required=False, default=OPTIM_WEIGHT_DECAY)
 
         # lr scheduler args
-        self.add_argument("--lrs-step-size", action="store", type=float, required=False, default=LRS_STEP_SIZE)
+        self.add_argument("--lrs-step-size", action="store", type=int, required=False, default=LRS_STEP_SIZE)
         self.add_argument("--lrs-gamma", action="store", type=float, required=False, default=LRS_GAMMA)
 
         # trainer args

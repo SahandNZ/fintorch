@@ -1,6 +1,8 @@
+from datetime import datetime
+
 import pandas as pd
 
-from .timestamp import floor_timestamp
+from .timestamp import floor_timestamp, ceil_timestamp
 from ..enum import TimeFrame
 
 
@@ -19,8 +21,7 @@ def resample_candles_df(
         inplace: bool = False
 ) -> pd.DataFrame:
     window_size = int(destination_timeframe) // int(source_timeframe)
-    first_timestamp = floor_timestamp(timestamp=df.index[0], time_frame=destination_timeframe)
-    first_timestamp += destination_timeframe
+    first_timestamp = ceil_timestamp(timestamp=df.index[0], time_frame=destination_timeframe)
 
     if not inplace:
         df = df.copy()
@@ -31,8 +32,7 @@ def resample_candles_df(
     df["low"] = df.low.rolling(window=indexer, min_periods=1, step=window_size).min()
     df["close"] = df.close.rolling(window=indexer, min_periods=1, step=window_size).agg(last_item)
     df["volume"] = df.volume.rolling(window=indexer, min_periods=1, step=window_size).sum()
-    if "trade" in df.columns:
-        df['trade'] = df.trade.rolling(window=indexer, min_periods=1, step=window_size).sum()
+    df['trade'] = df.trade.rolling(window=indexer, min_periods=1, step=window_size).sum()
     df = df.dropna()
 
     return df
@@ -45,8 +45,7 @@ def resample_long_short_ratio_df(
         inplace: bool = False
 ) -> pd.DataFrame:
     window_size = int(destination_timeframe) // int(source_timeframe)
-    first_timestamp = floor_timestamp(timestamp=df.index[0], time_frame=destination_timeframe)
-    first_timestamp += destination_timeframe
+    first_timestamp = ceil_timestamp(timestamp=df.index[0], time_frame=destination_timeframe)
 
     if not inplace:
         df = df.copy()
