@@ -75,8 +75,8 @@ class BinanceFutureMarketDataEndPoints(MarketDataEndPoints):
             self,
             symbol: str,
             time_frame: TimeFrame,
-            start_timestamp: float,
-            stop_timestamp: float
+            start_timestamp: int,
+            stop_timestamp: int
     ) -> List[AggregatedTrade]:
         endpoint = '/fapi/v1/aggTrades'
         params = {
@@ -94,8 +94,8 @@ class BinanceFutureMarketDataEndPoints(MarketDataEndPoints):
             self,
             symbol: str,
             time_frame: TimeFrame,
-            start_timestamp: float,
-            stop_timestamp: float
+            start_timestamp: int,
+            stop_timestamp: int
     ) -> List[Candle]:
         endpoint = '/fapi/v1/klines'
         limit = (stop_timestamp - start_timestamp) // time_frame
@@ -115,8 +115,8 @@ class BinanceFutureMarketDataEndPoints(MarketDataEndPoints):
             self,
             symbol: str,
             time_frame: TimeFrame,
-            start_timestamp: float,
-            stop_timestamp: float
+            start_timestamp: int,
+            stop_timestamp: int
     ) -> List[FundingRate]:
         endpoint = '/fapi/v1/fundingRate'
         limit = (stop_timestamp - start_timestamp) // self.funding_rates_interval
@@ -135,8 +135,8 @@ class BinanceFutureMarketDataEndPoints(MarketDataEndPoints):
             self,
             symbol: str,
             time_frame: TimeFrame,
-            start_timestamp: float,
-            stop_timestamp: float
+            start_timestamp: int,
+            stop_timestamp: int
     ) -> List[LongShortRatio]:
         endpoint = '/futures/data/globalLongShortAccountRatio'
         limit = (stop_timestamp - start_timestamp) // time_frame

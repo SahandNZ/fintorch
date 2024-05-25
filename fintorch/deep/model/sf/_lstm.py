@@ -1,11 +1,10 @@
-import torch
-from torch import nn
+import torch.nn as nn
 
-from ._feed_forward import FeedForward
-from ._model import Model
+from fintorch.deep.model.sf._feed_forward import FeedForward
+from fintorch.deep.model.sf._model import Model
 
 
-class Hybrid(Model):
+class LSTM(Model):
     def __init__(
             self,
             dim_input_sequence: int,
@@ -15,11 +14,13 @@ class Hybrid(Model):
             num_hidden_layers: int,
             dropout: float,
             batch_norm: bool,
-            activation_fn: nn.Module = None
+            activation_fn: nn.Module = None,
+            dim_hidden: int = 4,
+            num_layers: int = 2
     ):
         super().__init__(
-            name="Hybrid",
-            short_name="HYB",
+            name="Long Short-Term Memory",
+            short_name="LSTM",
             dim_input_sequence=dim_input_sequence,
             dim_input_feature=dim_input_feature,
             dim_output_sequence=dim_output_sequence,
@@ -30,13 +31,17 @@ class Hybrid(Model):
             activation_fn=activation_fn
         )
 
-        self.q_linear = nn.Linear(self.dim_input_feature, self.dim_input_feature)
-        self.k_linear = nn.Linear(self.dim_input_feature, self.dim_input_feature)
-        self.v_linear = nn.Linear(self.dim_input_feature, self.dim_input_feature)
+        self.lstm = nn.LSTM(
+            input_size=dim_input_feature,
+            hidden_size=dim_hidden,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=dropout
+        )
 
         self.ff = FeedForward(
-            dim_input_sequence=dim_input_sequence,
-            dim_input_feature=dim_input_feature,
+            dim_input_sequence=1,
+            dim_input_feature=dim_hidden,
             dim_output_sequence=dim_output_sequence,
             dim_output_feature=dim_output_feature,
             num_hidden_layers=num_hidden_layers,
@@ -46,12 +51,7 @@ class Hybrid(Model):
         )
 
     def _forward(self, x):
-        q = self.q_linear(x)
-        k = self.k_linear(x)
-        v = self.v_linear(x)
-        s = nn.functional.softmax(torch.einsum('bsf,bsf->bs', q, k), dim=-1).unsqueeze(-1)
-        f = v * s
-
-        y_hat = self.ff(f)
-
+        output, _ = self.lstm(x)
+        output = output[:, -1, :]
+        y_hat = self.ff(output)
         return y_hat

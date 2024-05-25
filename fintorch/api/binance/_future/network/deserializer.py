@@ -27,7 +27,7 @@ def aggregated_trade_deserializer(data: Dict) -> AggregatedTrade:
 def candle_deserializer(data: Dict) -> Candle:
     instance = Candle()
 
-    instance.timestamp = int(data[0]) / 1000
+    instance.timestamp = int(int(data[0]) / 1000)
     instance.open = float(data[1])
     instance.high = float(data[2])
     instance.low = float(data[3])
@@ -41,7 +41,7 @@ def candle_deserializer(data: Dict) -> Candle:
 def funding_rate_deserializer(data: Dict) -> FundingRate:
     instance = FundingRate()
 
-    instance.timestamp = int(data["fundingTime"]) / 1000
+    instance.timestamp = int(int(data["fundingTime"]) / 1000)
     instance.price = float(data["markPrice"]) if 0 < len(data["markPrice"]) else None
     instance.rate = float(data["fundingRate"])
 
@@ -51,7 +51,7 @@ def funding_rate_deserializer(data: Dict) -> FundingRate:
 def long_short_ratio_deserializer(data: Dict) -> LongShortRatio:
     instance = LongShortRatio()
 
-    instance.timestamp = int(data["timestamp"]) / 1000
+    instance.timestamp = int(int(data["timestamp"]) / 1000)
     instance.ratio = float(data["longShortRatio"])
     instance.long = float(data["longAccount"])
     instance.short = float(data["shortAccount"])
@@ -64,7 +64,7 @@ def order_deserializer(data: Dict):
 
     instance.id = data['orderId']
     instance.symbol = data['symbol']
-    instance.timestamp = int(data['time']) / 1000
+    instance.timestamp = int(int(data['time']) / 1000)
     instance.status = data['status']
     instance.side = data['side']
     instance.volume = float(data['origQty'])
@@ -92,7 +92,7 @@ def symbol_info_deserializer(data: Dict):
     instance.symbol = data['symbol']
     instance.base_asset = data['baseAsset']
     instance.quote_asset = data['quoteAsset']
-    instance.on_board_timestamp = int(data['onboardDate']) / 1000
+    instance.on_board_timestamp = int(int(data['onboardDate']) / 1000)
     instance.price_precision = int(data['pricePrecision'])
     instance.quantity_precision = int(data['quantityPrecision'])
 

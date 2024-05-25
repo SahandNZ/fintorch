@@ -1,13 +1,15 @@
 from abc import ABC
 
-from . import DeepStrategy
-from ...deep.module import Module
-from ...dtype import Position
+import numpy as np
+
+from fintorch.strategy.deep import DeepStrategy
+from fintorch.deep.module import Module
+from fintorch.dtype import Position
 
 
-class DynamicAtrTpSlDeepStrategy(DeepStrategy, ABC):
-    def __init__(self, module: Module, window: int = 5, take_profit_factor: float = 2, stop_loss_factor: float = 1):
-        super().__init__(name="Dynamic-Atr TP-SL Deep Strategy", short_name="D-ATR TP-SL", module=module)
+class DynamicRocTpSlDeepStrategy(DeepStrategy, ABC):
+    def __init__(self, module: Module, window: int = 5, take_profit_factor: float = 5, stop_loss_factor: float = 2.5):
+        super().__init__(name="Dynamic-Roc TP-SL Deep Strategy", short_name="D-ROC TP-SL", module=module)
         self.__window: int = window
         self.__take_profit_factor: float = take_profit_factor
         self.__stop_loss_factor: float = stop_loss_factor
@@ -40,11 +42,11 @@ class DynamicAtrTpSlDeepStrategy(DeepStrategy, ABC):
     def on_opened_position(self, position: Position) -> None:
         dc = self.future.data.get_data_collection(symbols=[self.symbol], time_frames=[self.time_frame])
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame).copy()
-        df["atr"] = df.high / df.low - 1
-        df["mean-atr"] = df.atr.rolling(window=self.window).mean()
+        df["abs-roc"] = np.abs(df.close / df.open - 1)
+        df["mean-abs-roc"] = df["abs-roc"].rolling(window=self.window).mean()
 
-        take_profit_rate = df["mean-atr"].iloc[-1] * self.take_profit_factor
-        stop_loss_rate = df["mean-atr"].iloc[-1] * self.stop_loss_factor
+        take_profit_rate = df["mean-abs-roc"].iloc[-1] * self.take_profit_factor
+        stop_loss_rate = df["mean-abs-roc"].iloc[-1] * self.stop_loss_factor
 
         take_profit_price = position.entry_price * (1 + int(position.side) * take_profit_rate)
         stop_loss_price = position.entry_price * (1 - int(position.side) * stop_loss_rate)

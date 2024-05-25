@@ -1,7 +1,7 @@
 import torch.nn as nn
 
-from ._feed_forward import FeedForward
-from ._model import Model
+from fintorch.deep.model.sf._feed_forward import FeedForward
+from fintorch.deep.model._model import Model
 
 
 class GRU(Model):

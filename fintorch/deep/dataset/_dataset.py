@@ -4,11 +4,11 @@ from typing import List, Tuple, Union
 import numpy as np
 import torch
 
-from ...deep.transform.feature import FeatureTransform
-from ...deep.transform.label import LabelTransform
-from ...dtype import DataCollection
-from ...enum import TimeFrame
-from ...utils.hash import static_list_hash
+from fintorch.deep.transform.feature import FeatureTransform
+from fintorch.deep.transform.label import LabelTransform
+from fintorch.dtype import DataCollection
+from fintorch.enum import TimeFrame
+from fintorch.utils.hash import static_list_hash
 
 
 class Dataset(ABC):

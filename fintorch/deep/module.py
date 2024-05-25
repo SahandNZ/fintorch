@@ -13,13 +13,12 @@ import torch
 
 from .cross_validation import CrossValidation
 from .data_loader import DataLoader
-from .dtype import Dataset, Fold, Status
+from .dataset import Dataset
 from .lr_scheduler import LrScheduler
 from .model import Model
 from .optimizer import Optimizer
+from .status import Fold, Status
 from .trainer import Trainer
-from .transform.feature import FeatureTransform
-from .transform.label import LabelTransform
 from ..dtype import DataCollection
 from ..enum import TimeFrame
 from ..settings import MODULE_DIR
@@ -33,8 +32,7 @@ from ..utils.timestamp import to_timestamp, floor_timestamp, ceil_timestamp
 class Module(ABC):
     def __init__(
             self,
-            feature_transform: FeatureTransform,
-            label_transform: LabelTransform,
+            dataset: Dataset,
             model_type: Type[Model],
             model_kwargs: Dict[str, Any],
             cross_validation_kwargs: Dict[str, Any],
@@ -46,7 +44,7 @@ class Module(ABC):
         self.__model_type: Type[Model] = model_type
         self.__model_kwargs: Dict[str, Any] = model_kwargs
 
-        self.__dataset: Dataset = Dataset(feature_transform=feature_transform, label_transform=label_transform)
+        self.__dataset: Dataset = dataset
         self.__model: Union[Model, None] = None
         self.__cross_validation = CrossValidation(time_frame=self.time_frame, **cross_validation_kwargs)
         self.__trainer: Trainer = Trainer(
@@ -71,8 +69,9 @@ class Module(ABC):
         ])
 
         # states
-        self.__directory: Union[str, None] = None
-        self.__open_mode: Union[str, None] = None
+        self.__directory: str = os.path.join(MODULE_DIR, str(self.static_hash))
+        self.__state_dict_path: str = os.path.join(self.directory, "state-dict.pkl")
+
         self.__folds_dict: Union[Dict[Tuple[int, int], Fold], None] = None
         self.__y_hats_dict: Union[Dict[int, np.array], None] = None
 
@@ -109,6 +108,10 @@ class Module(ABC):
         return self.__directory
 
     @property
+    def state_dict_path(self) -> str:
+        return self.__state_dict_path
+
+    @property
     def folds_dict(self) -> Dict[Tuple[int, int], Fold]:
         return self.__folds_dict
 
@@ -136,18 +139,16 @@ class Module(ABC):
 
         # create model
         self.__model_kwargs.update({
-            "dim_input_sequence": self.dataset.feature_transform.dim_sequence,
-            "dim_input_feature": self.dataset.feature_transform.dim_feature,
-            "dim_output_sequence": self.dataset.label_transform.dim_sequence,
-            "dim_output_feature": self.dataset.label_transform.dim_feature,
+            "dim_input_sequence": self.dataset.dim_input_sequence,
+            "dim_input_feature": self.dataset.dim_input_feature,
+            "dim_output_sequence": self.dataset.dim_output_sequence,
+            "dim_output_feature": self.dataset.dim_output_feature,
         })
         self.__model = call_with_dict(self.__model_type, self.__model_kwargs)
 
         # safe load state dict
-        self.__directory = os.path.join(MODULE_DIR, str(self.static_hash))
-        state_dict_path = os.path.join(self.directory, "state-dict.pkl")
         try:
-            with open(state_dict_path, "rb") as file:
+            with open(self.state_dict_path, "rb") as file:
                 state_dict = pickle.load(file)
         except (FileNotFoundError, EOFError, pickle.UnpicklingError):
             state_dict = {}
@@ -159,8 +160,7 @@ class Module(ABC):
 
         # store state dict
         create_directory(self.directory)
-        state_dict_path = os.path.join(self.directory, "state-dict.pkl")
-        with open(state_dict_path, "wb+") as file:
+        with open(self.state_dict_path, "wb+") as file:
             pickle.dump(self.state_dict(), file)
 
         # remove model
@@ -168,8 +168,8 @@ class Module(ABC):
         gc.collect()
 
     def get_start_timestamp(self, dc: DataCollection) -> float:
-        first_timestamp = self.dataset.feature_transform.get_start_timestamp(dc=dc)
-        last_timestamp = self.dataset.label_transform.get_stop_timestamp(dc=dc)
+        first_timestamp = self.dataset.get_start_timestamp(dc=dc)
+        last_timestamp = self.dataset.get_stop_timestamp(dc=dc)
 
         tmp_cross_validation = copy.deepcopy(self.cross_validation)
         tmp_cross_validation(first_timestamp=first_timestamp, last_timestamp=last_timestamp)
@@ -179,7 +179,7 @@ class Module(ABC):
         return start_timestamp
 
     def get_stop_timestamp(self, dc: DataCollection) -> float:
-        return self.dataset.feature_transform.get_stop_timestamp(dc=dc)
+        return self.dataset.get_stop_timestamp(dc=dc)
 
     def get_timestamps(
             self,
@@ -191,9 +191,9 @@ class Module(ABC):
         stop_timestamp = self.get_stop_timestamp(dc=dc)
 
         if start_date is not None:
-            start_timestamp = max(start_timestamp, int(to_timestamp(date=start_date)))
+            start_timestamp = int(max(start_timestamp, int(to_timestamp(date=start_date))))
         if stop_date is not None:
-            stop_timestamp = min(stop_timestamp, int(to_timestamp(date=stop_date)))
+            stop_timestamp = int(min(stop_timestamp, int(to_timestamp(date=stop_date))))
 
         start_timestamp = floor_timestamp(timestamp=start_timestamp, time_frame=self.time_frame)
         stop_timestamp = ceil_timestamp(timestamp=stop_timestamp, time_frame=self.time_frame)
@@ -210,8 +210,8 @@ class Module(ABC):
         stop_timestamp = to_timestamp(date=stop_date) if stop_date is not None else None
 
         # setup cross validation
-        first_timestamp = self.dataset.feature_transform.get_start_timestamp(dc=dc)
-        last_timestamp = self.dataset.feature_transform.get_stop_timestamp(dc=dc)
+        first_timestamp = self.dataset.get_start_timestamp(dc=dc)
+        last_timestamp = self.dataset.get_stop_timestamp(dc=dc)
         folds_iterator = self.cross_validation(
             first_timestamp=first_timestamp,
             last_timestamp=last_timestamp,
@@ -238,7 +238,7 @@ class Module(ABC):
                     status.update_elapsed_time(elapsed_time=elapsed_time)
                     yield status
 
-    def predict(self, dc: DataCollection, timestamps: List[float], mode="val") -> Dict[float, np.array]:
+    def predict(self, dc: DataCollection, timestamps: List[int], mode="val") -> Dict[float, np.array]:
         # load from y_hats_dict
         output = {ts: self.y_hats_dict[ts] for ts in timestamps if ts in self.y_hats_dict}
         output = {ts: y_hat for ts, y_hat in output.items() if not np.isnan(y_hat).max()}
@@ -311,13 +311,4 @@ class Module(ABC):
             self.close()
 
     def __str__(self):
-        return (
-            "{} {} {} {} {}"
-            .format(
-                self.dataset.symbol,
-                self.dataset.time_frame,
-                self.dataset.feature_transform.short_name,
-                self.dataset.label_transform.short_name,
-                self.__model_type.__name__
-            )
-        )
+        return "{} {}".format(str(self.dataset), self.__model_type.__name__)

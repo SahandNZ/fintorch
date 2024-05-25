@@ -159,8 +159,8 @@ class MarketDataEndPoints(Network):
             self,
             symbol: str,
             time_frame: TimeFrame,
-            start_timestamp: float,
-            stop_timestamp: float
+            start_timestamp: int,
+            stop_timestamp: int
     ) -> List[AggregatedTrade]:
         raise NotImplementedError()
 
@@ -169,13 +169,13 @@ class MarketDataEndPoints(Network):
             self,
             symbol: str,
             time_frame: TimeFrame,
-            start_timestamp: float,
-            stop_timestamp: float
+            start_timestamp: int,
+            stop_timestamp: int
     ) -> List[Candle]:
         raise NotImplementedError()
 
     @abstractmethod
-    def _get_funding_rates(self, symbol: str, start_timestamp: float, stop_timestamp: float) -> List[FundingRate]:
+    def _get_funding_rates(self, symbol: str, start_timestamp: int, stop_timestamp: int) -> List[FundingRate]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -183,8 +183,8 @@ class MarketDataEndPoints(Network):
             self,
             symbol: str,
             time_frame: TimeFrame,
-            start_timestamp: float,
-            stop_timestamp: float
+            start_timestamp: int,
+            stop_timestamp: int
     ) -> List[LongShortRatio]:
         raise NotImplementedError()
 
@@ -195,8 +195,8 @@ class MarketDataEndPoints(Network):
             self,
             symbol: str,
             time_frame: TimeFrame,
-            start_timestamp: float,
-            stop_timestamp: float,
+            start_timestamp: int,
+            stop_timestamp: int,
             attribute_name: str,
             dtype: Type[Union[FundingRate, Candle, LongShortRatio]],
             progress: Union[Progress, None] = None,

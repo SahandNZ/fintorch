@@ -1,8 +1,8 @@
 from abc import ABC
 
-from . import SimpleDeepStrategy, DeepStrategy
-from ...deep.module import Module
-from ...dtype import Position
+from fintorch.strategy.deep import SimpleDeepStrategy, DeepStrategy
+from fintorch.deep.module import Module
+from fintorch.dtype import Position
 
 
 class StaticTpSlDeepStrategy(DeepStrategy, ABC):

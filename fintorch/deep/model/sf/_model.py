@@ -4,8 +4,8 @@ from typing import List
 import torch
 from torch import nn
 
-from ...component import Component
-from ...utils.hash import static_list_hash
+from fintorch.component import Component
+from fintorch.utils.hash import static_list_hash
 
 
 class Model(nn.Module, Component, ABC):
