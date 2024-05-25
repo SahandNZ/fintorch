@@ -6,7 +6,7 @@ import pandas as pd
 
 class FundingRate:
     def __init__(self):
-        self.timestamp: Union[float, None] = None
+        self.timestamp: Union[int, None] = None
         self.price: Union[float, None] = None
         self.rate: Union[float, None] = None
 
@@ -19,6 +19,7 @@ class FundingRate:
         data = [FundingRate.to_list(funding_rate) for funding_rate in funding_rates]
         columns = ['timestamp', 'price', 'rate']
         df = pd.DataFrame(data=data, columns=columns)
+        df["timestamp"] = df.timestamp.astype(int)
         df = df.set_index('timestamp')
 
         return df

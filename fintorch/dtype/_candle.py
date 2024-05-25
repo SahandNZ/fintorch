@@ -6,7 +6,7 @@ import pandas as pd
 
 class Candle:
     def __init__(self):
-        self.timestamp: Union[float, None] = None
+        self.timestamp: Union[int, None] = None
         self.open: Union[float, None] = None
         self.high: Union[float, None] = None
         self.low: Union[float, None] = None

@@ -14,11 +14,11 @@ class Position:
         # opening properties
         self.side: Union[PositionSide, None] = None
         self.entry_price: Union[float, None] = None
-        self.entry_timestamp: Union[float, None] = None
-        self.entry_percentage: Union[float, None] = None
+        self.entry_timestamp: Union[int, None] = None
+        self.entry_percentage: Union[int, None] = None
 
         # while open properties
-        self.current_timestamp: Union[float, None] = None
+        self.current_timestamp: Union[int, None] = None
         self.current_price: Union[float, None] = None
         self.lowest_met_price: Union[float, None] = None
         self.highest_met_price: Union[float, None] = None
@@ -89,10 +89,14 @@ class Position:
         return self._calculate_pnl(percentage=self.draw_down_percentage)
 
     def paid_fee(self, fee_percentage: float) -> Union[float, None]:
-        return self._calculate_pnl(percentage=fee_percentage * 2)
+        exit_price = self.exit_price or self.current_price
+        entry_fee = self.entry_price * self.quantity * fee_percentage / 100
+        exit_fee = exit_price * self.quantity * fee_percentage / 100
+        return round(entry_fee + exit_fee, 2)
 
     def _calculate_pnl_percentage(self, exit_price: float) -> float:
-        return round((exit_price / self.entry_price - 1) * int(self.side) * self.leverage * 100, 2)
+        pnl_percentage = (exit_price / self.entry_price - 1) * int(self.side) * self.leverage * 100
+        return round(pnl_percentage, 2)
 
     def _calculate_pnl(self, percentage: float) -> Union[float, None]:
         if self.margin is not None:

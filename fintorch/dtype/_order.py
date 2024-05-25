@@ -15,7 +15,7 @@ class Order:
         self.comment: Union[bool, None] = None
 
         self.id: Union[str, None] = None
-        self.timestamp: Union[float, None] = None
+        self.timestamp: Union[int, None] = None
         self.activated_timestamp: Union[float, None] = None
         self.filled_timestamp: Union[float, None] = None
         self.canceled_timestamp: Union[float, None] = None

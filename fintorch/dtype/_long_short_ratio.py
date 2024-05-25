@@ -6,7 +6,7 @@ import pandas as pd
 
 class LongShortRatio:
     def __init__(self):
-        self.timestamp: Union[float, None] = None
+        self.timestamp: Union[int, None] = None
         self.ratio: Union[float, None] = None
         self.long: Union[float, None] = None
         self.short: Union[float, None] = None
