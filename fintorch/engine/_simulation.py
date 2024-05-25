@@ -15,10 +15,17 @@ class SimulationEngine(Engine):
             interval: TimeFrame,
     ):
         exchange = LocalExchange(online_exchange=online_exchange, interval=interval)
-        clock = Clock(online_exchange=online_exchange, strategy=strategy, interval=interval)
+        clock = Clock(start_date="2021-01-01", interval=interval)
         super().__init__(exchange=exchange, strategy=strategy, clock=clock)
 
-    def simulate(self) -> Generator[float, None, None]:
+        self.__online_exchange: OnlineExchange = online_exchange
+
+    def simulate(self) -> Generator[int, None, None]:
+        symbols = [self.strategy.symbol]
+        time_frames = self.strategy.time_frames
+        dc = self.__online_exchange.future.data.get_data_collection(symbols=symbols, time_frames=time_frames)
+        self.strategy.preprocess(dc=dc)
+
         while True:
             timestamp = self.clock.next()
             if timestamp is not None:
