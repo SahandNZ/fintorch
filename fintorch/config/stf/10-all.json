@@ -2,14 +2,20 @@
   "time-frames": [
     86400,
     14400,
-    3600
+    3600,
+    900
   ],
   "symbols": [
     "BTC-USDT",
     "ETH-USDT",
     "BCH-USDT",
     "XRP-USDT",
-    "EOS-USDT"
+    "EOS-USDT",
+    "LTC-USDT",
+    "TRX-USDT",
+    "ETC-USDT",
+    "LINK-USDT",
+    "XLM-USDT"
   ]
 }
 
