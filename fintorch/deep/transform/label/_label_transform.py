@@ -101,15 +101,14 @@ class LabelTransform(Transform, ABC):
         self._draw_lines(ohlc_ax=ohlc_ax, df=df)
         df.set_index("timestamp", inplace=True)
 
+        # set title and legend
+        fig.suptitle(str(self))
+        ohlc_ax.legend()
+
         return fig, ohlc_ax, df
 
     def show_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str) -> None:
-        _, ohlc_ax, _ = self.draw_ohlc_plot(dc=dc, start_date=start_date, stop_date=stop_date)
-
-        ohlc_ax.grid()
-        ohlc_ax.legend()
-
-        plt.title("{} (from {} to {})".format(str(self), start_date, stop_date))
+        _, _, _ = self.draw_ohlc_plot(dc=dc, start_date=start_date, stop_date=stop_date)
         plt.show()
 
     @abstractmethod
