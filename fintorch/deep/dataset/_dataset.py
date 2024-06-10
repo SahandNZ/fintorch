@@ -36,10 +36,18 @@ class Dataset(ABC):
     @property
     def time_frame(self) -> TimeFrame:
         return self.label_transform.time_frame
-
+    
+    @property
+    def symbols(self) -> List[str]:
+        ft_symbols = [ft.symbol for ft in self.feature_transforms]
+        lt_symbols = [self.label_transform.symbol]
+        return list(set(ft_symbols + lt_symbols))
+    
     @property
     def time_frames(self) -> List[TimeFrame]:
-        return [ft.time_frame for ft in self.feature_transforms]
+        ft_time_frames = [ft.time_frame for ft in self.feature_transforms]
+        lt_time_frames = [self.label_transform.time_frame]
+        return list(set(ft_time_frames + lt_time_frames))
 
     @property
     def static_hash(self) -> int:
