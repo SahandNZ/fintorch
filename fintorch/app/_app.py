@@ -13,6 +13,7 @@ class Application:
             time_frames: List[TimeFrame],
             online_exchange: OnlineExchange,
             market_type: MarketType,
+            executor
     ):
         self.__context = Context(
             symbols=symbols,
@@ -20,7 +21,7 @@ class Application:
             online_exchange=online_exchange,
             market_type=market_type,
         )
-        self.__job_queue = JobQueue(context=self.context)
+        self.__job_queue = JobQueue(context=self.context, executor=executor)
 
     @property
     def context(self) -> Context:
