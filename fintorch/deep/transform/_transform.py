@@ -1,4 +1,5 @@
 import os
+import gc
 import pickle
 from abc import abstractmethod
 from typing import Dict, Generator, Union, List
@@ -14,6 +15,7 @@ from ...settings import TRANSFORM_DIR
 from ...utils.directory import create_directory
 from ...utils.hash import static_list_hash
 from ...utils.timestamp import ceil_timestamp, floor_timestamp
+from ...utils.memory import get_memory_status
 
 
 class Transform(Component):
@@ -96,6 +98,9 @@ class Transform(Component):
         with open(self.path, "wb+") as file:
             pickle.dump(self.timestamp_to_sf, file)
 
+        # clear state to free allocated memory
+        self.__timestamp_to_sf.clear()
+
     def get_start_timestamp(self, dc: DataCollection) -> int:
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
         start_timestamp = df.index[0]
@@ -120,7 +125,8 @@ class Transform(Component):
         return timestamps
 
     def prepare_sf(
-            self, dc: DataCollection,
+            self,
+            dc: DataCollection,
             timestamps: Union[List[int], None] = None,
             progress: Union[Progress, None] = None
     ) -> None:
