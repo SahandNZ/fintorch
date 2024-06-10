@@ -25,8 +25,9 @@ from ..settings import MODULE_DIR
 from ..utils.directory import create_directory
 from ..utils.function import call_with_dict
 from ..utils.hash import static_list_hash
-from ..utils.plot import draw_predictions
+from ..utils.plot import draw_predictions_based_on_labels
 from ..utils.timestamp import to_timestamp, floor_timestamp, ceil_timestamp
+from ..utils.memory import get_memory_status
 
 
 class Module(ABC):
@@ -45,7 +46,6 @@ class Module(ABC):
         self.__model_kwargs: Dict[str, Any] = model_kwargs
 
         self.__dataset: Dataset = dataset
-        self.__model: Union[Model, None] = None
         self.__cross_validation = CrossValidation(time_frame=self.time_frame, **cross_validation_kwargs)
         self.__trainer: Trainer = Trainer(
             data_loader=DataLoader(post_load_fn=Module._post_load_fn, **data_loader_kwargs),
@@ -81,7 +81,7 @@ class Module(ABC):
 
     @property
     def model(self) -> Model:
-        return self.__model
+        return getattr(self, "__model")
 
     @property
     def cross_validation(self) -> CrossValidation:
@@ -121,7 +121,7 @@ class Module(ABC):
 
     @staticmethod
     def _post_load_fn(x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        return x, y
+        return x, y.squeeze(1)
 
     def state_dict(self) -> Dict:
         return {
@@ -147,7 +147,9 @@ class Module(ABC):
             "dim_output_sequence": self.dataset.dim_output_sequence,
             "dim_output_feature": self.dataset.dim_output_feature,
         })
-        self.__model = call_with_dict(self.__model_type, self.__model_kwargs)
+        
+        model = call_with_dict(self.__model_type, self.__model_kwargs)
+        setattr(self, "__model", model)
 
         # safe load state dict
         try:
@@ -166,9 +168,13 @@ class Module(ABC):
         with open(self.state_dict_path, "wb+") as file:
             pickle.dump(self.state_dict(), file)
 
-        # remove model
-        self.__model = None
+        # clear states to free allocated memory
+        delattr(self, "__model")
+        self.__folds_dict.clear()
+        self.__y_hats_dict.clear()
+
         gc.collect()
+        torch.cuda.empty_cache()
 
     def get_start_timestamp(self, dc: DataCollection) -> float:
         first_timestamp = self.dataset.get_start_timestamp(dc=dc)
@@ -291,7 +297,7 @@ class Module(ABC):
 
         # draw predictions
         df.reset_index(drop=False, inplace=True)
-        draw_predictions(ohlc_ax=ohlc_ax, df=df)
+        draw_predictions_based_on_labels(ohlc_ax=ohlc_ax, df=df)
         df.set_index("timestamp", inplace=True)
 
         return fig, ohlc_ax, df
