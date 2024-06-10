@@ -38,21 +38,23 @@ class SFFeedForward(SFModel):
 
         input_layer = self.dim_input_sequence * self.dim_input_feature
         output_layer = self.dim_output_sequence * self.dim_output_feature
-        powers = np.linspace(math.log2(input_layer), math.log2(output_layer), self.num_hidden_layers + 2)
-        self.__layers = [input_layer] + [2 ** round(p) for p in powers[1:-1]] + [output_layer]
-        self.__layers = [input_layer] * self.num_hidden_layers + [output_layer]
+        
+        # powers = np.linspace(math.log2(input_layer), math.log2(output_layer), self.num_hidden_layers + 2)
+        # self.__layers = [input_layer] + [2 ** round(p) for p in powers[1:-1]] + [output_layer]
+        
+        self.__layers = [input_layer] + [input_layer] * self.num_hidden_layers + [output_layer]
 
         modules = [nn.Flatten()]
         for index in range(len(self.layers) - 2):
             modules.append(nn.Linear(self.layers[index], self.layers[index + 1]))
-            if self.batch_norm:
+            if self.batch_norm and 0 == index % 2:
                 modules.append(nn.BatchNorm1d(self.layers[index + 1]))
             modules.append(nn.LeakyReLU())
             modules.append(nn.Dropout(dropout))
 
         modules.append(nn.Linear(self.layers[-2], self.layers[-1]))
-        if self.batch_norm:
-            modules.append(nn.BatchNorm1d(self.layers[-1]))
+        # if self.batch_norm:
+        #     modules.append(nn.BatchNorm1d(self.layers[-1]))
 
         self.net = nn.Sequential(*modules)
 
