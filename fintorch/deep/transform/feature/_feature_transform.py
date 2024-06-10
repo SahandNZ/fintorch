@@ -12,14 +12,14 @@ from ....utils.timestamp import floor_timestamp
 
 class FeatureTransform(Transform, ABC):
     def __init__(
-            self,
-            name: str,
-            short_name: str,
-            symbol: str,
-            time_frame: TimeFrame,
-            dim_sequence: int,
-            look_back: int,
-            features: List[str]
+        self,
+        name: str,
+        short_name: str,
+        symbol: str,
+        time_frame: TimeFrame,
+        dim_sequence: int,
+        look_back: int,
+        features: List[str],
     ):
         super().__init__(
             name=name,
@@ -30,7 +30,7 @@ class FeatureTransform(Transform, ABC):
             dim_sequence=dim_sequence,
             dim_feature=len(features),
             look_back=look_back,
-            look_ahead=0
+            look_ahead=0,
         )
         self.__features: List[str] = features
 
@@ -46,7 +46,10 @@ class FeatureTransform(Transform, ABC):
         raise NotImplementedError()
 
     def normalize_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        return df / (df.max() - df.min())
+        zdf = (df - df.mean()) / df.std()
+        ndf = (zdf - zdf.min()) / (zdf.max() - zdf.min())
+
+        return ndf
 
     def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> np.ndarray:
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
