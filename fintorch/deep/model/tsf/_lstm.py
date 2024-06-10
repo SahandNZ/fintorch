@@ -23,8 +23,8 @@ class LSTM(TSFModel):
             num_hidden_layers: int,
     ) -> None:
         super().__init__(
-            name="TSF Long-Short Term Memory",
-            short_name="TSF LSTM",
+            name="Long-Short Term Memory",
+            short_name="LSTM",
 
             dropout=dropout,
             batch_norm=batch_norm,

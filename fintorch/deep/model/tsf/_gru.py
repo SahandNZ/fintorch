@@ -23,8 +23,8 @@ class GRU(TSFModel):
             num_hidden_layers: int,
     ) -> None:
         super().__init__(
-            name="TSF Gate Recurrent Unit",
-            short_name="TSF GRU",
+            name="Gate Recurrent Unit",
+            short_name="GRU",
 
             dropout=dropout,
             batch_norm=batch_norm,

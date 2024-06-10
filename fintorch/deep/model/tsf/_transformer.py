@@ -23,8 +23,8 @@ class Transformer(TSFModel):
             num_hidden_layers: int,
     ) -> None:
         super().__init__(
-            name="TSF Transformer",
-            short_name="TSF TRAN",
+            name="Transformer",
+            short_name="TRAN",
 
             dropout=dropout,
             batch_norm=batch_norm,

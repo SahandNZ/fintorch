@@ -23,8 +23,8 @@ class Hybrid(TSFModel):
             num_hidden_layers: int,
     ) -> None:
         super().__init__(
-            name="TSF Hybrid",
-            short_name="TSF HYB",
+            name="Hybrid",
+            short_name="HYB",
 
             dropout=dropout,
             batch_norm=batch_norm,

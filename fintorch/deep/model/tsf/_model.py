@@ -50,17 +50,17 @@ class TSFModel(SFModel):
         sf_model: SFModel = sf_model_type(
             dropout=dropout,
             batch_norm=batch_norm,
-            activation_fn=nn.Tanh(),
+            activation_fn=nn.LeakyReLU(),
 
             dim_input_sequence=dim_input_sequence,
             dim_input_feature=dim_input_feature,
             dim_output_sequence=dim_latent_sequence,
             dim_output_feature=dim_latent_feature,
 
-            num_hidden_layers=num_hidden_layers
+            num_hidden_layers=2
         )
 
-        self.sf_models: List[SFModel] = [copy.deepcopy(sf_model) for _ in range(dim_input_time_frame)]
+        self.sf_models: nn.ModuleList = nn.ModuleList([copy.deepcopy(sf_model) for _ in range(dim_input_time_frame)])
         self.ff: SFFeedForward = SFFeedForward(
             dropout=dropout,
             batch_norm=batch_norm,
@@ -108,14 +108,9 @@ class TSFModel(SFModel):
             latents.append(time_frame_latent)
 
         latent = torch.stack(latents, dim=1).transpose(1, 2).flatten(start_dim=-2)
-        y_hat = self.ff(latent)
+        y_hat = self.ff(latent).squeeze(1)
 
         return y_hat
-
-    def to(self, device: torch.device):
-        for sf_model in self.sf_models:
-            sf_model.to(device)
-        self.ff.to(device)
 
     def reset(self, layers: List[nn.Module] = None):
         for sf_model in self.sf_models:

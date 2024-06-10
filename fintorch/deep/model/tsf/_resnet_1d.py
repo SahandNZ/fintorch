@@ -23,8 +23,8 @@ class ResNet1D(TSFModel):
             num_hidden_layers: int,
     ) -> None:
         super().__init__(
-            name="TSF Residual Network 1D",
-            short_name="TSF RN-1D",
+            name="Residual Network 1D",
+            short_name="RN-1D",
 
             dropout=dropout,
             batch_norm=batch_norm,
