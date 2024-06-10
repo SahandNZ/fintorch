@@ -12,8 +12,8 @@ class BackwardForwardMinimumLabelTransform(BackwardForwardLabelTransform):
             symbol: str,
             time_frame: TimeFrame,
             dim_sequence: int,
-            backward: int = 10,
-            forward: int = 10
+            backward: int = 20,
+            forward: int = 20
     ) -> None:
         super().__init__(
             name="Backward Forward min",

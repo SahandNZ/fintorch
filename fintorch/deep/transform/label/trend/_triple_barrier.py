@@ -7,7 +7,7 @@ from fintorch.enum import TimeFrame
 
 
 class TripleBarrierLabelTransform(LabelTransform):
-    def __init__(self, symbol: str, time_frame: TimeFrame, dim_sequence: int, forward: int = 10) -> None:
+    def __init__(self, symbol: str, time_frame: TimeFrame, dim_sequence: int, forward: int = 20) -> None:
         super().__init__(
             name="Triple Barrier",
             short_name="T-Barrier",
