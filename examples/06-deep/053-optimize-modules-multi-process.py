@@ -1,27 +1,35 @@
 import gc
 import time
+import atexit
 import warnings
-from multiprocessing import Queue, Process
+import multiprocessing
+from multiprocessing import Process, Queue
 from typing import List
 
+import torch
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress import Progress
 
 from fintorch.deep.module import Module
+from fintorch.exchange import OnlineExchange
 from fintorch.defaults import RICH_PROGRESS_COLUMNS
-from fintorch.utils.args import DefaultArgumentParser, DefaultNamespace
+from fintorch.utils.args import DefaultArgumentParser
 
-def target(queue: Queue, module: Module, args: DefaultNamespace):
+def terminal_sub_process():
+    for child in multiprocessing.active_children():
+        child.terminate()
+
+def target(queue: Queue, module: Module, online_exchange: OnlineExchange):
     try:
-        dc = args.online_exchange.future.data.get_data_collection(
+        dc = online_exchange.future.data.get_data_collection(
             symbols=[module.symbol],
-            time_frames=args.time_frames
+            time_frames=module.dataset.time_frames
         )
 
         with module:
-            for status in module.optimize(dc=dc, start_date=args.start_date):
+            for status in module.optimize(dc=dc):
                 queue.put(str(status))
 
     except Exception as e:
@@ -32,11 +40,11 @@ def target(queue: Queue, module: Module, args: DefaultNamespace):
 
 
 def main():
-    warnings.filterwarnings("ignore")
-    args = DefaultArgumentParser.parse()
+    string_args = ["--max-workers", "8"]
+    args = DefaultArgumentParser.parse(args=string_args)
 
     # create rich main layout
-    rows_count, columns_count = 5, 5
+    rows_count, columns_count = 4, 2
 
     overall_progress = Progress(*RICH_PROGRESS_COLUMNS)
     overall_task = overall_progress.add_task(description="overall", total=len(args.modules))
@@ -63,12 +71,12 @@ def main():
     # Create pending processes and add them to set
     for module in args.modules:
         queue = Queue()
-        process = Process(target=target, args=(queue, module, args))
+        process = Process(target=target, args=(queue, module, args.online_exchange))
         process_to_args[process] = (queue, module)
         pending_process_set.add(process)
 
     # Update main_layout to track processes
-    with Live(main_layout, refresh_per_second=2):
+    with Live(main_layout):
         while len(done_process_set) < len(args.modules):
             # start process if there is free worker and work to do
             if len(running_process_set) < args.max_workers and 0 < len(pending_process_set):
@@ -105,4 +113,7 @@ def main():
 
 
 if __name__ == '__main__':
+    warnings.filterwarnings("ignore")
+    atexit.register(terminal_sub_process)
+    multiprocessing.set_start_method('spawn')
     main()

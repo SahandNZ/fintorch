@@ -1,6 +1,6 @@
 import atexit
-from multiprocessing import Process
 from typing import List
+from multiprocessing import Process, active_children
 
 from rich.progress import Progress
 
@@ -9,9 +9,9 @@ from fintorch.defaults import RICH_PROGRESS_COLUMNS
 from fintorch.utils.args import DefaultArgumentParser, DefaultNamespace
 
 
-def terminate_processes(processes: List[Process]):
-    for process in processes:
-        process.terminate()
+def terminal_sub_process():
+    for child in active_children():
+        child.terminate()
 
 
 def task_target(transform: Transform, args: DefaultNamespace):
@@ -34,9 +34,6 @@ def main():
         process_args = (transform, args)
         process = Process(target=task_target, args=process_args)
         processes.append(process)
-
-    # set at exit callback to terminate all processes
-    atexit.register(terminate_processes, processes=processes)
 
     # start processes and update progress bars
     pending_process_set = set(processes)
@@ -65,4 +62,5 @@ def main():
 
 
 if __name__ == '__main__':
+    atexit.register(terminal_sub_process)
     main()

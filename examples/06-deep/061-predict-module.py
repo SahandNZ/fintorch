@@ -9,7 +9,7 @@ from fintorch.utils.args import DefaultArgumentParser
 def main():
     args = DefaultArgumentParser.parse()
 
-    dc = args.online_exchange.future.data.get_data_collection(symbols=[args.symbol], time_frames=[args.time_frame])
+    dc = args.online_exchange.future.data.get_data_collection(symbols=[args.symbol], time_frames=args.time_frames)
 
     start_time = time.time()
     with args.module:
@@ -18,7 +18,7 @@ def main():
     elapsed_time_ms = (time.time() - start_time) * 1000
 
     print("Loading predictions takes: {:.3f} ms".format(elapsed_time_ms))
-    print(np.isnan(np.array(list(y_hat_dict.values()))).sum())
+    print("Nan values count:", np.isnan(np.array(list(y_hat_dict.values()))).sum())
     print(len(timestamps), len(y_hat_dict))
     for ts, y_hat in y_hat_dict.items():
         if np.isnan(y_hat).max():
