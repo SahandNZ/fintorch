@@ -150,6 +150,9 @@ class Measures:
 
         first_timestamp = self.positions[0].entry_timestamp
         last_timestamp = self.positions[-1].exit_timestamp or self.positions[-1].current_timestamp
+        
+        first_timestamp = max(first_timestamp, self.candles_df.index[0])
+        last_timestamp = min(last_timestamp, self.candles_df.index[-1])
 
         entry_price = self.candles_df.loc[first_timestamp].open
         exit_price = self.candles_df.loc[last_timestamp].close
