@@ -10,8 +10,7 @@ class FocalCE(Criterion):
         self.gamma: float = gamma
 
     def _forward(self, input: torch.Tensor, target: torch.Tensor):
-        weight = torch.clip(target.sum(dim=0), min=1)
-        weight = len(target) / (2 * weight)
+        weight = 1 - (target.sum(dim=0) / len(target))
         loss = F.cross_entropy(input=input, target=target, weight=weight, reduction="none")
 
         actual = torch.argmax(target, dim=-1)
