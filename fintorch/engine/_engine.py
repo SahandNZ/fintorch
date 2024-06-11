@@ -1,8 +1,9 @@
 import os.path
 from abc import ABC
 from datetime import datetime
-from typing import Tuple, Generator
+from typing import Tuple, Generator, Union
 
+import pandas as pd
 from matplotlib import pyplot as plt
 
 from ._clock import Clock
@@ -10,8 +11,8 @@ from ..dtype import DataCollection
 from ..exchange import Exchange
 from ..settings import FINTORCH_DATA_DIR
 from ..strategy import Strategy
-from ..utils.plot import draw_position
-from ..utils.timestamp import floor_timestamp, ceil_timestamp
+from ..utils.plot import draw_position_and_orders
+from ..utils.timestamp import to_timestamp
 
 
 class Engine(ABC):
@@ -62,35 +63,56 @@ class Engine(ABC):
         self.exchange.close(directory=self.directory)
         self.clock.close(directory=self.directory)
 
-    def draw_positions_ohlcv_plot(
+    def draw_positions_plot(
             self,
             dc: DataCollection,
-            look_back: int = 100,
-            look_ahead: int = 100,
-    ) -> Generator[Tuple[plt.Figure, plt.Axes], None, None]:
-        symbol = self.strategy.symbol
-        time_frame = self.clock.interval
+            start_date: Union[str, datetime],
+            stop_date: Union[str, datetime],
+            look_back: int = 50,
+            look_ahead: int = 50,
+    ) -> Generator[Tuple[plt.Figure, plt.Axes, pd.DataFrame], None, None]:
+        start_timestamp = to_timestamp(date=start_date)
+        stop_timestamp = to_timestamp(date=stop_date)
 
-        for position in self.exchange.future.trade.get_positions_history(symbol=symbol):
-            start_timestamp = position.entry_timestamp - look_back * int(time_frame)
-            stop_timestamp = position.exit_timestamp + look_ahead * int(time_frame)
+        positions = self.exchange.future.trade.get_positions_history(symbol=self.strategy.symbol)
+        for position in positions:
+            entry_timestamp = position.entry_timestamp
+            exit_timestamp = position.exit_timestamp or position.current_timestamp
 
-            start_timestamp = floor_timestamp(start_timestamp, time_frame)
-            stop_timestamp = ceil_timestamp(stop_timestamp, time_frame)
+            if start_timestamp <= entry_timestamp and exit_timestamp < stop_timestamp:
+                exit_orders = self.exchange.future.trade.get_exit_orders(position=position)
 
-            start_date = datetime.fromtimestamp(start_timestamp)
-            stop_date = datetime.fromtimestamp(stop_timestamp)
+                # draw candlestick, indicators, and position plot
+                fig, ohlc_ax, df = self.strategy.draw_candlestick_and_indicators_plot(
+                    dc=dc,
+                    position=position,
+                    interval=self.clock.interval,
+                    look_back=look_back,
+                    look_ahead=look_ahead
+                )
 
-            # draw candlestick, labels and predictions plot
-            fig, ax, df = self.strategy.module.dataset.label_transform.draw_ohlc_plot(
-                dc=dc,
-                start_date=start_date,
-                stop_date=stop_date
-            )
+                # draw position and exit orders
+                draw_position_and_orders(ohlc_ax=ohlc_ax, df=df, position=position, exit_orders=exit_orders)
 
-            draw_position(ax=ax, df=df, position=position)
-            fig.show()
-            break
+                yield fig, ohlc_ax, df
+
+    def show_positions_plot(
+            self,
+            dc: DataCollection,
+            start_date: Union[str, datetime],
+            stop_date: Union[str, datetime],
+            look_back: int = 50,
+            look_ahead: int = 50,
+    ) -> None:
+        fig_generator = self.draw_positions_plot(
+            dc=dc,
+            start_date=start_date,
+            stop_date=stop_date,
+            look_back=look_back,
+            look_ahead=look_ahead
+        )
+        for _, _, _ in fig_generator:
+            plt.show()
 
     def __enter__(self):
         self.open()
