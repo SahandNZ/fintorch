@@ -4,6 +4,7 @@ import json
 import logging.config
 
 import yaml
+from apscheduler.executors.pool import ProcessPoolExecutor, ThreadPoolExecutor
 
 from .function import call_with_dict
 from .timestamp import to_timestamp
@@ -51,6 +52,9 @@ class DefaultNamespace(argparse.Namespace):
 
         self.symbol: str = stf_config_dict["symbols"][0]
         self.time_frame: TimeFrame = TimeFrame(max(stf_config_dict["time-frames"]))
+        
+        self.feature_time_frames: List[TimeFrame] = FEATURE_TIME_FRAMES
+        self.label_time_frames: List[TimeFrame] = LABEL_TIME_FRAMES
 
         # add default kwargs and instances of api and exchange
         self.proxies = self.api_kwargs["proxies"]
@@ -71,35 +75,48 @@ class DefaultNamespace(argparse.Namespace):
         self.feature_transform_kwargs = {"dim_sequence": self.dim_input_sequence}
         self.label_transform_kwargs = {"dim_sequence": self.dim_output_sequence}
 
-        # transform instances
+        # feature transform instances
+        symbols = self.symbols
+        time_frames = self.feature_time_frames
+        transform_types = self.feature_transform_types
+        
         self.feature_transforms = []
-        for s, tf, ft_type in itertools.product(self.symbols, self.time_frames, self.feature_transform_types):
-            ft_kwargs = self.feature_transform_kwargs.copy()
-            ft_kwargs.update({"symbol": s, "time_frame": tf})
-            feature_transform = call_with_dict(ft_type, ft_kwargs)
+        for symbol, time_frame, type_ in itertools.product(symbols, time_frames, transform_types):
+            kwargs = self.feature_transform_kwargs.copy()
+            kwargs.update({"symbol": symbol, "time_frame": time_frame})
+            feature_transform = call_with_dict(type_, kwargs)
             self.feature_transforms.append(feature_transform)
+            
+        self.feature_transform = self.feature_transforms[0]
+            
+        # label transform instances
+        symbols = self.symbols
+        time_frames = self.label_time_frames
+        transform_types = self.label_transform_types
 
         self.label_transforms = []
-        for s, tf, lt_type in itertools.product(self.symbols, self.time_frames, self.label_transform_types):
-            lt_kwargs = self.label_transform_kwargs.copy()
-            lt_kwargs.update({"symbol": s, "time_frame": tf})
-            label_transform = call_with_dict(lt_type, lt_kwargs)
+        for symbol, time_frame, type_ in itertools.product(symbols, time_frames, transform_types):
+            kwargs = self.label_transform_kwargs.copy()
+            kwargs.update({"symbol": symbol, "time_frame": time_frame})
+            label_transform = call_with_dict(type_, kwargs)
             self.label_transforms.append(label_transform)
 
-        self.transforms = self.feature_transforms + self.label_transforms
-
         self.label_transform = self.label_transforms[0]
-        self.feature_transform = self.feature_transforms[0]
+        
+        # transform instances
+        self.transforms = self.feature_transforms + self.label_transforms
         self.transform = self.transforms[0]
+
 
         # dataset type, kwargs, and instance
         self.dataset_type = DATASET_TYPE
         self.dataset_kwargs = {
             "feature_symbol": self.symbol,
             "feature_time_frame": self.time_frame,
-            "feature_time_frames": self.time_frames,
+            "feature_time_frames": self.feature_time_frames,
             "feature_transform_kwargs": self.feature_transform_kwargs,
             "feature_transform_type": self.feature_transform_type,
+            
             "label_symbol": self.symbol,
             "label_time_frame": self.time_frame,
             "label_transform_kwargs": self.label_transform_kwargs,
@@ -167,15 +184,22 @@ class DefaultNamespace(argparse.Namespace):
             "gradient_clipping_threshold": self.gct,
         }
 
-        items = itertools.product(self.symbols, self.time_frames[:2], self.label_transform_types,
-                                  self.feature_transform_types, self.model_types)
+        items = itertools.product(
+            self.symbols,
+            self.label_time_frames, 
+            self.feature_transform_types,
+            self.label_transform_types, 
+            self.model_types
+        )
+        
         self.modules = []
-        for symbol, time_frame, lt_type, ft_type, model_type in items:
+        for symbol, time_frame, ft_type, lt_type, model_type in items:
             dataset_kwargs = self.dataset_kwargs.copy()
             dataset_kwargs.update({
                 "feature_symbol": symbol,
-                "feature_time_frame": time_frame,
+                "feature_time_frames": self.feature_time_frames,
                 "feature_transform_type": ft_type,
+                
                 "label_symbol": symbol,
                 "label_time_frame": time_frame,
                 "label_transform_type": lt_type,
@@ -203,9 +227,8 @@ class DefaultNamespace(argparse.Namespace):
         self.strategy_kwargs = {"module": self.module}
         self.strategies = []
         for strategy_type, module in itertools.product(self.strategy_types, self.modules):
-            if TimeFrame.DAY1 == module.time_frame:
-                strategy = strategy_type(module=module)
-                self.strategies.append(strategy)
+            strategy = strategy_type(module=module)
+            self.strategies.append(strategy)
 
         self.strategy: Strategy = self.strategies[0]
 
@@ -222,11 +245,17 @@ class DefaultNamespace(argparse.Namespace):
         self.engine: SimulationEngine = self.engines[0]
 
         # add app instance
+        if "process" == self.executor_type.lower():
+            self.executor = ProcessPoolExecutor(max_workers=self.max_workers)
+        else:
+            self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
+            
         self.app_kwargs = {
             "symbols": self.symbols,
             "time_frames": self.time_frames,
             "online_exchange": self.online_exchange,
-            "market_type": MarketType.FUTURE
+            "market_type": MarketType.FUTURE,
+            "executor": self.executor
         }
         self.app = Application(**self.app_kwargs)
 
@@ -284,6 +313,9 @@ class DefaultArgumentParser(argparse.ArgumentParser):
         # backtest args
         self.add_argument("--initial-capital", action="store", type=int, required=False, default=INITIAL_CAPITAL)
         self.add_argument("--interval", action="store", type=int, required=False, default=INTERVAL)
+        
+        # application args
+        self.add_argument("--executor-type", action="store", type=str, required=False, default=EXECUTOR_TYPE)
 
     @staticmethod
     def parse(args: List[str] = None) -> DefaultNamespace:
