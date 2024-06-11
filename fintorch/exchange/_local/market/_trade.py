@@ -53,6 +53,10 @@ class LocalMarketTrade(MarketTrade):
         self.__symbol_to_all_orders_dict.setdefault(symbol, {})
         return list(self.__symbol_to_all_orders_dict[symbol].values())
 
+    def get_exit_orders(self, position: Position) -> List[Order]:
+        self.__position_to_exit_orders_dict.setdefault(position, [])
+        return self.__position_to_exit_orders_dict[position]
+
     def set_order(
             self,
             symbol: str,
@@ -339,7 +343,6 @@ class LocalMarketTrade(MarketTrade):
         if 0 < len(self.__order_logs) + len(self.__position_logs):
             _logger.debug("")
             _logger.debug(f"{str(self.datetime)}")
-            _logger.debug(f"open orders count: {len(self.__symbol_to_open_orders_dict['BTC-USDT'])}")
 
             for status, order in self.__order_logs:
                 self.__order_log_fn(status=status, order=order)

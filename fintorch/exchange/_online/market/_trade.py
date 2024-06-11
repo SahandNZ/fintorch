@@ -27,6 +27,9 @@ class OnlineMarketTrade(MarketTrade):
     def get_orders_history(self, symbol: str) -> List[Order]:
         raise NotImplementedError()
 
+    def get_exit_orders(self, position: Position) -> List[Order]:
+        raise NotImplementedError()
+
     def set_order(
             self,
             symbol: str,
