@@ -14,13 +14,16 @@ from .strategy import *
 
 # config files
 API_CONFIG = "api"
-STF_CONFIG = "btc-all"
+STF_CONFIG = "2-all"
 LOGGER_CONFIG = "debug"
 
 MAX_WORKERS = os.cpu_count()
 
 # API and Exchanges
 EXCHANGE_NAME = "binance"
+
+# APP
+EXECUTOR_TYPE = "process"
 
 # Date
 START_DATE = "2019-01-01"
@@ -30,26 +33,38 @@ STOP_DATE = "2025-01-01"
 INITIAL_CAPITAL = 1000
 INTERVAL = TimeFrame.MIN15
 
+FEATURE_TIME_FRAMES = [
+    TimeFrame.HOUR4,
+    TimeFrame.HOUR1,
+    TimeFrame.MIN30
+]
+
+LABEL_TIME_FRAMES = [
+    TimeFrame.HOUR4,
+    TimeFrame.HOUR1
+]
+
 # types
 FEATURE_TRANSFORM_TYPES = [
-    # PreviousFractalsFeatureTransform,
+    PreviousFractalsFeatureTransform,
     # PreviousFractalsWithFundingRateFeatureTransform,
     RollingMeanStdTrRocFeatureTransform,
     # SquareLogTrRocFeatureTransform,
     StftTrRocFeatureTransform,
-    # TechnicalTrendIndicatorsFeatureTransform,
+    TechnicalTrendIndicatorsFeatureTransform,
 ]
 
 LABEL_TRANSFORM_TYPES = [
     # BackwardForwardFftLabelTransform,
     BackwardForwardMeanLabelTransform,
     BackwardForwardMinimumLabelTransform,
+    # ForwardIchimokuLabelTransform,
     # ForwardRocLabelTransform,
     # NextFractalLabelTransform,
     # NextFractalSideLabelTransform,
     # TripleBarrierLabelTransform,
     # UpDownLabelTransform,
-    # UpDownHeikinAshiLabelTransform
+    UpDownHeikinAshiLabelTransform
 ]
 
 DATASET_TYPE = TimeFrameSequenceFeatureDataset
@@ -75,33 +90,33 @@ DROPOUT = 0.5
 BATCH_NORM = True
 ACTIVATION_FN = nn.Softmax(dim=-1)
 
-DIM_INPUT_SEQUENCE = 32
-DIM_LATENT_SEQUENCE = 8
-DIM_LATENT_FEATURE = 4
+DIM_INPUT_SEQUENCE = 2 ** 5
+DIM_LATENT_SEQUENCE = 2 ** 4
+DIM_LATENT_FEATURE = 2 ** 4
 DIM_OUTPUT_SEQUENCE = 1
 
-NUM_HIDDEN_LAYERS = 1
+NUM_HIDDEN_LAYERS = 2
 
 # Trainer hyperparameters
-BATCH_SIZE = 64
+BATCH_SIZE = 2 ** 10
 
 # Optimizer
 OPTIM_TYPE = torch.optim.Adam
-OPTIM_LR = 1
-OPTIM_WEIGHT_DECAY = 0.01
+OPTIM_LR = 1e-4
+OPTIM_WEIGHT_DECAY = 1e-6
 
 # Learning Rate Scheduler
 LRS_TYPE = torch.optim.lr_scheduler.StepLR
-LRS_STEP_SIZE = 25
+LRS_STEP_SIZE = 100
 LRS_GAMMA = 0.1
 
 TRAIN_PERIOD = TimeFrame.MONTH1 * 12
-VAL_PERIOD = TimeFrame.MONTH1 * 2
-TEST_PERIOD = TimeFrame.MONTH1 * 2
+VAL_PERIOD = TimeFrame.MONTH1 * 6
+TEST_PERIOD = TimeFrame.MONTH1 * 6
 
-CRITERION = FocalMSE()
+CRITERION = CE()
 SHUFFLE = True
-EPOCHS_COUNT = 10
+EPOCHS_COUNT = 50
 GRADIENT_CLIPPING_THRESHOLD = None
 
 # Rich progress columns
