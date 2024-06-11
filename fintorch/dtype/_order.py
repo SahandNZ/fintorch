@@ -12,7 +12,7 @@ class Order:
         self.reduce_only: Union[bool, None] = None
         self.price: Union[float, None] = None
         self.stop_price: Union[float, None] = None
-        self.comment: Union[bool, None] = None
+        self.comment: Union[str, None] = None
 
         self.id: Union[str, None] = None
         self.timestamp: Union[int, None] = None
