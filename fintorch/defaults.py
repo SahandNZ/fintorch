@@ -14,7 +14,7 @@ from .strategy import *
 
 # config files
 API_CONFIG = "api"
-STF_CONFIG = "2-all"
+STF_CONFIG = "5-all"
 LOGGER_CONFIG = "debug"
 
 MAX_WORKERS = os.cpu_count()
@@ -50,7 +50,7 @@ FEATURE_TRANSFORM_TYPES = [
     # PreviousFractalsWithFundingRateFeatureTransform,
     RollingMeanStdTrRocFeatureTransform,
     # SquareLogTrRocFeatureTransform,
-    StftTrRocFeatureTransform,
+    # StftTrRocFeatureTransform,
     TechnicalTrendIndicatorsFeatureTransform,
 ]
 
@@ -72,7 +72,7 @@ DATASET_TYPE = TimeFrameSequenceFeatureDataset
 MODEL_TYPES = [
     # FeedForward,
     GRU,
-    LSTM,
+    # LSTM,
     Hybrid,
     ResNet1D,
     # Transformer
