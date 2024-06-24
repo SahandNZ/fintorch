@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from torch.optim.lr_scheduler import StepLR
 
 from .._backward_forward import BackwardForwardLabelTransform
 from .....enum import TimeFrame
@@ -24,7 +25,11 @@ class BackwardForwardMinimumLabelTransform(BackwardForwardLabelTransform):
             dim_sequence=dim_sequence,
             backward=backward,
             forward=forward,
-            classes=["UP", "DOWN"]
+            classes=["UP", "DOWN"],
+            data_loader_kwargs={"batch_size": None, "batch_count": 2 ** 3},
+            optimizer_kwargs={"lr": 1e-4},
+            lr_scheduler_kwargs={},
+            trainer_kwargs={"epochs_count": 50}
         )
 
     def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:

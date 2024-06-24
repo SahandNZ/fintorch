@@ -1,6 +1,6 @@
 import os
-import gc
 import pickle
+import filelock
 from abc import abstractmethod
 from typing import Dict, Generator, Union, List
 
@@ -11,7 +11,7 @@ from rich.progress import Progress
 from ...component import Component
 from ...dtype import DataCollection
 from ...enum import TimeFrame
-from ...settings import TRANSFORM_DIR
+from ...settings import FINTORCH_TRANSFORM_DIR
 from ...utils.directory import create_directory
 from ...utils.hash import static_list_hash
 from ...utils.timestamp import ceil_timestamp, floor_timestamp
@@ -40,6 +40,7 @@ class Transform(Component):
         self.__look_ahead: int = look_ahead
 
         self.__timestamp_to_sf: Dict[int, np.ndarray] = {}
+        self.rewrite_timestamp_to_sf: bool = False
 
         self.__static_hash: int = static_list_hash([
             self.short_name,
@@ -84,7 +85,7 @@ class Transform(Component):
 
     @property
     def path(self) -> str:
-        return os.path.join(TRANSFORM_DIR, f"{str(self.static_hash)}.pkl")
+        return os.path.join(FINTORCH_TRANSFORM_DIR, f"{str(self.static_hash)}.pkl")
 
     def open(self) -> None:
         try:
@@ -92,11 +93,15 @@ class Transform(Component):
                 self.__timestamp_to_sf = pickle.load(file)
         except (FileNotFoundError, EOFError, pickle.UnpicklingError):
             self.__timestamp_to_sf = {}
+            
+        self.__rewrite_timestamp_to_sf = False
 
     def close(self) -> None:
-        create_directory(TRANSFORM_DIR)
-        with open(self.path, "wb+") as file:
-            pickle.dump(self.timestamp_to_sf, file)
+        if self.__rewrite_timestamp_to_sf:
+            create_directory(FINTORCH_TRANSFORM_DIR)
+            with filelock.FileLock(self.path):
+                with open(self.path, "wb+") as file:
+                    pickle.dump(self.timestamp_to_sf, file)
 
         # clear state to free allocated memory
         self.__timestamp_to_sf.clear()
@@ -168,6 +173,7 @@ class Transform(Component):
             if not self._is_sf_valid(dc=dc, timestamp=shifted_timestamp, sf=sf):
                 sf = self._transform_dc_to_sf(dc=dc, timestamp=shifted_timestamp)
                 self.timestamp_to_sf[shifted_timestamp] = sf
+                self.__rewrite_timestamp_to_sf = True
 
             yield sf
 

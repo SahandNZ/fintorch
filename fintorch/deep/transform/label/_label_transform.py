@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Tuple, Union, List
+from typing import Tuple, Union, List, Dict, Any
 
 import numpy as np
 import pandas as pd
@@ -25,6 +25,10 @@ class LabelTransform(Transform, ABC):
             look_ahead: int,
             look_back: int,
             classes: List[str],
+            data_loader_kwargs: Dict[str, Any],
+            optimizer_kwargs: Dict[str, Any],
+            lr_scheduler_kwargs: Dict[str, Any],
+            trainer_kwargs: Dict[str, Any],
     ):
         super().__init__(
             name=name,
@@ -37,12 +41,34 @@ class LabelTransform(Transform, ABC):
             look_back=look_back,
             look_ahead=look_ahead,
         )
+        
         self.__classes: List[str] = classes
+        self.__data_loader_kwargs: Dict[str, Any] = data_loader_kwargs
+        self.__optimizer_kwargs: Dict[str, Any] = optimizer_kwargs
+        self.__lr_scheduler_kwargs: Dict[str, Any] = lr_scheduler_kwargs
+        self.__trainer_kwargs: Dict[str, Any] = trainer_kwargs
+        
         self.__df: Union[pd.DataFrame, None] = None
 
     @property
     def classes(self) -> List[str]:
         return self.__classes
+    
+    @property
+    def data_loader_kwargs(self) -> Dict[str, Any]:
+        return self.__data_loader_kwargs
+    
+    @property
+    def optimizer_kwargs(self) -> Dict[str, Any]:
+        return self.__optimizer_kwargs
+    
+    @property
+    def lr_scheduler_kwargs(self) -> Dict[str, Any]:
+        return self.__lr_scheduler_kwargs
+    
+    @property
+    def trainer_kwargs(self) -> Dict[str, Any]:
+        return self.__trainer_kwargs
 
     @property
     def df(self) -> Union[pd.DataFrame, None]:
@@ -102,7 +128,7 @@ class LabelTransform(Transform, ABC):
         df.set_index("timestamp", inplace=True)
 
         # set title and legend
-        fig.suptitle(str(self))
+        ohlc_ax.set_title(str(self))
         ohlc_ax.legend()
 
         return fig, ohlc_ax, df

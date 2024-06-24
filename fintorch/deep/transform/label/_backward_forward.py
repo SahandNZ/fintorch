@@ -1,4 +1,5 @@
 from abc import ABC
+from typing import Dict, Any
 
 from ._label_transform import LabelTransform
 from ....enum import TimeFrame
@@ -15,7 +16,11 @@ class BackwardForwardLabelTransform(LabelTransform, ABC):
             dim_sequence: int,
             backward: int,
             forward: int,
-            classes: list[str]
+            classes: list[str],
+            data_loader_kwargs: Dict[str, Any],
+            optimizer_kwargs: Dict[str, Any],
+            lr_scheduler_kwargs: Dict[str, Any],
+            trainer_kwargs: Dict[str, Any],
     ):
         super().__init__(
             name=name,
@@ -26,7 +31,11 @@ class BackwardForwardLabelTransform(LabelTransform, ABC):
             dim_sequence=dim_sequence,
             look_ahead=forward,
             look_back=backward,
-            classes=classes
+            classes=classes,
+            data_loader_kwargs=data_loader_kwargs,
+            optimizer_kwargs=optimizer_kwargs,
+            lr_scheduler_kwargs=lr_scheduler_kwargs,
+            trainer_kwargs=trainer_kwargs
         )
 
         self.__backward: int = backward

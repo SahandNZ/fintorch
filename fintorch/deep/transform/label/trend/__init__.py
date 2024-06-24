@@ -1,5 +1,5 @@
 from ._backward_forward_fft import BackwardForwardFftLabelTransform
-from ._backward_forward_mean import BackwardForwardMeanLabelTransform
+from ._backward_forward_avg import BackwardForwardAverageLabelTransform
 from ._backward_forward_min import BackwardForwardMinimumLabelTransform
 from ._forward_ichimoku import ForwardIchimokuLabelTransform
 from ._forward_roc import ForwardRocLabelTransform

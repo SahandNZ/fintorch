@@ -1,5 +1,6 @@
 import pandas as pd
 from matplotlib import pyplot as plt
+from torch.optim.lr_scheduler import StepLR
 
 from .._label_transform import LabelTransform
 from .....enum import TimeFrame
@@ -17,7 +18,11 @@ class UpDownHeikinAshiLabelTransform(LabelTransform):
             dim_sequence=dim_sequence,
             look_ahead=1,
             look_back=0,
-            classes=["UP", "DOWN"]
+            classes=["UP", "DOWN"],
+            data_loader_kwargs={"batch_size": None, "batch_count": 2 ** 3},
+            optimizer_kwargs={"lr": 1e-4},
+            lr_scheduler_kwargs={},
+            trainer_kwargs={"epochs_count": 50}
         )
 
     def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
