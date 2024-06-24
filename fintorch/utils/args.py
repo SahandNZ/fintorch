@@ -2,6 +2,7 @@ import argparse
 import itertools
 import json
 import logging.config
+import multiprocessing as mp
 
 import yaml
 from apscheduler.executors.pool import ProcessPoolExecutor, ThreadPoolExecutor
@@ -33,26 +34,26 @@ class DefaultNamespace(argparse.Namespace):
         logging.config.dictConfig(self.logging_config_dict)
 
         # load api kwargs from its config file
-        path = os.path.join(CONFIG_DIR, f"{self.api_config}.json")
+        path = os.path.join(CONFIG_DIR, "api", f"{self.api_config}.json")
         with open(path, "r") as file:
             self.api_kwargs = json.load(file)
 
         # load symbols and time frame from their config file
-        path = os.path.join(CONFIG_DIR, "stf", f"{self.stf_config}.json")
+        path = os.path.join(CONFIG_DIR, "symbols", f"{self.symbols_config}.json")
         with open(path, "r") as file:
-            stf_config_dict = json.load(file)
+            symbols = json.load(file)
 
         # set start and stop timestamps
         self.start_timestamp: float = to_timestamp(self.start_date)
         self.stop_timestamp: float = to_timestamp(self.stop_date)
 
         # set symbols and time frames
-        self.symbols: List[str] = stf_config_dict["symbols"]
-        self.time_frames: List[TimeFrame] = [TimeFrame(tf) for tf in stf_config_dict["time-frames"]]
+        self.symbols: List[str] = symbols
+        self.time_frames: List[TimeFrame] = TIME_FRAMES
 
-        self.symbol: str = stf_config_dict["symbols"][0]
-        self.time_frame: TimeFrame = TimeFrame(max(stf_config_dict["time-frames"]))
-        
+        self.symbol: str = self.symbols[0]
+        self.time_frame: TimeFrame = self.time_frames[0]
+
         self.feature_time_frames: List[TimeFrame] = FEATURE_TIME_FRAMES
         self.label_time_frames: List[TimeFrame] = LABEL_TIME_FRAMES
 
@@ -79,16 +80,16 @@ class DefaultNamespace(argparse.Namespace):
         symbols = self.symbols
         time_frames = self.feature_time_frames
         transform_types = self.feature_transform_types
-        
+
         self.feature_transforms = []
         for symbol, time_frame, type_ in itertools.product(symbols, time_frames, transform_types):
             kwargs = self.feature_transform_kwargs.copy()
             kwargs.update({"symbol": symbol, "time_frame": time_frame})
             feature_transform = call_with_dict(type_, kwargs)
             self.feature_transforms.append(feature_transform)
-            
+
         self.feature_transform = self.feature_transforms[0]
-            
+
         # label transform instances
         symbols = self.symbols
         time_frames = self.label_time_frames
@@ -102,11 +103,10 @@ class DefaultNamespace(argparse.Namespace):
             self.label_transforms.append(label_transform)
 
         self.label_transform = self.label_transforms[0]
-        
+
         # transform instances
         self.transforms = self.feature_transforms + self.label_transforms
         self.transform = self.transforms[0]
-
 
         # dataset type, kwargs, and instance
         self.dataset_type = DATASET_TYPE
@@ -116,7 +116,7 @@ class DefaultNamespace(argparse.Namespace):
             "feature_time_frames": self.feature_time_frames,
             "feature_transform_kwargs": self.feature_transform_kwargs,
             "feature_transform_type": self.feature_transform_type,
-            
+
             "label_symbol": self.symbol,
             "label_time_frame": self.time_frame,
             "label_transform_kwargs": self.label_transform_kwargs,
@@ -133,7 +133,7 @@ class DefaultNamespace(argparse.Namespace):
         self.cross_validation = CrossValidation(time_frame=self.dataset.time_frame, **self.cross_validation_kwargs)
 
         # data loader, kwargs and instance
-        self.data_loader_kwargs = {"batch_size": self.batch_size}
+        self.data_loader_kwargs = {"batch_count": self.batch_count}
         self.data_loader = DataLoader(**self.data_loader_kwargs)
 
         # model types, kwargs, and instances
@@ -186,12 +186,12 @@ class DefaultNamespace(argparse.Namespace):
 
         items = itertools.product(
             self.symbols,
-            self.label_time_frames, 
+            self.label_time_frames,
             self.feature_transform_types,
-            self.label_transform_types, 
+            self.label_transform_types,
             self.model_types
         )
-        
+
         self.modules = []
         for symbol, time_frame, ft_type, lt_type, model_type in items:
             dataset_kwargs = self.dataset_kwargs.copy()
@@ -199,7 +199,7 @@ class DefaultNamespace(argparse.Namespace):
                 "feature_symbol": symbol,
                 "feature_time_frames": self.feature_time_frames,
                 "feature_transform_type": ft_type,
-                
+
                 "label_symbol": symbol,
                 "label_time_frame": time_frame,
                 "label_transform_type": lt_type,
@@ -246,10 +246,11 @@ class DefaultNamespace(argparse.Namespace):
 
         # add app instance
         if "process" == self.executor_type.lower():
-            self.executor = ProcessPoolExecutor(max_workers=self.max_workers)
+            mp_context = mp.get_context("spawn")
+            self.executor = ProcessPoolExecutor(max_workers=self.max_workers, pool_kwargs={"mp_context": mp_context})
         else:
             self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
-            
+
         self.app_kwargs = {
             "symbols": self.symbols,
             "time_frames": self.time_frames,
@@ -270,8 +271,8 @@ class DefaultArgumentParser(argparse.ArgumentParser):
 
         # config args
         self.add_argument("--api-config", action="store", type=str, required=False, default=API_CONFIG)
-        self.add_argument("--stf-config", action="store", type=str, required=False, default=STF_CONFIG)
         self.add_argument("--logger-config", action="store", type=str, required=False, default=LOGGER_CONFIG)
+        self.add_argument("--symbols-config", action="store", type=str, required=False, default=SYMBOLS_CONFIG)
         self.add_argument("--max-workers", action="store", type=int, required=False, default=MAX_WORKERS)
 
         # deep learning args
@@ -294,6 +295,7 @@ class DefaultArgumentParser(argparse.ArgumentParser):
 
         # data loader args
         self.add_argument("--batch-size", action="store", type=int, required=False, default=BATCH_SIZE)
+        self.add_argument("--batch-count", action="store", type=int, required=False, default=BATCH_COUNT)
 
         # optimizer args
         self.add_argument("--lr", action="store", type=float, required=False, default=OPTIM_LR)
@@ -313,7 +315,7 @@ class DefaultArgumentParser(argparse.ArgumentParser):
         # backtest args
         self.add_argument("--initial-capital", action="store", type=int, required=False, default=INITIAL_CAPITAL)
         self.add_argument("--interval", action="store", type=int, required=False, default=INTERVAL)
-        
+
         # application args
         self.add_argument("--executor-type", action="store", type=str, required=False, default=EXECUTOR_TYPE)
 
