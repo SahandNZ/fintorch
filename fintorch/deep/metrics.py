@@ -10,6 +10,7 @@ class Metrics:
 
         self.__y: torch.Tensor = y.clone().detach().cpu()
         self.__y_hat: torch.Tensor = y_hat.clone().detach().cpu()
+        self.__weight: torch.Tensor = 1 - (self.y.sum(dim=0) / len(self.y))
         self.__actual: torch.Tensor = torch.argmax(y, dim=-1) if self.classification_task else None
         self.__prediction: torch.Tensor = torch.argmax(y_hat, dim=-1) if self.classification_task else None
         self.__probability: torch.Tensor = torch.max(y_hat, dim=-1).values if self.classification_task else None
@@ -25,6 +26,10 @@ class Metrics:
     @property
     def y_hat(self) -> torch.Tensor:
         return self.__y_hat
+    
+    @property
+    def weight(self) -> torch.Tensor:
+        return self.__weight
 
     @property
     def actual(self) -> torch.Tensor:
@@ -44,7 +49,7 @@ class Metrics:
 
     @property
     def objective(self) -> float:
-        return round(self.criterion(self.y_hat, self.y).detach().item(), 4)
+        return round(self.criterion(input=self.y_hat, target=self.y, weight=self.weight).detach().item(), 4)
 
     @property
     def mse_loss(self) -> float:
