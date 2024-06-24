@@ -13,9 +13,9 @@ from .enum import TimeFrame
 from .strategy import *
 
 # config files
-API_CONFIG = "api"
-STF_CONFIG = "5-all"
+API_CONFIG = "finland-proxy"
 LOGGER_CONFIG = "debug"
+SYMBOLS_CONFIG = "2"
 
 MAX_WORKERS = os.cpu_count()
 
@@ -33,6 +33,13 @@ STOP_DATE = "2025-01-01"
 INITIAL_CAPITAL = 1000
 INTERVAL = TimeFrame.MIN15
 
+TIME_FRAMES = [
+    TimeFrame.DAY1,
+    TimeFrame.HOUR4,
+    TimeFrame.HOUR1,
+    TimeFrame.MIN15
+]
+
 FEATURE_TIME_FRAMES = [
     TimeFrame.HOUR4,
     TimeFrame.HOUR1,
@@ -47,42 +54,52 @@ LABEL_TIME_FRAMES = [
 # types
 FEATURE_TRANSFORM_TYPES = [
     PreviousFractalsFeatureTransform,
-    # PreviousFractalsWithFundingRateFeatureTransform,
     RollingMeanStdTrRocFeatureTransform,
+    TechnicalTrendIndicatorsFeatureTransform,
+    
+    # these feature transforms will not include in final product
     # SquareLogTrRocFeatureTransform,
     # StftTrRocFeatureTransform,
-    TechnicalTrendIndicatorsFeatureTransform,
+    # PreviousFractalsWithFundingRateFeatureTransform,
 ]
 
 LABEL_TRANSFORM_TYPES = [
-    # BackwardForwardFftLabelTransform,
-    BackwardForwardMeanLabelTransform,
+    BackwardForwardAverageLabelTransform,
     BackwardForwardMinimumLabelTransform,
+    UpDownHeikinAshiLabelTransform
+    
+    ## these label transforms will not include in final product
+    # BackwardForwardFftLabelTransform,
     # ForwardIchimokuLabelTransform,
     # ForwardRocLabelTransform,
     # NextFractalLabelTransform,
     # NextFractalSideLabelTransform,
     # TripleBarrierLabelTransform,
     # UpDownLabelTransform,
-    UpDownHeikinAshiLabelTransform
 ]
 
 DATASET_TYPE = TimeFrameSequenceFeatureDataset
 
 MODEL_TYPES = [
-    # FeedForward,
     GRU,
-    # LSTM,
-    Hybrid,
+    LSTM,
     ResNet1D,
+    
+    ## these models will not include in final product
+    # FeedForward,
+    # Hybrid,
     # Transformer
 ]
 
 STRATEGY_TYPES = [
-    DynamicAtrTpSlStrategy,
-    DynamicRocTpSlStrategy,
-    SimpleStrategy,
-    StaticTpSlStrategy,
+    TrailingStopLossStrategy,
+    
+    # ActiveMarketStrategy,
+    # PassiveMarketStrategy,
+    
+    ## these strategy will not include in final product
+    # ActiveLimitToggleStrategy,
+    # PassiveLimitToggleStrategy,
 ]
 
 # Model hyper-parameters
@@ -99,6 +116,7 @@ NUM_HIDDEN_LAYERS = 2
 
 # Trainer hyperparameters
 BATCH_SIZE = 2 ** 10
+BATCH_COUNT = 2 ** 3
 
 # Optimizer
 OPTIM_TYPE = torch.optim.Adam
@@ -114,9 +132,12 @@ TRAIN_PERIOD = TimeFrame.MONTH1 * 12
 VAL_PERIOD = TimeFrame.MONTH1 * 6
 TEST_PERIOD = TimeFrame.MONTH1 * 6
 
-CRITERION = CE()
+# Criterion 
+LABEL_SMOOTHING = 0.0
+CRITERION = CE(label_smoothing=LABEL_SMOOTHING)
+
 SHUFFLE = True
-EPOCHS_COUNT = 50
+EPOCHS_COUNT = 10
 GRADIENT_CLIPPING_THRESHOLD = None
 
 # Rich progress columns
