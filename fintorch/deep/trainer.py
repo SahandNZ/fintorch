@@ -171,17 +171,18 @@ class Trainer:
     def ___batched_common_step(self, dataset: Dataset, model: Model, fold: Fold, epoch: Epoch, mode: str) -> Generator:
         optimize = "train" == mode
         shuffle = self.shuffle and optimize
-        catch_nan_in_test_set = "test" == mode
+        drop_nan = "test" == mode or "val" == mode
         timestamps = getattr(fold, f"{mode}_timestamps")
-        iterator = self.data_loader(dataset=dataset, timestamps=timestamps, shuffle=shuffle)
+        iterator = self.data_loader(dataset=dataset, timestamps=timestamps, drop_nan=drop_nan, shuffle=shuffle)
         setattr(epoch, f"{mode}_batch_count", self.data_loader.batch_count)
 
         try:
             start_time = time.time()
-            for index, (batch_x, batch_y) in enumerate(iterator):
+            for index, (batch_x, batch_y, weight) in enumerate(iterator):
                 # move to cuda if it's available
                 batch_x = batch_x.to(self.device)
                 batch_y = batch_y.to(self.device)
+                weight = weight.to(self.device)
 
                 if 0 == len(batch_x) or 0 == len(batch_y):
                     continue
@@ -190,7 +191,7 @@ class Trainer:
                     continue
 
                 # calculate metrics
-                batch_loss, batch_y_hat = self.___common_step(model, batch_x, batch_y, optimize)
+                batch_loss, batch_y_hat = self.___common_step(model, batch_x, batch_y, weight, optimize)
                 batch_actual = torch.argmax(batch_y, dim=-1)
                 batch_prediction = torch.argmax(batch_y_hat.detach(), dim=-1)
                 batch_accuracy = (batch_actual == batch_prediction).sum() / len(batch_actual) * 100
@@ -206,11 +207,17 @@ class Trainer:
                 start_time = time.time()
 
         except NanValueInBatchError as e:
-            if not catch_nan_in_test_set:
+            if not drop_nan:
                 raise e
 
-    def ___common_step(self, model: Model, x: torch.Tensor, y: torch.Tensor, optimize: bool) \
-            -> Tuple[torch.Tensor, torch.Tensor]:
+    def ___common_step(
+        self,
+        model: Model,
+        x: torch.Tensor,
+        y: torch.Tensor,
+        weight: torch.Tensor,
+        optimize: bool
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         if optimize:
             model.train()
 
@@ -218,10 +225,10 @@ class Trainer:
             if self.half_precision:
                 with torch.autocast(device_type=self.device_type, dtype=self.dtype):
                     y_hat = model(x)
-                    loss = self.criterion(y_hat, y)
+                    loss = self.criterion(input=y_hat, target=y, weight=weight)
             else:
                 y_hat = model(x)
-                loss = self.criterion(y_hat, y)
+                loss = self.criterion(input=y_hat, target=y, weight=weight)
 
             # backward prop
             loss.backward()
@@ -235,6 +242,6 @@ class Trainer:
             model.eval()
             with torch.no_grad():
                 y_hat = model(x)
-                loss = self.criterion(y_hat, y)
+                loss = self.criterion(input=y_hat, target=y, weight=weight)
 
         return loss, y_hat
