@@ -1,9 +1,11 @@
-import copy
 import gc
-import os.path
-import pickle
 import time
+import copy
+import pickle
+import os.path
+import filelock
 from abc import ABC
+from datetime import datetime
 from typing import Any, Dict, Generator, List, Tuple, Type, Union
 
 import matplotlib.pyplot as plt
@@ -15,13 +17,14 @@ from .cross_validation import CrossValidation
 from .data_loader import DataLoader
 from .dataset import Dataset
 from .lr_scheduler import LrScheduler
+from .metrics import Metrics
 from .model import Model
 from .optimizer import Optimizer
 from .status import Fold, Status
 from .trainer import Trainer
 from ..dtype import DataCollection
 from ..enum import TimeFrame
-from ..settings import MODULE_DIR
+from ..settings import FINTORCH_MODULE_DIR
 from ..utils.directory import create_directory
 from ..utils.function import call_with_dict
 from ..utils.hash import static_list_hash
@@ -42,13 +45,18 @@ class Module(ABC):
             lr_scheduler_kwargs: Dict[str, Any],
             trainer_kwargs: Dict[str, Any],
     ):
+        data_loader_kwargs.update(dataset.label_transform.data_loader_kwargs)
+        optimizer_kwargs.update(dataset.label_transform.optimizer_kwargs)
+        lr_scheduler_kwargs.update(dataset.label_transform.lr_scheduler_kwargs)
+        trainer_kwargs.update(dataset.label_transform.trainer_kwargs)
+
         self.__model_type: Type[Model] = model_type
         self.__model_kwargs: Dict[str, Any] = model_kwargs
 
         self.__dataset: Dataset = dataset
         self.__cross_validation = CrossValidation(time_frame=self.time_frame, **cross_validation_kwargs)
         self.__trainer: Trainer = Trainer(
-            data_loader=DataLoader(post_load_fn=Module._post_load_fn, **data_loader_kwargs),
+            data_loader=DataLoader(**data_loader_kwargs),
             optimizer=Optimizer(**optimizer_kwargs),
             lr_scheduler=LrScheduler(**lr_scheduler_kwargs),
             **trainer_kwargs
@@ -69,15 +77,22 @@ class Module(ABC):
         ])
 
         # states
-        self.__directory: str = os.path.join(MODULE_DIR, str(self.static_hash))
-        self.__state_dict_path: str = os.path.join(self.directory, "state-dict.pkl")
+        self.__directory: str = os.path.join(FINTORCH_MODULE_DIR, str(self.static_hash))
+        self.__folds_dict_path: str = os.path.join(self.directory, "folds-dict.pkl")
+        self.__y_hats_dict_path: str = os.path.join(self.directory, "y-hats-dict.pkl")
 
         self.__folds_dict: Union[Dict[Tuple[int, int], Fold], None] = None
         self.__y_hats_dict: Union[Dict[int, np.array], None] = None
+        self.__rewrite_folds_dict: bool = False
+        self.__rewrite_y_hats_dict: bool = False
 
     @property
     def dataset(self) -> Dataset:
         return self.__dataset
+    
+    @property
+    def model_type(self) -> Type[Model]:
+        return self.__model_type
 
     @property
     def model(self) -> Model:
@@ -108,8 +123,12 @@ class Module(ABC):
         return self.__directory
 
     @property
-    def state_dict_path(self) -> str:
-        return self.__state_dict_path
+    def folds_dict_path(self) -> str:
+        return self.__folds_dict_path
+    
+    @property
+    def y_hats_dict_path(self) -> str:
+        return self.__y_hats_dict_path
 
     @property
     def folds_dict(self) -> Dict[Tuple[int, int], Fold]:
@@ -118,20 +137,6 @@ class Module(ABC):
     @property
     def y_hats_dict(self) -> Dict[int, np.array]:
         return {k: v for k, v in sorted(self.__y_hats_dict.items(), key=lambda item: item[0], reverse=True)}
-
-    @staticmethod
-    def _post_load_fn(x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        return x, y.squeeze(1)
-
-    def state_dict(self) -> Dict:
-        return {
-            "folds_dict": self.folds_dict,
-            "y_hats_dict": self.y_hats_dict
-        }
-
-    def load_state_dict(self, state_dict: Dict) -> None:
-        self.__folds_dict = state_dict.get("folds_dict", {})
-        self.__y_hats_dict = state_dict.get("y_hats_dict", {})
 
     def open(self) -> None:
         # open dataset files from
@@ -151,22 +156,38 @@ class Module(ABC):
         model = call_with_dict(self.__model_type, self.__model_kwargs)
         setattr(self, "__model", model)
 
-        # safe load state dict
+        # safe load folds-dict and y-hats-dict
         try:
-            with open(self.state_dict_path, "rb") as file:
-                state_dict = pickle.load(file)
+            with open(self.folds_dict_path, "rb") as file:
+                self.__folds_dict = pickle.load(file)
         except (FileNotFoundError, EOFError, pickle.UnpicklingError):
-            state_dict = {}
-
-        self.load_state_dict(state_dict=state_dict)
+            self.__folds_dict = {}
+            
+        try:
+            with open(self.y_hats_dict_path, "rb") as file:
+                self.__y_hats_dict = pickle.load(file)
+        except (FileNotFoundError, EOFError, pickle.UnpicklingError):
+            self.__y_hats_dict = {}
+            
+        self.__rewrite_folds_dict = False
+        self.__rewrite_y_hats_dict = False
 
     def close(self) -> None:
         self.dataset.close()
 
-        # store state dict
-        create_directory(self.directory)
-        with open(self.state_dict_path, "wb+") as file:
-            pickle.dump(self.state_dict(), file)
+        # store folds dict and y hats dict
+        if self.__rewrite_folds_dict:
+            create_directory(self.directory)
+            with filelock.FileLock(self.folds_dict_path):
+                with open(self.folds_dict_path, "wb+") as file:
+                    pickle.dump(self.folds_dict, file)
+
+        if self.__rewrite_y_hats_dict:
+            create_directory(self.directory)
+            with filelock.FileLock(self.y_hats_dict_path):
+                with open(self.y_hats_dict_path, "wb+") as file:
+                    pickle.dump(self.y_hats_dict, file)
+
 
         # clear states to free allocated memory
         delattr(self, "__model")
@@ -241,11 +262,42 @@ class Module(ABC):
                 yield status
             else:
                 self.folds_dict[key] = fold
+                self.__rewrite_folds_dict = True
+                
                 status.append_fold(fold=fold)
                 for _ in self.trainer.optimize_fold(dataset=self.dataset, model=self.model, fold=fold):
                     elapsed_time = time.time() - start_time
                     status.update_elapsed_time(elapsed_time=elapsed_time)
                     yield status
+                    
+    def _predict(self, dc: DataCollection, timestamps: List[int], mode="val") -> Dict[float, np.array]:
+        # move model to cuda device if its available
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.eval()
+        self.model.to(device=device)
+        
+        # generate predictions
+        result = {}
+        with torch.no_grad():
+            for key, fold in self.folds_dict.items():
+                self.model.load_state_dict(getattr(fold, f"best_{mode}_epoch").model_state_dict)
+                fold_timestamps = [ts for ts in timestamps if key[0] <= ts <= key[1]]
+                if 0 < len(fold_timestamps):
+                    x = self.dataset.preprocess(dc=dc, timestamps=fold_timestamps)
+                    x = x.to(device=device)
+                    y_hats = self.model(x).cpu().numpy()
+                    result.update({ts: y_hats[index] for index, ts in enumerate(fold_timestamps)})
+
+        # move model back to cpu
+        self.model.cpu()
+        
+        # set missed timestamps to array of np.nan values
+        nan_y_hat = np.zeros((self.model.dim_output_feature)) * np.nan
+        missing_timestamps = [ts for ts in timestamps if ts not in result]
+        result.update({ts: nan_y_hat for ts in missing_timestamps})
+        
+        return result
+
 
     def predict(self, dc: DataCollection, timestamps: List[int], mode="val") -> Dict[float, np.array]:
         # load from y_hats_dict
@@ -253,34 +305,46 @@ class Module(ABC):
         output = {ts: y_hat for ts, y_hat in output.items() if not np.isnan(y_hat).max()}
         missing_timestamps = [ts for ts in timestamps if ts not in output]
 
-        # predict missing timestamps
+        # predict missing timestamps and update self.y_hats_dict
         if 0 < len(missing_timestamps):
-            self.model.eval()
-            with torch.no_grad():
-                for key, fold in self.folds_dict.items():
-                    self.model.load_state_dict(getattr(fold, f"best_{mode}_epoch").model_state_dict)
-                    fold_timestamps = [ts for ts in missing_timestamps if key[0] <= ts <= key[1]]
-                    if 0 < len(fold_timestamps):
-                        x = self.dataset.preprocess(dc=dc, timestamps=fold_timestamps)
-                        y_hats = self.model(x).numpy()
-                        output.update({ts: y_hats[index] for index, ts in enumerate(fold_timestamps)})
-
-            # update and sort y_hats_dict
+            output_missing_timestamp = self._predict(dc=dc, timestamps=timestamps, mode=mode)
+            output.update(output_missing_timestamp)
             self.y_hats_dict.update(output)
+            self.__rewrite_y_hats_dict = True
 
-        # set missed timestamps to array of np.nan values
-        nan_y_hat = np.zeros((self.model.dim_output_sequence, self.model.dim_output_feature)) * np.nan
-        missing_timestamps = [ts for ts in timestamps if ts not in output]
-        output.update({ts: nan_y_hat for ts in missing_timestamps})
-        sorted_output = {k: v for k, v in sorted(output.items(), key=lambda item: item[0])}
+        return {k: v for k, v in sorted(output.items(), key=lambda item: item[0])}
+    
+    def calculate_metrics(
+        self,
+        dc: DataCollection,
+        start_date: Union[str, datetime],
+        stop_date: Union[str, datetime],
+        mode: str = "val"
+    ) -> Metrics:
+         # prepare y and y_hat values for metrics
+        stop_timestamp = self.dataset.label_transform.get_stop_timestamp(dc=dc)
+        timestamps = self.get_timestamps(dc=dc, start_date=start_date, stop_date=stop_date)
+        timestamps = [ts for ts in timestamps if ts < stop_timestamp]
 
-        return sorted_output
+        sf_generator = self.dataset.label_transform.transform_sf(dc=dc, timestamps=timestamps)
+        y_array = np.concatenate([sf for sf in sf_generator])
+        y_hat_dict = self.predict(dc=dc, timestamps=timestamps, mode=mode)   
+        
+        # convert y and y_hat values to torch.Tensor
+        y = torch.from_numpy(y_array)
+        y_hat = torch.from_numpy(np.array(list(y_hat_dict.values())))
+        
+        # create metrics
+        metrics = Metrics(criterion=self.trainer.criterion, y=y, y_hat=y_hat)
+        
+        return metrics
+ 
 
     def draw_ohlc_plot(
             self,
             dc: DataCollection,
-            start_date: str,
-            stop_date: str,
+            start_date: Union[str, datetime],
+            stop_date: Union[str, datetime],
             mode: str = "val"
     ) -> Tuple[plt.Figure, plt.Axes, pd.DataFrame]:
         # draw ohlc and labels
@@ -300,15 +364,16 @@ class Module(ABC):
         draw_predictions_based_on_labels(ohlc_ax=ohlc_ax, df=df)
         df.set_index("timestamp", inplace=True)
 
+        # add legend and x tick angles
+        ohlc_ax.legend()
+        ohlc_ax.set_title("{} (from {} to {})".format(str(self), start_date, stop_date))
+        for tick in ohlc_ax.get_xticklabels():
+            tick.set_rotation(0)
+
         return fig, ohlc_ax, df
 
     def show_ohlc_plot(self, dc: DataCollection, start_date: str, stop_date: str, mode: str = "val") -> None:
-        _, ohlc_ax, _ = self.draw_ohlc_plot(dc=dc, start_date=start_date, stop_date=stop_date, mode=mode)
-
-        ohlc_ax.grid()
-        ohlc_ax.legend()
-
-        plt.title("{} (from {} to {})".format(str(self), start_date, stop_date))
+        _, _, _ = self.draw_ohlc_plot(dc=dc, start_date=start_date, stop_date=stop_date, mode=mode)
         plt.show()
 
     def __enter__(self):
