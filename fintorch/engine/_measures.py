@@ -5,7 +5,6 @@ from typing import List, Union
 import numpy as np
 import pandas as pd
 
-from . import Engine
 from ..dtype import Position
 from ..enum import TimeFrame
 from ..exchange import Exchange
@@ -16,15 +15,20 @@ from ..utils.timestamp import ceil_timestamp
 class Measures:
     def __init__(
             self,
-            engine: Engine,
+            interval: int,
+            strategy: Strategy,
+            exchange: Exchange,
             positions: List[Position],
             leverage: int,
             initial_capital: int,
             margin_assignment_method: str,
-            fee_percentage: float = 0.1,
+            fee_percentage: float = 0.04,
             risk_free_percentage: float = 4,
     ):
-        self.engine: Engine = engine
+        self.interval: int = interval
+        self.strategy: Strategy = strategy
+        self.exchange: Exchange = exchange
+        
         self.positions: List[Position] = copy.deepcopy(positions)
         self.leverage: int = leverage
         self.initial_capital: int = initial_capital
@@ -32,15 +36,12 @@ class Measures:
         self.fee_percentage: float = fee_percentage
         self.risk_free_percentage: float = risk_free_percentage
 
-        self.exchange: Exchange = engine.exchange
-        self.strategy: Strategy = engine.strategy
-
         self.symbol = self.strategy.symbol
         self.time_frame = self.strategy.time_frame
         self.symbol_info = self.exchange.future.data.get_symbol_info(symbol=self.strategy.symbol)
         self.candles_df = self.exchange.future.data.get_candles_dataframe(
             symbol=self.symbol,
-            time_frame=self.engine.clock.interval
+            time_frame=self.interval
         )
 
         self.__daily_profits: Union[np.ndarray, None] = None
@@ -102,7 +103,7 @@ class Measures:
 
     @property
     def gross_profit(self) -> float:
-        return np.round(self.profits[0 < self.profits].sum(), 2)
+        return np.round(self.profits[0 <= self.profits].sum(), 2)
 
     @property
     def gross_loss(self) -> float:
@@ -270,7 +271,7 @@ class Measures:
         for position in self.positions:
             entry_timestamp = position.entry_timestamp
             exit_timestamp = position.exit_timestamp or position.current_timestamp
-            timestamps = list(np.arange(entry_timestamp, exit_timestamp, float(self.engine.clock.interval)))
+            timestamps = list(np.arange(entry_timestamp, exit_timestamp, float(self.interval)))
             for timestamp in timestamps:
                 profit = round(df.loc[timestamp].roc * position.side * position.margin, 2)
                 profits_dict[timestamp] = profit
@@ -278,7 +279,7 @@ class Measures:
         df["profit"] = [profits_dict.get(ts, 0) for ts in df.index]
 
         # resampling daily profits
-        window_size = int(int(TimeFrame.DAY1) // int(self.engine.clock.interval))
+        window_size = int(int(TimeFrame.DAY1) // int(self.interval))
 
         first_timestamp = self.positions[0].entry_timestamp
         first_timestamp = ceil_timestamp(timestamp=first_timestamp, time_frame=TimeFrame.DAY1)

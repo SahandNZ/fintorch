@@ -7,9 +7,10 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 from ._clock import Clock
+from ._measures import Measures
 from ..dtype import DataCollection
 from ..exchange import Exchange
-from ..settings import FINTORCH_DATA_DIR
+from ..settings import FINTORCH_ENGINE_DIR
 from ..strategy import Strategy
 from ..utils.plot import draw_position_and_orders
 from ..utils.timestamp import to_timestamp
@@ -21,8 +22,7 @@ class Engine(ABC):
         self.__strategy: Strategy = strategy
         self.__clock: Clock = clock
 
-        engine_type = self.__class__.__name__.lower().replace("engine", "")
-        self.__directory = os.path.join(FINTORCH_DATA_DIR, "engine", engine_type, str(self.strategy.static_hash))
+        self.__directory = os.path.join(FINTORCH_ENGINE_DIR, str(self.strategy.static_hash))
 
     @property
     def exchange(self) -> Exchange:
@@ -62,6 +62,35 @@ class Engine(ABC):
         self.strategy.close()
         self.exchange.close(directory=self.directory)
         self.clock.close(directory=self.directory)
+
+    def calculate_measures(
+        self,
+        start_date: Union[str, datetime],
+        stop_date: Union[str, datetime],
+        leverage: int = 1,
+        initial_capital: int = 1000,
+        margin_assignment_method: str ="cumulative"
+    ) -> Measures:
+        start_timestamp = to_timestamp(date=start_date)
+        stop_timestamp = to_timestamp(date=stop_date)
+
+        positions = self.exchange.future.trade.get_positions_history(symbol=self.strategy.symbol)
+        filtered_position = []
+        for position in positions:
+            if start_timestamp <= position.entry_timestamp <= stop_timestamp:
+                filtered_position.append(position)
+
+        measures = Measures(
+            interval=self.clock.interval,
+            strategy=self.strategy,
+            exchange=self.exchange,
+            positions=filtered_position,
+            leverage=leverage,
+            initial_capital=initial_capital,
+            margin_assignment_method=margin_assignment_method
+        )
+
+        return measures
 
     def draw_positions_plot(
             self,

@@ -15,7 +15,7 @@ class SimulationEngine(Engine):
             interval: TimeFrame,
     ):
         exchange = LocalExchange(online_exchange=online_exchange, interval=interval)
-        clock = Clock(start_date="2021-01-01", interval=interval)
+        clock = Clock(start_date="2022-01-01", interval=interval)
         super().__init__(exchange=exchange, strategy=strategy, clock=clock)
 
         self.__online_exchange: OnlineExchange = online_exchange
