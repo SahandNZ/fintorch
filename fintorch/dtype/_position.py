@@ -70,6 +70,10 @@ class Position:
     def draw_down_percentage(self) -> float:
         worst_met_price = self.lowest_met_price if PositionSide.LONG == self.side else self.highest_met_price
         return abs(self._calculate_pnl_percentage(exit_price=worst_met_price))
+    
+    @property
+    def profit_rate(self) -> float:
+        return round(self.profit_percentage / 100, 6)
 
     @property
     def margin(self) -> Union[float, None]:
