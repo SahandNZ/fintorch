@@ -5,13 +5,18 @@ from ._criterion import Criterion
 
 
 class FocalCE(Criterion):
-    def __init__(self, gamma: float = 2, reduction: str = 'mean'):
+    def __init__(self, label_smoothing: float, gamma: float = 2, reduction: str = 'mean'):
         super().__init__(name="Focal CE", reduction=reduction, classification_criterion=True)
         self.gamma: float = gamma
 
-    def _forward(self, input: torch.Tensor, target: torch.Tensor):
-        weight = 1 - (target.sum(dim=0) / len(target))
-        loss = F.cross_entropy(input=input, target=target, weight=weight, reduction="none")
+    def _forward(self, input: torch.Tensor, target: torch.Tensor, weight: torch.Tensor) -> torch.Tensor:
+        loss = F.cross_entropy(
+            input=input,
+            target=target,
+            weight=weight,
+            reduction="none",
+            label_smoothing=self.label_smoothing
+        )
 
         actual = torch.argmax(target, dim=-1)
         p_t = input[range(len(input)), actual]

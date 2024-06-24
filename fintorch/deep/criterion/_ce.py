@@ -5,12 +5,17 @@ from ._criterion import Criterion
 
 
 class CE(Criterion):
-    def __init__(self, reduction: str = 'mean'):
-        super().__init__(name="CE", reduction=reduction, classification_criterion=True)
+    def __init__(self, label_smoothing: float, reduction: str = 'mean'):
+        super().__init__(name="CE", label_smoothing=label_smoothing, reduction=reduction, classification_criterion=True)
 
-    def _forward(self, input: torch.Tensor, target: torch.Tensor):
-        weight = 1 - (target.sum(dim=0) / len(target))
-        loss = F.cross_entropy(input=input, target=target, weight=weight, reduction=self.reduction)
+    def _forward(self, input: torch.Tensor, target: torch.Tensor, weight: torch.Tensor) -> torch.Tensor:
+        loss = F.cross_entropy(
+            input=input,
+            target=target,
+            weight=weight,
+            label_smoothing=self.label_smoothing,
+            reduction=self.reduction
+        )
         
         return loss
 

@@ -7,7 +7,7 @@ class FocalMSE(Criterion):
     def __init__(self):
         super().__init__(name="Focal MSE", reduction='mean', classification_criterion=True)
 
-    def _forward(self, input: torch.Tensor, target: torch.Tensor):
+    def _forward(self, input: torch.Tensor, target: torch.Tensor, weight: torch.Tensor) -> torch.Tensor:
         return ((target - input) ** 2).mean()
 
     def to_str(self, value: float) -> str:
