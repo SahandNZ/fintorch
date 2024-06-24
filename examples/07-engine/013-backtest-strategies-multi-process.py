@@ -1,6 +1,7 @@
 import gc
 import time
 from datetime import datetime
+import multiprocessing as mp
 from multiprocessing import Queue, Process
 
 from rich.progress import Progress
@@ -100,4 +101,5 @@ def main():
 
 
 if __name__ == '__main__':
+    mp.set_start_method('spawn')
     main()
