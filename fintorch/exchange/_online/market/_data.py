@@ -23,7 +23,6 @@ class OnlineMarketData(MarketData):
         self.__api: API = api
         self.__market_data_end_points: MarketDataEndPoints = getattr(api, str(market_type)).data
 
-        self.__update_timestamp: Union[int, None] = None
         self.__symbol_info_dict: Dict[str, SymbolInfo] = {}
         self.__funding_rates_df_dict: Dict[str, pd.DataFrame] = {}
         self.__aggregated_trades_df_dict: Dict[str, pd.DataFrame] = {}

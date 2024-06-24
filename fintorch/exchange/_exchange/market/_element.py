@@ -1,4 +1,5 @@
 import pickle
+import filelock
 from abc import ABC
 from datetime import datetime
 from typing import Dict, Union
@@ -30,6 +31,9 @@ class MarketElement(ABC):
 
     def load_state_dict(self, state_dict: Dict) -> None:
         self.__timestamp = state_dict.get("timestamp")
+        
+    def clear_state_dict(self) -> None:
+        self.__timestamp = None
 
     def open(self, path: str):
         try:
@@ -44,5 +48,8 @@ class MarketElement(ABC):
         self.__timestamp = timestamp
 
     def close(self, path: str):
-        with open(path, "wb+") as file:
-            pickle.dump(self.state_dict(), file)
+        with filelock.FileLock(path):
+            with open(path, "wb+") as file:
+                pickle.dump(self.state_dict(), file)
+                
+        self.clear_state_dict()

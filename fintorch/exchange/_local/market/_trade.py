@@ -194,12 +194,22 @@ class LocalMarketTrade(MarketTrade):
         return state_dict
 
     def load_state_dict(self, state_dict: Dict) -> None:
+        super().load_state_dict(state_dict=state_dict)
         self.__symbol_to_leverage_dict = state_dict.get("symbol_to_leverage_dict", {})
         self.__symbol_to_all_orders_dict = state_dict.get("symbol_to_all_orders_dict", {})
         self.__symbol_to_open_orders_dict = state_dict.get("symbol_to_open_orders_dict", {})
         self.__symbol_to_all_positions_dict = state_dict.get("symbol_to_all_positions_dict", {})
         self.__symbol_to_open_position_dict = state_dict.get("symbol_to_open_position_dict", {})
         self.__position_to_exit_orders_dict = state_dict.get("position_to_exit_orders_dict", {})
+        
+    def clear_state_dict(self) -> None:
+        super().clear_state_dict()
+        self.__symbol_to_leverage_dict.clear()
+        self.__symbol_to_all_orders_dict.clear()
+        self.__symbol_to_open_orders_dict.clear()
+        self.__symbol_to_all_positions_dict.clear()
+        self.__symbol_to_open_position_dict.clear()
+        self.__position_to_exit_orders_dict.clear()
 
     def next(self, timestamp: int) -> None:
         super().next(timestamp=timestamp)
