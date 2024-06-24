@@ -66,5 +66,8 @@ class TimeFrameSequenceFeatureDataset(Dataset):
         # convert to torch.tensor
         x = torch.from_numpy(np.array(features)).transpose(0, 1).float()
         y = torch.from_numpy(np.array(labels)).float()
+        
+        if 0 < len(y):
+            y = y.squeeze(1)
 
         return x, y
