@@ -1,6 +1,7 @@
-import math
 import os
+import math
 import pickle
+import filelock
 from datetime import datetime
 from typing import Dict, Union
 
@@ -49,8 +50,9 @@ class Clock:
     def open(self, directory: str) -> None:
         path = os.path.join(directory, "clock.pkl")
         try:
-            with open(path, "rb") as file:
-                state_dict = pickle.load(file)
+            with filelock.FileLock(path):
+                with open(path, "rb") as file:
+                    state_dict = pickle.load(file)
         except (FileNotFoundError, EOFError, pickle.UnpicklingError):
             state_dict = {}
 
@@ -58,8 +60,9 @@ class Clock:
 
     def close(self, directory: str) -> None:
         path = os.path.join(directory, "clock.pkl")
-        with open(path, "wb+") as file:
-            pickle.dump(self.state_dict(), file)
+        with filelock.FileLock(path):
+            with open(path, "wb+") as file:
+                pickle.dump(self.state_dict(), file)
 
     def __len__(self):
         current_timestamp = int(datetime.now().timestamp())

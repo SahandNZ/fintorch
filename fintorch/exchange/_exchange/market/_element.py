@@ -37,8 +37,9 @@ class MarketElement(ABC):
 
     def open(self, path: str):
         try:
-            with open(path, "rb") as file:
-                state_dict = pickle.load(file)
+            with filelock.FileLock(path):
+                with open(path, "rb") as file:
+                    state_dict = pickle.load(file)
         except (FileNotFoundError, EOFError, pickle.UnpicklingError):
             state_dict = {}
 

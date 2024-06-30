@@ -158,14 +158,16 @@ class Module(ABC):
 
         # safe load folds-dict and y-hats-dict
         try:
-            with open(self.folds_dict_path, "rb") as file:
-                self.__folds_dict = pickle.load(file)
-        except (FileNotFoundError, EOFError, pickle.UnpicklingError):
+            with filelock.FileLock(self.folds_dict_path):
+                with open(self.folds_dict_path, "rb") as file:
+                    self.__folds_dict = pickle.load(file)
+        except (FileNotFoundError, EOFError, pickle.UnpicklingError) as e:
             self.__folds_dict = {}
             
         try:
-            with open(self.y_hats_dict_path, "rb") as file:
-                self.__y_hats_dict = pickle.load(file)
+            with filelock.FileLock(self.y_hats_dict_path):
+                with open(self.y_hats_dict_path, "rb") as file:
+                    self.__y_hats_dict = pickle.load(file)
         except (FileNotFoundError, EOFError, pickle.UnpicklingError):
             self.__y_hats_dict = {}
             

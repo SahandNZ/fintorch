@@ -131,8 +131,9 @@ class Strategy(Component, ABC):
         self.module.open()
 
         try:
-            with open(self.path, "rb") as file:
-                state_dict = pickle.load(file)
+            with filelock.FileLock(self.path):
+                with open(self.path, "rb") as file:
+                    state_dict = pickle.load(file)
         except (FileNotFoundError, EOFError, pickle.UnpicklingError):
             state_dict = {}
 

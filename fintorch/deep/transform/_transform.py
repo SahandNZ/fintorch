@@ -89,8 +89,9 @@ class Transform(Component):
 
     def open(self) -> None:
         try:
-            with open(self.path, "rb") as file:
-                self.__timestamp_to_sf = pickle.load(file)
+            with filelock.FileLock(self.path):
+                with open(self.path, "rb") as file:
+                    self.__timestamp_to_sf = pickle.load(file)
         except (FileNotFoundError, EOFError, pickle.UnpicklingError):
             self.__timestamp_to_sf = {}
             
