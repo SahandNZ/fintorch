@@ -99,10 +99,15 @@ class Strategy(Component, ABC):
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame).copy()
         df.insert(0, "datetime", [datetime.fromtimestamp(ts) for ts in df.index])
         
+        sf_generator = self.module.dataset.label_transform.transform_sf(dc=dc, timestamps=df.index.to_list())
+        y_array = np.concatenate([sf for sf in sf_generator])
         y_hat_dict = self.module.predict(timestamps=df.index, dc=dc)
-        df["trend"] = [np.argmax(y_hat) if not np.isnan(y_hat).max() else np.nan for y_hat in y_hat_dict.values()]
-        df["side"] = np.where(1 == df.trend, 1, np.where(0 == df.trend, -1, np.nan))
-        df["toggle"] = df.side.diff()
+        df["actual"] = y_array
+        df["prediction"] = [np.argmax(y_hat) if not np.isnan(y_hat).max() else np.nan for y_hat in y_hat_dict.values()]
+        df["aside"] = np.where(1 == df.acutal, 1, np.where(0 == df.actual, -1, np.nan))
+        df["pside"] = np.where(1 == df.prediction, 1, np.where(0 == df.prediction, -1, np.nan))
+        df["atog"] = df.aside.diff()
+        df["ptog"] = df.pside.diff()
         
         df["bmax"] = df.high.rolling(window=5).max()
         df["bmin"] = df.low.rolling(window=5).min()
@@ -128,7 +133,7 @@ class Strategy(Component, ABC):
         pass
 
     def open(self) -> None:
-        self.module.open()
+        self.module.open(read_only=True)
 
         try:
             with filelock.FileLock(self.path):
@@ -151,9 +156,9 @@ class Strategy(Component, ABC):
         self.module.close()
 
         create_directory(self.directory)
-        with filelock.FileLock(self.path):
-            with open(self.path, "wb+") as file:
-                pickle.dump(self.get_state_dict(), file)
+        # with filelock.FileLock(self.path):
+        with open(self.path, "wb+") as file:
+            pickle.dump(self.get_state_dict(), file)
 
         self.clear_state()
 
@@ -221,9 +226,9 @@ class Strategy(Component, ABC):
     def _draw_indicators_plot(self, axis: List[plt.Axes], df: pd.DataFrame) -> None:
         df = df.copy()
         df["y"] = df.low.min()
-        udf = df[(1 == df.trend) & (0 == df.timestamp % self.time_frame)]
-        ddf = df[(0 == df.trend) & (0 == df.timestamp % self.time_frame)]
-        ndf = df[np.isnan(df.trend) & (0 == df.timestamp % self.time_frame)]
+        udf = df[(1 == df.pside) & (0 == df.timestamp % self.time_frame)]
+        ddf = df[(-1 == df.pside) & (0 == df.timestamp % self.time_frame)]
+        ndf = df[np.isnan(df.pside) & (0 == df.timestamp % self.time_frame)]
 
         # draw prediction scatters
         ohlc_ax = axis[0]

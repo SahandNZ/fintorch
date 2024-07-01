@@ -36,13 +36,13 @@ class Dataset(ABC):
     @property
     def time_frame(self) -> TimeFrame:
         return self.label_transform.time_frame
-    
+
     @property
     def symbols(self) -> List[str]:
         ft_symbols = [ft.symbol for ft in self.feature_transforms]
         lt_symbols = [self.label_transform.symbol]
         return list(set(ft_symbols + lt_symbols))
-    
+
     @property
     def time_frames(self) -> List[TimeFrame]:
         ft_time_frames = [ft.time_frame for ft in self.feature_transforms]
@@ -77,10 +77,10 @@ class Dataset(ABC):
     def dim_output_feature(self) -> int:
         return self._label_transform.dim_feature
 
-    def open(self) -> None:
+    def open(self, read_only: bool = False) -> None:
         for feature_transform in self.feature_transforms:
-            feature_transform.open()
-        self.label_transform.open()
+            feature_transform.open(read_only=read_only)
+        self.label_transform.open(read_only=read_only)
 
     def close(self) -> None:
         for feature_transform in self.feature_transforms:
@@ -112,7 +112,11 @@ class Dataset(ABC):
         return list(range(start_timestamp, stop_timestamp, int(self.time_frame)))
 
     @abstractmethod
-    def preprocess(self, dc: DataCollection, timestamps: List[int]) -> torch.Tensor:
+    def load_x(self, timestamps: List[int]) -> torch.Tensor:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def load_y(self, timestamps: List[int]) -> torch.Tensor:
         raise NotImplementedError()
 
     @abstractmethod
@@ -126,14 +130,6 @@ class Dataset(ABC):
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
             self.close()
-
-    def __getitem__(self, item: Union[int, List[int]]) -> Tuple[torch.Tensor, torch.Tensor]:
-        if isinstance(item, int):
-            return self.load(timestamps=[item])
-        elif isinstance(item, list):
-            return self.load(timestamps=item)
-        else:
-            raise ValueError("item parameter must be float (single timestamp) or list of floats (multiple timestamps).")
 
     def __str__(self):
         return ("{} {} {} {}"

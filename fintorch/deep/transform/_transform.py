@@ -1,6 +1,5 @@
 import os
 import pickle
-import filelock
 from abc import abstractmethod
 from typing import Dict, Generator, Union, List
 
@@ -15,7 +14,6 @@ from ...settings import FINTORCH_TRANSFORM_DIR
 from ...utils.directory import create_directory
 from ...utils.hash import static_list_hash
 from ...utils.timestamp import ceil_timestamp, floor_timestamp
-from ...utils.memory import get_memory_status
 
 
 class Transform(Component):
@@ -40,7 +38,8 @@ class Transform(Component):
         self.__look_ahead: int = look_ahead
 
         self.__timestamp_to_sf: Dict[int, np.ndarray] = {}
-        self.rewrite_timestamp_to_sf: bool = False
+        self.__read_only: bool = False
+        self.__rewrite_timestamp_to_sf: bool = False
 
         self.__static_hash: int = static_list_hash([
             self.short_name,
@@ -87,22 +86,23 @@ class Transform(Component):
     def path(self) -> str:
         return os.path.join(FINTORCH_TRANSFORM_DIR, f"{str(self.static_hash)}.pkl")
 
-    def open(self) -> None:
+    def open(self, read_only: bool = False) -> None:
         try:
-            with filelock.FileLock(self.path):
-                with open(self.path, "rb") as file:
-                    self.__timestamp_to_sf = pickle.load(file)
+            # with filelock.FileLock(self.path):
+            with open(self.path, "rb") as file:
+                self.__timestamp_to_sf = pickle.load(file)
         except (FileNotFoundError, EOFError, pickle.UnpicklingError):
             self.__timestamp_to_sf = {}
-            
+
+        self.__read_only = read_only
         self.__rewrite_timestamp_to_sf = False
 
     def close(self) -> None:
-        if self.__rewrite_timestamp_to_sf:
+        if not self.__read_only and self.__rewrite_timestamp_to_sf:
             create_directory(FINTORCH_TRANSFORM_DIR)
-            with filelock.FileLock(self.path):
-                with open(self.path, "wb+") as file:
-                    pickle.dump(self.timestamp_to_sf, file)
+            # with filelock.FileLock(self.path):
+            with open(self.path, "wb+") as file:
+                pickle.dump(self.timestamp_to_sf, file)
 
         # clear state to free allocated memory
         self.__timestamp_to_sf.clear()

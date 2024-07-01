@@ -6,7 +6,6 @@ import torch
 from ._dataset import Dataset
 from ..transform.feature import FeatureTransform
 from ..transform.label import LabelTransform
-from ...dtype import DataCollection
 from ...enum import TimeFrame
 from ...utils.function import call_with_dict
 from ...utils.hash import static_list_hash
@@ -46,28 +45,26 @@ class TimeFrameSequenceFeatureDataset(Dataset):
         self._label_transform: LabelTransform = label_transform
         self._static_hash: int = static_hash
 
-    def preprocess(self, dc: DataCollection, timestamps: List[int]) -> torch.Tensor:
-        features = []
-        for feature_transform in self.feature_transforms:
-            time_frame_features = list(feature_transform.transform_sf(dc=dc, timestamps=timestamps))
-            features.append(time_frame_features)
-
-        x = torch.from_numpy(np.array(features)).transpose(0, 1).float()
-
-        return x
-
-    def load(self, timestamps: List[int]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def load_x(self, timestamps: List[int]) -> torch.Tensor:
         features = []
         for feature_transform in self.feature_transforms:
             time_frame_features = feature_transform.load_sf(timestamps=timestamps)
             features.append(time_frame_features)
-        labels = self.label_transform.load_sf(timestamps=timestamps)
 
-        # convert to torch.tensor
         x = torch.from_numpy(np.array(features)).transpose(0, 1).float()
+        return x
+
+    def load_y(self, timestamps: List[int]) -> torch.Tensor:
+        labels = self.label_transform.load_sf(timestamps=timestamps)
         y = torch.from_numpy(np.array(labels)).float()
-        
+
         if 0 < len(y):
             y = y.squeeze(1)
+
+        return y
+
+    def load(self, timestamps: List[int]) -> Tuple[torch.Tensor, torch.Tensor]:
+        x = self.load_x(timestamps=timestamps)
+        y = self.load_y(timestamps=timestamps)
 
         return x, y

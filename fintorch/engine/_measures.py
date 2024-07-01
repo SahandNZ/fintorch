@@ -15,7 +15,7 @@ from ..utils.timestamp import ceil_timestamp
 class Measures:
     def __init__(
             self,
-            interval: int,
+            interval: TimeFrame,
             strategy: Strategy,
             exchange: Exchange,
             positions: List[Position],
@@ -25,7 +25,7 @@ class Measures:
             fee_percentage: float = 0.04,
             risk_free_percentage: float = 4,
     ):
-        self.interval: int = interval
+        self.interval: TimeFrame = interval
         self.strategy: Strategy = strategy
         self.exchange: Exchange = exchange
         

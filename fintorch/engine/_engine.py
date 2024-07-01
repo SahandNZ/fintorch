@@ -69,7 +69,7 @@ class Engine(ABC):
         stop_date: Union[str, datetime],
         leverage: int = 1,
         initial_capital: int = 1000,
-        margin_assignment_method: str ="cumulative"
+        margin_assignment_method: str = "cumulative"
     ) -> Measures:
         start_timestamp = to_timestamp(date=start_date)
         stop_timestamp = to_timestamp(date=stop_date)

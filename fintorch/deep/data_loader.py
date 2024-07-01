@@ -2,10 +2,9 @@ import copy
 import math
 import random
 from datetime import datetime
-from typing import Callable, Iterator, Tuple, List, Union
+from typing import Iterator, Tuple, List, Union
 
 import torch
-import numpy as np
 
 from .dataset import Dataset
 from .error import NanValueInBatchError
@@ -38,7 +37,7 @@ class DataLoader:
     @property
     def drop_nan(self) -> bool:
         return self.__drop_nan
-    
+
     @property
     def shuffle(self) -> bool:
         return self.__shuffle
@@ -71,7 +70,7 @@ class DataLoader:
 
     def __iter__(self):
         self.__index = -1
-        _, y = self.dataset[self.timestamps]
+        y = self.dataset.load_y(timestamps=self.timestamps)
         y = y[~torch.any(y.isnan(), dim=1)]
         self.__weight = len(y) / (2 * y.sum(dim=0))
 
@@ -87,7 +86,7 @@ class DataLoader:
             start_index = self.index * self.batch_size
             stop_index = start_index + self.batch_size
             batch_timestamps = self.timestamps[start_index: stop_index]
-            batch_x, batch_y = self.dataset[batch_timestamps]
+            batch_x, batch_y = self.dataset.load(timestamps=batch_timestamps)
 
             if 0 < len(batch_x) and 0 < len(batch_y):
                 if self.drop_nan:
