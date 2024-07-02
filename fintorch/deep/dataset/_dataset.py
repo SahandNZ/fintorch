@@ -112,6 +112,10 @@ class Dataset(ABC):
         return list(range(start_timestamp, stop_timestamp, int(self.time_frame)))
 
     @abstractmethod
+    def prepare_x(self, dc: DataCollection, timestamps: List[int]) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
     def load_x(self, timestamps: List[int]) -> torch.Tensor:
         raise NotImplementedError()
 

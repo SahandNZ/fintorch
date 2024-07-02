@@ -6,6 +6,7 @@ import torch
 from ._dataset import Dataset
 from ..transform.feature import FeatureTransform
 from ..transform.label import LabelTransform
+from ...dtype import DataCollection
 from ...enum import TimeFrame
 from ...utils.function import call_with_dict
 from ...utils.hash import static_list_hash
@@ -44,6 +45,10 @@ class TimeFrameSequenceFeatureDataset(Dataset):
         self._feature_transforms: List[FeatureTransform] = feature_transforms
         self._label_transform: LabelTransform = label_transform
         self._static_hash: int = static_hash
+
+    def prepare_x(self, dc: DataCollection, timestamps: List[int]) -> None:
+        for feature_transform in self.feature_transforms:
+            feature_transform.prepare_sf(dc=dc, timestamps=timestamps)
 
     def load_x(self, timestamps: List[int]) -> torch.Tensor:
         features = []
