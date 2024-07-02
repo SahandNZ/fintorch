@@ -161,7 +161,7 @@ class Module(ABC):
             # with filelock.FileLock(self.folds_dict_path):
             with open(self.folds_dict_path, "rb") as file:
                 self.__folds_dict = pickle.load(file)
-        except (FileNotFoundError, EOFError, pickle.UnpicklingError) as e:
+        except (FileNotFoundError, EOFError, pickle.UnpicklingError):
             self.__folds_dict = {}
 
         try:
@@ -272,8 +272,8 @@ class Module(ABC):
                     status.update_elapsed_time(elapsed_time=elapsed_time)
                     yield status
 
-    def _predict(self, dc: DataCollection, timestamps: List[int], mode="val") -> Dict[float, np.array]:
-        # move model to cuda device if its available
+    def _predict(self, dc: DataCollection, timestamps: List[int], mode="val") -> Dict[float, np.ndarray]:
+        # move model to cuda device if it's available
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.eval()
         self.model.to(device=device)
@@ -285,7 +285,8 @@ class Module(ABC):
                 self.model.load_state_dict(getattr(fold, f"best_{mode}_epoch").model_state_dict)
                 fold_timestamps = [ts for ts in timestamps if key[0] <= ts <= key[1]]
                 if 0 < len(fold_timestamps):
-                    x = self.dataset.preprocess(dc=dc, timestamps=fold_timestamps)
+                    self.dataset.prepare_x(dc=dc, timestamps=fold_timestamps)
+                    x = self.dataset.load_x(timestamps=fold_timestamps)
                     x = x.to(device=device)
                     y_hats = self.model(x).cpu().numpy()
                     result.update({ts: y_hats[index] for index, ts in enumerate(fold_timestamps)})
@@ -294,7 +295,7 @@ class Module(ABC):
         self.model.cpu()
 
         # set missed timestamps to array of np.nan values
-        nan_y_hat = np.zeros((self.model.dim_output_feature)) * np.nan
+        nan_y_hat = np.zeros(self.model.dim_output_feature) * np.nan
         missing_timestamps = [ts for ts in timestamps if ts not in result]
         result.update({ts: nan_y_hat for ts in missing_timestamps})
 
@@ -313,7 +314,8 @@ class Module(ABC):
             self.y_hats_dict.update(output)
             self.__rewrite_y_hats_dict = True
 
-        return {k: v for k, v in sorted(output.items(), key=lambda item: item[0])}
+        sorted_output = {k: v for k, v in sorted(output.items(), key=lambda item: item[0])}
+        return sorted_output
 
     def calculate_metrics(
             self,
