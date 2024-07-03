@@ -204,10 +204,10 @@ class OnlineMarketData(MarketData):
         super().next(timestamp=timestamp)
 
         # update candles
-        candles_open_timestamp = floor_timestamp(timestamp=timestamp, time_frame=BASE_TIME_FRAME)
+        current_open_timestamp = floor_timestamp(timestamp=timestamp, time_frame=BASE_TIME_FRAME)
         for (symbol, _) in self.__candles_df_dict.keys():
             df = self.get_candles_dataframe(symbol=symbol, time_frame=BASE_TIME_FRAME)
-            if force_update or candles_open_timestamp not in df.index:
+            if force_update or current_open_timestamp not in df.index:
                 self.update_candles_dataframe(symbol=symbol)
 
         # update funding rates
