@@ -31,7 +31,7 @@ class Strategy(Component, ABC):
     ):
         super().__init__(name=name, short_name=short_name, description="")
         self.__module: Module = module
-        self.__indicators: List[str] = ["trend", "bmax", "bmin"] + indicators
+        self.__indicators: List[str] = ["side", "bmax", "bmin"] + indicators
         self.__height_ratios: List[int] = height_ratios
 
         self.__static_hash: int = static_list_hash([self.short_name, self.module.static_hash])
@@ -40,10 +40,14 @@ class Strategy(Component, ABC):
 
         # engine related properties
         self.exchange: Union[Exchange, None] = None
+        self.interval: Union[TimeFrame, None] = None
 
         # process data
         self.__processed_df: Union[pd.DataFrame, None] = None
+        self.__processed_interval_df: Union[pd.DataFrame, None] = None
+        
         self.__df: Union[pd.DataFrame, None] = None
+        self.__interval_df: Union[pd.DataFrame, None] = None
 
     @property
     def module(self) -> Module:
@@ -88,12 +92,18 @@ class Strategy(Component, ABC):
     @property
     def df(self) -> pd.DataFrame:
         return self.__df
+    
+    @property
+    def interval_df(self) -> pd.DataFrame:
+        return self.__interval_df
 
     def preprocess(self, dc: DataCollection = None) -> None:
         if dc is None:
-            dc = self.future.data.get_data_collection(symbols=[self.symbol], time_frames=self.time_frames)
+            time_frames = [self.time_frame, self.interval]
+            dc = self.future.data.get_data_collection(symbols=[self.symbol], time_frames=time_frames)
 
         self.__processed_df = self.process_dc_to_df(dc=dc)
+        self.__processed_interval_df = self.process_dc_to_interval_df(dc=dc)
 
     def process_dc_to_df(self, dc: DataCollection) -> pd.DataFrame:
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame).copy()
@@ -102,17 +112,23 @@ class Strategy(Component, ABC):
         sf_generator = self.module.dataset.label_transform.transform_sf(dc=dc, timestamps=df.index.to_list())
         y_array = np.concatenate([sf for sf in sf_generator])
         y_hat_dict = self.module.predict(timestamps=df.index, dc=dc)
-        df["actual"] = y_array
-        df["prediction"] = [np.argmax(y_hat) if not np.isnan(y_hat).max() else np.nan for y_hat in y_hat_dict.values()]
-        df["aside"] = np.where(1 == df.acutal, 1, np.where(0 == df.actual, -1, np.nan))
-        df["pside"] = np.where(1 == df.prediction, 1, np.where(0 == df.prediction, -1, np.nan))
-        df["atog"] = df.aside.diff()
-        df["ptog"] = df.pside.diff()
+        df["atrend"] = [np.argmax(y) if not np.isnan(y).max() else np.nan for y in y_array]
+        df["ptrend"] = [np.argmax(y_hat) if not np.isnan(y_hat).max() else np.nan for y_hat in y_hat_dict.values()]
+        df["trend"] = df.ptrend
+        
+        df["side"] = np.where(1 == df.trend, 1, np.where(0 == df.trend, -1, np.nan))
+        df["toggle"] = df.side.diff()
         
         df["bmax"] = df.high.rolling(window=5).max()
         df["bmin"] = df.low.rolling(window=5).min()
         
         return df
+    
+    def process_dc_to_interval_df(self, dc: DataCollection) -> pd.DataFrame:
+        pass
+        
+    def on_new_interval(self) -> None:
+        pass
 
     def on_new_candle(self) -> None:
         pass
@@ -151,6 +167,8 @@ class Strategy(Component, ABC):
             self.preprocess()
 
         self.__df = self.__processed_df[self.__processed_df.index < timestamp]
+        if self.__processed_interval_df is not None:
+            self.__interval_df = self.__processed_interval_df[self.__processed_interval_df.index < timestamp]
 
     def close(self) -> None:
         self.module.close()
@@ -226,9 +244,9 @@ class Strategy(Component, ABC):
     def _draw_indicators_plot(self, axis: List[plt.Axes], df: pd.DataFrame) -> None:
         df = df.copy()
         df["y"] = df.low.min()
-        udf = df[(1 == df.pside) & (0 == df.timestamp % self.time_frame)]
-        ddf = df[(-1 == df.pside) & (0 == df.timestamp % self.time_frame)]
-        ndf = df[np.isnan(df.pside) & (0 == df.timestamp % self.time_frame)]
+        udf = df[(1 == df.side) & (0 == df.timestamp % self.time_frame)]
+        ddf = df[(-1 == df.side) & (0 == df.timestamp % self.time_frame)]
+        ndf = df[np.isnan(df.side) & (0 == df.timestamp % self.time_frame)]
 
         # draw prediction scatters
         ohlc_ax = axis[0]

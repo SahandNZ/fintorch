@@ -5,11 +5,11 @@ from ..deep.module import Module
 from ..dtype import Order
 
 
-class PassiveLimitStrategy(Strategy):
+class PassiveLimitToggleStrategy(Strategy):
     def __init__(self, module: Module) -> None:
         super().__init__(
-            name="Passive Limit Strategy",
-            short_name="PL",
+            name="Passive Limit Toggle Strategy",
+            short_name="PL-TOG",
             module=module,
             indicators=[],
             height_ratios=[1]
@@ -37,12 +37,11 @@ class PassiveLimitStrategy(Strategy):
             if position.side != side:
                 # there is an open position
                 if position.is_open:
-                    if 0 < position.profit_percentage:
-                        self.future.trade.set_exit_order(
-                            position=position,
-                            percentage=100,
-                            comment="Market Exit"
-                        )
+                    self.future.trade.set_exit_order(
+                        position=position,
+                        percentage=100,
+                        comment="Market Exit"
+                    )
 
                 # there is no open position
                 if not position.is_open:

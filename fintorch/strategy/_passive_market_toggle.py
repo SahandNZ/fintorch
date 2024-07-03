@@ -4,11 +4,11 @@ from ._strategy import Strategy
 from ..deep.module import Module
 
 
-class PassiveMarketStrategy(Strategy):
+class PassiveMarketToggleStrategy(Strategy):
     def __init__(self, module: Module) -> None:
         super().__init__(
-            name="Passive Market Strategy",
-            short_name="PM",
+            name="Passive Market Toggle Strategy",
+            short_name="PM-TOG",
             module=module,
             indicators=[],
             height_ratios=[1]
@@ -28,12 +28,11 @@ class PassiveMarketStrategy(Strategy):
             if position.side != side:
                 # there is an open position
                 if position.is_open:
-                    if 0 < position.profit_percentage:
-                        self.future.trade.set_exit_order(
-                            position=position,
-                            percentage=100,
-                            comment="Market Exit"
-                        )
+                    self.future.trade.set_exit_order(
+                        position=position,
+                        percentage=100,
+                        comment="Market Exit"
+                    )
 
                 # there is no open position
                 if not position.is_open:
