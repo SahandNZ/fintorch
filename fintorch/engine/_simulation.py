@@ -22,7 +22,7 @@ class SimulationEngine(Engine):
 
     def simulate(self) -> Generator[int, None, None]:
         symbols = [self.strategy.symbol]
-        time_frames = self.strategy.time_frames
+        time_frames = self.strategy.time_frames + [self.clock.interval]
         dc = self.__online_exchange.future.data.get_data_collection(symbols=symbols, time_frames=time_frames)
         self.strategy.preprocess(dc=dc)
 

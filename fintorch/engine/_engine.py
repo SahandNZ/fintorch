@@ -47,6 +47,7 @@ class Engine(ABC):
 
         # share properties between exchange and strategy
         self.strategy.exchange = self.exchange
+        self.strategy.interval = self.clock.interval
         self.exchange.future.trade.opened_position_event.add(self.strategy.on_opened_position)
         self.exchange.future.trade.closed_position_event.add(self.strategy.on_closed_position)
 
@@ -54,8 +55,9 @@ class Engine(ABC):
 
     def next(self, timestamp: int) -> None:
         self.exchange.next(timestamp=timestamp)
+        self.strategy.next(timestamp=timestamp)
+        self.strategy.on_new_interval()
         if 0 == self.exchange.future.data.timestamp % self.strategy.time_frame:
-            self.strategy.next(timestamp=timestamp)
             self.strategy.on_new_candle()
 
     def close(self):
