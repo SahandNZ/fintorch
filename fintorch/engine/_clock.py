@@ -50,9 +50,8 @@ class Clock:
     def open(self, directory: str) -> None:
         path = os.path.join(directory, "clock.pkl")
         try:
-            with filelock.FileLock(path):
-                with open(path, "rb") as file:
-                    state_dict = pickle.load(file)
+            with open(path, "rb") as file:
+                state_dict = pickle.load(file)
         except (FileNotFoundError, EOFError, pickle.UnpicklingError):
             state_dict = {}
 
@@ -60,9 +59,8 @@ class Clock:
 
     def close(self, directory: str) -> None:
         path = os.path.join(directory, "clock.pkl")
-        with filelock.FileLock(path):
-            with open(path, "wb+") as file:
-                pickle.dump(self.state_dict(), file)
+        with open(path, "wb+") as file:
+            pickle.dump(self.state_dict(), file)
 
     def __len__(self):
         current_timestamp = int(datetime.now().timestamp())
