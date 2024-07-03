@@ -37,9 +37,8 @@ class MarketElement(ABC):
 
     def open(self, path: str):
         try:
-            with filelock.FileLock(path):
-                with open(path, "rb") as file:
-                    state_dict = pickle.load(file)
+            with open(path, "rb") as file:
+                state_dict = pickle.load(file)
         except (FileNotFoundError, EOFError, pickle.UnpicklingError):
             state_dict = {}
 
@@ -49,8 +48,7 @@ class MarketElement(ABC):
         self.__timestamp = timestamp
 
     def close(self, path: str):
-        with filelock.FileLock(path):
-            with open(path, "wb+") as file:
-                pickle.dump(self.state_dict(), file)
-                
+        with open(path, "wb+") as file:
+            pickle.dump(self.state_dict(), file)
+            
         self.clear_state_dict()
