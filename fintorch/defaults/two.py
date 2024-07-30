@@ -1,44 +1,13 @@
-import os
-
 import torch
-from rich.progress import *
 from torch import nn
 
-from fintorch.deep.model.tsf import *
-from .deep.criterion import *
-from .deep.dataset import TimeFrameSequenceFeatureDataset
-from .deep.transform.feature import *
-from .deep.transform.label.trend import *
-from .enum import TimeFrame
-from .strategy import *
+from ..deep.model.tsf import *
+from ..deep.criterion import *
+from ..deep.dataset import TimeFrameSequenceFeatureDataset
+from ..deep.transform.feature import *
+from ..deep.transform.label.trend import *
+from ..enum import TimeFrame
 
-# config files
-API_CONFIG = "finland-proxy"
-LOGGER_CONFIG = "debug"
-SYMBOLS_CONFIG = "2"
-
-MAX_WORKERS = os.cpu_count()
-
-# API and Exchanges
-EXCHANGE_NAME = "binance"
-
-# APP
-EXECUTOR_TYPE = "process"
-
-# Date
-START_DATE = "2019-01-01"
-STOP_DATE = "2025-01-01"
-
-# Simulation
-INITIAL_CAPITAL = 1000
-INTERVAL = TimeFrame.MIN15
-
-TIME_FRAMES = [
-    TimeFrame.DAY1,
-    TimeFrame.HOUR4,
-    TimeFrame.HOUR1,
-    TimeFrame.MIN15
-]
 
 FEATURE_TIME_FRAMES = [
     TimeFrame.HOUR4,
@@ -91,17 +60,6 @@ MODEL_TYPES = [
     # Transformer
 ]
 
-STRATEGY_TYPES = [
-    TrailingStopLossStrategy,
-    
-    # ActiveMarketStrategy,
-    # PassiveMarketStrategy,
-    
-    ## these strategy will not include in final product
-    # ActiveLimitToggleStrategy,
-    # PassiveLimitToggleStrategy,
-]
-
 # Model hyper-parameters
 DROPOUT = 0.5
 BATCH_NORM = True
@@ -139,14 +97,3 @@ CRITERION = CE(label_smoothing=LABEL_SMOOTHING)
 SHUFFLE = True
 EPOCHS_COUNT = 10
 GRADIENT_CLIPPING_THRESHOLD = None
-
-# Rich progress columns
-RICH_PROGRESS_COLUMNS = [
-    SpinnerColumn(),
-    TextColumn("[progress.description]{task.description}"),
-    BarColumn(),
-    TaskProgressColumn(show_speed=True),
-    MofNCompleteColumn(),
-    TimeElapsedColumn(),
-    TimeRemainingColumn(),
-]

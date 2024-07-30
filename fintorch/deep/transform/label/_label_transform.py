@@ -10,7 +10,7 @@ from .._transform import Transform
 from ....dtype import DataCollection
 from ....enum import TimeFrame
 from ....utils.plot import draw_candlestick_plot, draw_labels
-from ....utils.timestamp import to_timestamp, ceil_timestamp
+from ....utils.timestamp import to_timestamp, ceil_timestamp, floor_timestamp
 
 
 class LabelTransform(Transform, ABC):
@@ -78,8 +78,11 @@ class LabelTransform(Transform, ABC):
         return ceil_timestamp(timestamp=timestamp, time_frame=self.time_frame)
 
     def _transform_dc_to_sf(self, dc: DataCollection, timestamp: int) -> np.ndarray:
+        currnet_timestamp = int(datetime.now().timestamp())
+        currnet_open_timestamp = floor_timestamp(timestamp=currnet_timestamp, time_frame=self.time_frame)
         if self.df is None or timestamp not in self.df.index:
             df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
+            df = df[df.index < currnet_open_timestamp].copy()
             df = self.transform_df(df=df)
             df = df.dropna()
             self.__df = df

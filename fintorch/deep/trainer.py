@@ -113,6 +113,8 @@ class Trainer:
         # move model to cuda device if it's available and prepare it for training
         model.to(self.device)
         model.reset()
+        
+        print(self.device)
 
         with self.optimizer, self.lr_scheduler:
             # reset model and optimizer and lr scheduler

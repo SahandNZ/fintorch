@@ -1,4 +1,5 @@
-import os.path
+import os
+import shutil
 from abc import ABC
 from datetime import datetime
 from typing import Tuple, Generator, Union
@@ -12,6 +13,7 @@ from ..dtype import DataCollection
 from ..exchange import Exchange
 from ..settings import FINTORCH_ENGINE_DIR
 from ..strategy import Strategy
+from ..utils.directory import create_directory
 from ..utils.plot import draw_position_and_orders
 from ..utils.timestamp import to_timestamp
 
@@ -22,7 +24,7 @@ class Engine(ABC):
         self.__strategy: Strategy = strategy
         self.__clock: Clock = clock
 
-        self.__directory = os.path.join(FINTORCH_ENGINE_DIR, str(self.strategy.static_hash))
+        self.__directory = os.path.join(FINTORCH_ENGINE_DIR, "simulation", str(self.strategy.static_hash))
 
     @property
     def exchange(self) -> Exchange:
@@ -40,8 +42,12 @@ class Engine(ABC):
     def directory(self) -> str:
         return self.__directory
 
+    def remove(self) -> None:
+        if os.path.exists(self.directory):
+            shutil.rmtree(self.directory, ignore_errors=True)
+
     def open(self):
-        self.strategy.open()
+        self.strategy.open(directory=self.directory)
         self.exchange.open(directory=self.directory)
         self.clock.open(directory=self.directory)
 
@@ -61,17 +67,18 @@ class Engine(ABC):
             self.strategy.on_new_candle()
 
     def close(self):
-        self.strategy.close()
+        create_directory(self.directory)
+        self.strategy.close(directory=self.directory)
         self.exchange.close(directory=self.directory)
         self.clock.close(directory=self.directory)
 
     def calculate_measures(
-        self,
-        start_date: Union[str, datetime],
-        stop_date: Union[str, datetime],
-        leverage: int = 1,
-        initial_capital: int = 1000,
-        margin_assignment_method: str = "cumulative"
+            self,
+            start_date: Union[str, datetime],
+            stop_date: Union[str, datetime],
+            leverage: int = 1,
+            initial_capital: int = 1000,
+            margin_assignment_method: str = "cumulative"
     ) -> Measures:
         start_timestamp = to_timestamp(date=start_date)
         stop_timestamp = to_timestamp(date=stop_date)

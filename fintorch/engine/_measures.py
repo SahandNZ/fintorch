@@ -1,6 +1,7 @@
 import copy
 import math
 from typing import List, Union
+from datetime import datetime 
 
 import numpy as np
 import pandas as pd
@@ -22,7 +23,7 @@ class Measures:
             leverage: int,
             initial_capital: int,
             margin_assignment_method: str,
-            fee_percentage: float = 0.04,
+            fee_percentage: float = 0.1,
             risk_free_percentage: float = 4,
     ):
         self.interval: TimeFrame = interval
@@ -44,10 +45,7 @@ class Measures:
             time_frame=self.interval
         )
 
-        self.__daily_profits: Union[np.ndarray, None] = None
-
         self.__assign_quantity()
-        self.__calculate_daily_profits()
 
     @property
     def days(self) -> float:
@@ -67,19 +65,11 @@ class Measures:
     @property
     def profits(self) -> np.ndarray:
         profits = np.array([p.profit for p in self.positions])
-        return profits - self.paid_fees
-
-    @property
-    def daily_profits(self) -> np.ndarray:
-        return self.__daily_profits
+        return profits
 
     @property
     def profit_percentages(self) -> np.ndarray:
         return np.round(self.profits / self.initial_capital * 100, 2)
-
-    @property
-    def daily_profit_percentages(self) -> np.ndarray:
-        return np.round(self.daily_profits / self.initial_capital * 100, 2)
 
     @property
     def average_bars_in_trade(self) -> int:
@@ -95,10 +85,10 @@ class Measures:
 
     @property
     def net_profit(self) -> float:
-        return np.round(self.profits.sum(), 2)
+        return np.round(self.profits.sum() - self.paid_fees.sum(), 2)
 
     @property
-    def commission_paid(self) -> float:
+    def commission_paid(self) -> np.floating:
         return np.round(self.paid_fees.sum(), 2)
 
     @property
@@ -152,6 +142,9 @@ class Measures:
         first_timestamp = self.positions[0].entry_timestamp
         last_timestamp = self.positions[-1].exit_timestamp or self.positions[-1].current_timestamp
         
+        first_timestamp = first_timestamp // self.interval * self.interval
+        last_timestamp = last_timestamp // self.interval * self.interval
+        
         first_timestamp = max(first_timestamp, self.candles_df.index[0])
         last_timestamp = min(last_timestamp, self.candles_df.index[-1])
 
@@ -172,19 +165,27 @@ class Measures:
 
     @property
     def sharpe_ratio(self) -> float:
-        daily_risk_free_percentage = self.risk_free_percentage / 365
-        mean_daily_profit_percentage = self.daily_profit_percentages.mean()
-        numerator = mean_daily_profit_percentage - daily_risk_free_percentage
-        denominator = self.daily_profit_percentages.std()
-        return round(numerator / denominator * np.sqrt(365), 2)
+        mean_rfp = self.risk_free_percentage / len(self.positions)
+        mean_fp = self.fee_percentage * 2
+        mean_pp = self.profit_percentages.mean()
+        numerator = mean_pp - mean_rfp - mean_fp
+        denominator = self.profit_percentages.std(ddof=1)
+        ratio = np.round(numerator / denominator * np.sqrt(365), 2)
+        
+        return ratio
 
     @property
-    def sortino_ratio(self) -> float:
-        daily_risk_free_percentage = self.risk_free_percentage / 365
-        mean_daily_profit_percentage = self.daily_profit_percentages.mean()
-        numerator = mean_daily_profit_percentage - daily_risk_free_percentage
-        denominator = self.daily_profit_percentages[self.daily_profit_percentages <= 0].std()
-        return round(numerator / denominator * np.sqrt(365), 2)
+    def sortino_ratio(self) -> float:    
+        neg_pp = self.profit_percentages[self.profit_percentages < 0]
+        
+        mean_rfp = self.risk_free_percentage / len(self.positions)
+        mean_fp = self.fee_percentage * 2
+        mean_pp = self.profit_percentages.mean()
+        numerator = mean_pp - mean_rfp - mean_fp
+        denominator = neg_pp.std(ddof=1)
+        ratio = np.round(numerator / denominator * np.sqrt(365), 2)
+        
+        return ratio
 
     @property
     def number_of_total_trades(self) -> int:
@@ -204,27 +205,32 @@ class Measures:
 
     @property
     def average_trades(self) -> float:
-        return np.round(self.profits.mean(), 2)
+        net_profits = self.profits - self.paid_fees
+        return np.round(net_profits.mean(), 2)
 
     @property
-    def average_winning_trades(self) -> float:
-        return np.round(self.profits[0 < self.profits].mean(), 2)
+    def average_winning_trades(self) -> np.floating:
+        net_profits = self.profits - self.paid_fees
+        return np.round(net_profits[0 <= net_profits].mean(), 2)
 
     @property
-    def average_losing_trades(self) -> float:
-        return np.round(np.abs(self.profits[self.profits < 0].mean()), 2)
+    def average_losing_trades(self) -> np.floating:
+        net_profits = self.profits - self.paid_fees
+        return np.round(np.abs(net_profits[net_profits < 0].mean()), 2)
 
     @property
     def ratio_average_win_to_average_loss(self) -> float:
         return np.round(self.average_winning_trades / self.average_losing_trades)
 
     @property
-    def largest_winning_trade(self) -> float:
-        return np.round(self.profits[0 < self.profits].max(), 2)
+    def largest_winning_trade(self) -> np.floating:
+        profits = self.profits[0 <= self.profits]
+        return np.round(np.max(profits), 2) if 0 < len(profits) else np.nan
 
     @property
-    def largest_losing_trade(self) -> float:
-        return np.round(np.abs(self.profits[self.profits < 0]).max(), 2)
+    def largest_losing_trade(self) -> np.floating:
+        profits = self.profits[self.profits < 0]
+        return np.round(np.max(np.abs(profits)), 2) if 0 < len(profits) else np.nan
 
     @property
     def equity_series(self) -> List[float]:
@@ -262,37 +268,6 @@ class Measures:
             profit = position.profit
             paid_fee = position.paid_fee(fee_percentage=self.fee_percentage)
             equities.append(equities[-1] + profit - paid_fee)
-
-    def __calculate_daily_profits(self):
-        df = self.candles_df.copy()
-        df["roc"] = df.close / df.open - 1
-
-        profits_dict = {}
-        for position in self.positions:
-            entry_timestamp = position.entry_timestamp
-            exit_timestamp = position.exit_timestamp or position.current_timestamp
-            timestamps = list(np.arange(entry_timestamp, exit_timestamp, float(self.interval)))
-            for timestamp in timestamps:
-                profit = round(df.loc[timestamp].roc * position.side * position.margin, 2)
-                profits_dict[timestamp] = profit
-
-        df["profit"] = [profits_dict.get(ts, 0) for ts in df.index]
-
-        # resampling daily profits
-        window_size = int(int(TimeFrame.DAY1) // int(self.interval))
-
-        first_timestamp = self.positions[0].entry_timestamp
-        first_timestamp = ceil_timestamp(timestamp=first_timestamp, time_frame=TimeFrame.DAY1)
-        last_timestamp = self.positions[-1].exit_timestamp or self.positions[-1].current_timestamp
-        last_timestamp = ceil_timestamp(timestamp=last_timestamp, time_frame=TimeFrame.DAY1)
-
-        forward_indexer = pd.api.indexers.FixedForwardWindowIndexer(window_size=window_size)
-        ddf = df[first_timestamp <= df.index]
-        ddf = ddf[ddf.index <= last_timestamp]
-        ddf["profit"] = ddf.profit.rolling(window=forward_indexer, min_periods=1, step=window_size).sum()
-        ddf = ddf.dropna()
-
-        self.__daily_profits = ddf.profit.to_numpy()
 
     def __str__(self) -> str:
         return (

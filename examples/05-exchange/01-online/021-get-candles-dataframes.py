@@ -7,7 +7,7 @@ def main():
     args = DefaultArgumentParser.parse()
     
     for symbol in args.symbols:
-        df = args.online_exchange.future.data.get_candles_dataframe(symbol=symbol, time_frame=args.time_frame)
+        df = args.online_exchange.future.data.get_base_candles_df(symbol=symbol, time_frame=args.time_frame)
         has_missing_value = (0 != (df.index.diff().dropna() - args.time_frame)).max()
 
         print(symbol)

@@ -8,3 +8,6 @@ class NanValueInModelInputError(Exception):
 
 class NanValueInModelOutputError(Exception):
     pass
+
+class NanValueInLastPredictionError(Exception):
+    pass

@@ -58,7 +58,7 @@ class ActiveLimitToggleStrategy(Strategy):
             # update stop loss order (Risk Free order)
             if position.is_open and 5 <= position.profit_percentage:
                 risk_free_price = position.entry_price * (1 + int(position.side) * 0.025)
-                if not self.is_risk_free_done and self.stop_loss_order.price != risk_free_price:
+                if not self.is_risk_free_done and self.stop_loss_order.stop_price != risk_free_price:
                     self.is_risk_free_done = True
                     self.future.trade.cancel_order(symbol=self.symbol, order_id=self.stop_loss_order.id)
                     self.stop_loss_order = self.future.trade.set_exit_order(
@@ -107,11 +107,6 @@ class ActiveLimitToggleStrategy(Strategy):
         
         take_profit_price = position.entry_price * (1 + int(position.side) * 0.1)
         stop_loss_price = position.entry_price * (1 - int(position.side) * 0.1)
-        
-        # bmax, bmin = self.df.lbmax.iloc[-1], self.df.lbmin.iloc[-1]
-        # take_profit_price = bmax if 1 == position.side else bmin
-        # stop_loss_price = bmin if 1 == position.side else bmax
-        # stop_loss_price = stop_loss_price * (1 - int(position.side) * 0.025)
 
         self.take_profit_order = self.future.trade.set_exit_order(
             position=position,

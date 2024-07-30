@@ -229,16 +229,36 @@ class LocalMarketTrade(MarketTrade):
 
     def __handle_open_orders(self):
         for open_orders_dict in self.__symbol_to_open_orders_dict.values():
-            for open_order in open_orders_dict.copy().values():
-                if open_order.id in open_orders_dict:
-                    candle = self.__data.get_current_candle(symbol=open_order.symbol, time_frame=self.__interval)
-                    if not open_order.is_activated:
-                        if not open_order.type.is_stop or candle.is_touched(open_order.stop_price):
-                            self.__handle_activated_order(order=open_order)
+            for order in open_orders_dict.copy().values():
+                if order.id in open_orders_dict:
+                    candle = self.__data.get_current_candle(symbol=order.symbol, time_frame=self.__interval)
+                    price = candle.open
+                    
+                    # check order for activation condition
+                    if not order.is_activated:
+                        if order.type.is_stop:
+                            is_stop_price_touched = candle.is_touched(price=order.stop_price)
+                            is_stop_price_touched |= OrderSide.BUY == order.side and order.stop_price <= price
+                            is_stop_price_touched |= OrderSide.SELL == order.side and price <= order.stop_price
+                            is_order_activated = is_stop_price_touched
+                        else:
+                            is_order_activated = True
+                        
+                        if is_order_activated:
+                            self.__handle_activated_order(order=order)
 
-                    if open_order.is_activated:
-                        if open_order.type.is_market or candle.is_touched(open_order.price):
-                            self.__handle_filled_order(order=open_order)
+                    # check order for fill condition
+                    if order.is_activated:
+                        if order.type.is_market:
+                            is_order_filled = True
+                        else:
+                            is_price_touched = candle.is_touched(price=order.price)
+                            is_price_touched |= OrderSide.BUY == order.side and price <= order.price
+                            is_price_touched |= OrderSide.SELL == order.side and order.price <= price
+                            is_order_filled = is_price_touched
+                                
+                        if is_order_filled:
+                            self.__handle_filled_order(order=order)
 
     def __handle_activated_order(self, order: Order) -> None:
         symbol_info = self.__data.get_symbol_info(symbol=order.symbol)

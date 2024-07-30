@@ -8,7 +8,8 @@ from fintorch.utils.args import DefaultArgumentParser
 
 
 def main():
-    args = DefaultArgumentParser.parse()
+    string_args = ["--symbols-config", "5"]
+    args = DefaultArgumentParser.parse(args=string_args)
 
     # optimize modules with rich panel
     overall_progress = Progress(*RICH_PROGRESS_COLUMNS)

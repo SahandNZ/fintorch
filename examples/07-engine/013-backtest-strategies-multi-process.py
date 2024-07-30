@@ -1,7 +1,9 @@
 import gc
 import time
-from datetime import datetime
+import atexit
+import warnings
 import multiprocessing as mp
+from datetime import datetime
 from multiprocessing import Queue, Process
 
 from rich.progress import Progress
@@ -9,7 +11,11 @@ from rich.progress import Progress
 from fintorch.defaults import RICH_PROGRESS_COLUMNS
 from fintorch.engine import SimulationEngine
 from fintorch.utils.args import DefaultArgumentParser
+from fintorch.enum import TimeFrame
 
+def terminal_sub_process():
+    for child in mp.active_children():
+        child.terminate()
 
 def target(queue: Queue, engine: SimulationEngine):
     try:
@@ -28,12 +34,15 @@ def target(queue: Queue, engine: SimulationEngine):
 def main():
     string_args = [
         "--logger-config", "info",
-        "--max-workers", "8",
+        "--symbols-config", "5",
+        "--max-workers", "1",
     ]
     args = DefaultArgumentParser.parse(args=string_args)
-
+    symbols = args.symbols[2:]
+    engines = [engine for engine in args.engines if engine.strategy.symbol in symbols]
+    
     progress = Progress(*RICH_PROGRESS_COLUMNS)
-    overall_task_id = progress.add_task(description="overall", total=len(args.engines))
+    overall_task_id = progress.add_task(description="overall", total=len(engines))
 
     # multi process life cycles and properties
     pending_process_set = set()
@@ -43,7 +52,7 @@ def main():
     process_to_args = {}
 
     # Create pending processes and add them to set
-    for engine in args.engines:
+    for engine in engines:
         queue = Queue()
         process_args = (queue, engine)
         process = Process(target=target, args=process_args)
@@ -52,7 +61,7 @@ def main():
 
     # Update main_layout to track processes
     with progress:
-        while len(done_process_set) < len(args.engines):
+        while len(done_process_set) < len(engines):
             # start process if there is free worker and work to do
             if len(running_process_set) < args.max_workers and 0 < len(pending_process_set):
                 process = pending_process_set.pop()
@@ -74,9 +83,7 @@ def main():
                 task_id = process_to_task_id[process]
                 if not queue.empty():
                     message = queue.get()
-                    if isinstance(message, str):
-                        print(message)
-                    if isinstance(message, int):
+                    try: 
                         message = int(message)
                         if 0 < message:
                             description = f"{str(engine)} - {str(datetime.fromtimestamp(message))}"
@@ -89,6 +96,8 @@ def main():
                             progress.update(task_id=overall_task_id, advance=1)
                             progress.update(task_id=task_id, visible=False)
                             done_process_set.add(process)
+                    except ValueError:
+                        print(message)
 
             # remove done processes from running set
             running_process_set = running_process_set - done_process_set
@@ -101,5 +110,7 @@ def main():
 
 
 if __name__ == '__main__':
+    warnings.filterwarnings("ignore")
+    atexit.register(terminal_sub_process)
     mp.set_start_method('spawn')
     main()

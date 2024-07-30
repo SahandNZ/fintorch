@@ -21,6 +21,7 @@ from .model import Model
 from .optimizer import Optimizer
 from .status import Fold, Status
 from .trainer import Trainer
+from .error import NanValueInLastPredictionError
 from ..dtype import DataCollection
 from ..enum import TimeFrame
 from ..settings import FINTORCH_MODULE_DIR
@@ -181,13 +182,11 @@ class Module(ABC):
         # store folds dict and y hats dict
         if not self.__read_only and self.__rewrite_folds_dict:
             create_directory(self.directory)
-            # with filelock.FileLock(self.folds_dict_path):
             with open(self.folds_dict_path, "wb+") as file:
                 pickle.dump(self.folds_dict, file)
 
         if not self.__read_only and self.__rewrite_y_hats_dict:
             create_directory(self.directory)
-            # with filelock.FileLock(self.y_hats_dict_path):
             with open(self.y_hats_dict_path, "wb+") as file:
                 pickle.dump(self.y_hats_dict, file)
 
@@ -229,6 +228,15 @@ class Module(ABC):
 
         start_timestamp = floor_timestamp(timestamp=start_timestamp, time_frame=self.time_frame)
         stop_timestamp = ceil_timestamp(timestamp=stop_timestamp, time_frame=self.time_frame)
+        return list(range(start_timestamp, stop_timestamp, int(self.time_frame)))
+    
+    def get_prediction_timestamps(self, dc: DataCollection) -> List[int]:
+        start_timestamp = self.get_start_timestamp(dc=dc)
+        stop_timestamp = datetime.now().timestamp()
+
+        start_timestamp = floor_timestamp(timestamp=start_timestamp, time_frame=self.time_frame)
+        stop_timestamp = floor_timestamp(timestamp=stop_timestamp, time_frame=self.time_frame)
+        stop_timestamp += int(self.time_frame)
         return list(range(start_timestamp, stop_timestamp, int(self.time_frame)))
 
     def optimize(
@@ -277,6 +285,14 @@ class Module(ABC):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.eval()
         self.model.to(device=device)
+        
+        # check is last fold able to predict last timestamps or if it can't then optimize module
+        last_fold_keys = list(self.folds_dict.keys())[-1] 
+        last_fold_stop_timestamp = last_fold_keys[-1]
+        if last_fold_stop_timestamp < timestamps[-1]:
+            print(f"Optimizing {str(self)} for new fold...")
+            for _ in self.optimize(dc=dc):
+                pass
 
         # generate predictions
         result = {}
@@ -290,10 +306,17 @@ class Module(ABC):
                     x = x.to(device=device)
                     y_hats = self.model(x).cpu().numpy()
                     result.update({ts: y_hats[index] for index, ts in enumerate(fold_timestamps)})
+                    
+                    # remove x from memory
+                    del x       
 
         # move model back to cpu
         self.model.cpu()
-
+        
+        # release cuda memory
+        torch.cuda.empty_cache()
+        gc.collect()
+        
         # set missed timestamps to array of np.nan values
         nan_y_hat = np.zeros(self.model.dim_output_feature) * np.nan
         missing_timestamps = [ts for ts in timestamps if ts not in result]
@@ -315,6 +338,12 @@ class Module(ABC):
             self.__rewrite_y_hats_dict = True
 
         sorted_output = {k: v for k, v in sorted(output.items(), key=lambda item: item[0])}
+        
+        # rasie exception if nan value exist in output
+        is_last_prediction_nan = 0 < len(sorted_output) and np.isnan(list(sorted_output.values())[-1]).any()
+        if is_last_prediction_nan:
+            raise NanValueInLastPredictionError("NaN or Inf values found in the last prediction.")
+        
         return sorted_output
 
     def calculate_metrics(

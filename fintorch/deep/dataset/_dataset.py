@@ -1,4 +1,5 @@
 import math
+from datetime import datetime
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Union
 
@@ -108,7 +109,8 @@ class Dataset(ABC):
         stop_timestamp = self.get_stop_timestamp(dc=dc)
 
         start_timestamp = floor_timestamp(timestamp=start_timestamp, time_frame=self.time_frame)
-        stop_timestamp = ceil_timestamp(timestamp=stop_timestamp, time_frame=self.time_frame)
+        stop_timestamp = floor_timestamp(timestamp=stop_timestamp, time_frame=self.time_frame)
+        stop_timestamp += int(self.time_frame)
         return list(range(start_timestamp, stop_timestamp, int(self.time_frame)))
 
     @abstractmethod

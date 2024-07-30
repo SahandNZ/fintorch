@@ -72,7 +72,7 @@ class DataLoader:
         self.__index = -1
         y = self.dataset.load_y(timestamps=self.timestamps)
         y = y[~torch.any(y.isnan(), dim=1)]
-        self.__weight = len(y) / (2 * y.sum(dim=0))
+        self.__weight = len(y) / (2 * torch.clip(y.sum(dim=0), min=0.1, max=0.9))
 
         if self.shuffle:
             random.shuffle(self.timestamps)

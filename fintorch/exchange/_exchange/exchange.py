@@ -35,7 +35,7 @@ class Exchange(ABC):
         # TODO call open methods of account and spot
         self.future.open(directory=directory)
 
-    def next(self, timestamp: float) -> None:
+    def next(self, timestamp: int) -> None:
         # TODO call next methods of account and spot
         self.future.next(timestamp=timestamp)
 

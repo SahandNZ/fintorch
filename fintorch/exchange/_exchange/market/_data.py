@@ -44,14 +44,13 @@ class MarketData(MarketElement, ABC):
     def get_candles_dataframe(self, symbol: str, time_frame: TimeFrame) -> pd.DataFrame:
         raise NotImplementedError()
 
-    @abstractmethod
-    def get_funding_rates_dataframe(self, symbol: str) -> pd.DataFrame:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_top_long_short_ratios_account_dataframe(self, symbol: str, time_frame: TimeFrame) -> pd.DataFrame:
-        raise NotImplementedError()
-
-    @abstractmethod
     def get_data_collection(self, symbols: List[str], time_frames: List[TimeFrame]) -> DataCollection:
-        raise NotImplementedError()
+        dc = DataCollection()
+        for symbol in symbols:
+            symbol_info = self.get_symbol_info(symbol=symbol)
+            dc.set_symbol_info(symbol=symbol, symbol_info=symbol_info)
+            for time_frame in time_frames:
+                df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
+                dc.set_candles_df(symbol=symbol, time_frame=time_frame, df=df)
+
+        return dc

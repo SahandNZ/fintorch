@@ -93,10 +93,7 @@ class Position:
         return self._calculate_pnl(percentage=self.draw_down_percentage)
 
     def paid_fee(self, fee_percentage: float) -> Union[float, None]:
-        exit_price = self.exit_price or self.current_price
-        entry_fee = self.entry_price * self.quantity * fee_percentage / 100
-        exit_fee = exit_price * self.quantity * fee_percentage / 100
-        return round(entry_fee + exit_fee, 2)
+        return self._calculate_pnl(percentage=fee_percentage * 2)
 
     def _calculate_pnl_percentage(self, exit_price: float) -> float:
         pnl_percentage = (exit_price / self.entry_price - 1) * int(self.side) * self.leverage * 100

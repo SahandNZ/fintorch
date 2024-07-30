@@ -8,6 +8,7 @@ from rich.progress import Progress
 from ..network import Network, Https, Wss
 from ....dtype import AggregatedTrade, SymbolInfo, Candle, FundingRate, LongShortRatio, Ticker
 from ....enum import TimeFrame
+from ....utils.timestamp import ceil_timestamp
 
 
 class MarketDataEndPoints(Network):
@@ -57,7 +58,7 @@ class MarketDataEndPoints(Network):
             symbol: str,
             time_frame: TimeFrame,
             start_timestamp: int,
-            stop_timestamp: int,
+            stop_timestamp: Union[int, None],
             progress: Union[Progress, None] = None,
     ) -> List[Candle]:
         return self.__send_get_requests(
@@ -206,16 +207,14 @@ class MarketDataEndPoints(Network):
 
         # Setup progress bar if it's not none
         if progress is not None:
-            progress_interval = TimeFrame.upper(int(time_frame) * max_request_size * 2)
-            intervals = math.ceil((stop_timestamp - start_timestamp) / int(progress_interval))
-            next_interval_timestamp = start_timestamp + int(progress_interval)
-
+            current_timestamp = int(datetime.now().timestamp())
+            next_open_timestamp = ceil_timestamp(timestamp=current_timestamp, time_frame=time_frame)
+            last_timestamp = stop_timestamp or next_open_timestamp
+            total = math.ceil((last_timestamp - start_timestamp) / int(time_frame) / max_request_size)
             description = f"Downloading {symbol} {str(time_frame)} {attribute_name.replace('_', ' ')}"
-            task = progress.add_task(description=description, total=intervals)
+            task = progress.add_task(description=description, total=total)
         else:
             task = None
-            progress_interval = None
-            next_interval_timestamp = None
 
         results: List[dtype] = []
         request_start_timestamp = start_timestamp
@@ -230,19 +229,21 @@ class MarketDataEndPoints(Network):
             results.extend(request_results)
 
             # update progress bar
-            if progress is not None and next_interval_timestamp <= request_stop_timestamp:
-                next_interval_timestamp += progress_interval
+            if progress is not None:
                 progress.update(task, advance=1)
 
-            # assign value to req_start_ts as request start timestamp
+            # assign value to request start timestamp
             if 0 == len(results):
                 request_start_timestamp += max_request_size * time_frame
             else:
                 request_start_timestamp = results[-1].timestamp + time_frame
 
-            # assign value to req_stop_ts as request stop timestamp
+            # assign value to request stop timestamp
+            current_timestamp = int(datetime.now().timestamp())
+            next_open_timestamp = ceil_timestamp(timestamp=current_timestamp, time_frame=time_frame)
+            last_timestamp = stop_timestamp or next_open_timestamp
             request_stop_timestamp = request_start_timestamp + max_request_size * time_frame
-            request_stop_timestamp = min(stop_timestamp, request_stop_timestamp)
+            request_stop_timestamp = min(last_timestamp, request_stop_timestamp)
 
         # make progress bar invisible
         if progress is not None:

@@ -1,6 +1,7 @@
 import os
 import pickle
 from abc import abstractmethod
+from datetime import datetime
 from typing import Dict, Generator, Union, List
 
 import numpy as np
@@ -86,9 +87,12 @@ class Transform(Component):
     def path(self) -> str:
         return os.path.join(FINTORCH_TRANSFORM_DIR, f"{str(self.static_hash)}.pkl")
 
+    def remove(self) -> None:
+        if os.path.exists(self.path):
+            os.remove(self.path)
+        
     def open(self, read_only: bool = False) -> None:
         try:
-            # with filelock.FileLock(self.path):
             with open(self.path, "rb") as file:
                 self.__timestamp_to_sf = pickle.load(file)
         except (FileNotFoundError, EOFError, pickle.UnpicklingError):
@@ -100,7 +104,6 @@ class Transform(Component):
     def close(self) -> None:
         if not self.__read_only and self.__rewrite_timestamp_to_sf:
             create_directory(FINTORCH_TRANSFORM_DIR)
-            # with filelock.FileLock(self.path):
             with open(self.path, "wb+") as file:
                 pickle.dump(self.timestamp_to_sf, file)
 
@@ -111,7 +114,6 @@ class Transform(Component):
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
         start_timestamp = df.index[0]
         start_timestamp = start_timestamp + self.look_back * int(self.time_frame)
-        start_timestamp = floor_timestamp(timestamp=start_timestamp, time_frame=self.time_frame)
 
         return start_timestamp
 
@@ -119,13 +121,13 @@ class Transform(Component):
         df = dc.get_candles_df(symbol=self.symbol, time_frame=self.time_frame)
         stop_timestamp = df.index[-1]
         stop_timestamp = stop_timestamp - self.look_ahead * int(self.time_frame)
-        stop_timestamp = ceil_timestamp(timestamp=stop_timestamp, time_frame=self.time_frame)
 
         return stop_timestamp
 
     def get_timestamps(self, dc: DataCollection) -> List[int]:
         start_timestamp = self.get_start_timestamp(dc=dc)
         stop_timestamp = self.get_stop_timestamp(dc=dc)
+        stop_timestamp += int(self.time_frame)
         timestamps = list(range(start_timestamp, stop_timestamp, int(self.time_frame)))
 
         return timestamps
@@ -193,7 +195,7 @@ class Transform(Component):
     def _is_sf_valid(self, dc: DataCollection, timestamp: int, sf: np.ndarray) -> bool:
         start_timestamp = self.get_start_timestamp(dc=dc)
         stop_timestamp = self.get_stop_timestamp(dc=dc)
-        is_timestamp_valid = start_timestamp <= timestamp < stop_timestamp
+        is_timestamp_valid = start_timestamp <= timestamp <= stop_timestamp
         is_value_valid = not np.isnan(sf).max()
         is_valid = is_timestamp_valid and is_value_valid
 

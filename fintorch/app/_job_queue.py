@@ -36,10 +36,12 @@ class JobQueue:
     @staticmethod
     def _cast_when(interval: TimeFrame, when: str) -> Union[datetime, None]:
         if "any" == when:
-            return None
+            return datetime.now()
         elif "open" == when:
             next_timestamp = ceil_timestamp(timestamp=datetime.now().timestamp(), time_frame=interval)
             return datetime.fromtimestamp(next_timestamp)
+        else:
+            raise ValueError("Invalid value for when parameter.")
 
     def start(self):
         if not self.scheduler.running:

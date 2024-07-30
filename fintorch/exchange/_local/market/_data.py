@@ -1,10 +1,11 @@
-from typing import List, Tuple, Dict
-
+from typing import List, Dict
+from datetime import datetime
+from fintorch.dtype import DataCollection
 import pandas as pd
 
 from ..._exchange.market import MarketData
 from ..._online import OnlineExchange, OnlineMarketData
-from ....dtype import DataCollection, SymbolInfo, Ticker, Candle
+from ....dtype import SymbolInfo, Ticker, Candle
 from ....enum import MarketType, TimeFrame
 
 
@@ -13,9 +14,8 @@ class LocalMarketData(MarketData):
         super().__init__(market_type=market_type)
         self.__online_exchange: OnlineExchange = online_exchange
         self.__online_market_data: OnlineMarketData = getattr(self.__online_exchange, str(self.market_type)).data
-
-        self.__current_candle_dict: Dict[Tuple[str, TimeFrame], Candle] = {}
-        self.__candles_dataframe_dict: Dict[Tuple[str, TimeFrame], pd.DataFrame] = {}
+        
+        self.__candles_df_dict: Dict[str, pd.DataFrame] = {}
 
     def get_current_timestamp(self) -> float:
         return self.timestamp
@@ -36,43 +36,31 @@ class LocalMarketData(MarketData):
         raise NotImplementedError()
 
     def get_current_candle(self, symbol: str, time_frame: TimeFrame) -> Candle:
-        key = (symbol, time_frame)
-        if key not in self.__current_candle_dict:
-            df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
-            last_row = [df.index[-1]] + df.iloc[-1].to_list()
-            current_candle = Candle.from_list(data=last_row)
-
-            self.__current_candle_dict[key] = current_candle
-
-        return self.__current_candle_dict[key]
+        df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
+        last_row = [df.index[-1]] + df.iloc[-1].to_list()
+        return Candle.from_list(data=last_row)
 
     def get_candles_dataframe(self, symbol: str, time_frame: TimeFrame) -> pd.DataFrame:
         key = (symbol, time_frame)
-        if key not in self.__candles_dataframe_dict:
+        
+        # key does not exist in candle_df_dict
+        if key not in self.__candles_df_dict:
+            df = self.__online_market_data.update_base_candles_df(symbol=symbol, force_update=False)
             df = self.__online_market_data.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
-            df = df[df.index < self.timestamp]
-            self.__candles_dataframe_dict[key] = df
+            self.__candles_df_dict[key] = df
 
-        return self.__candles_dataframe_dict[key]
+        # timestamp does not exist in dataframe
+        df = self.__candles_df_dict[key]
+        if self.timestamp not in df.index:
+            df = self.__online_market_data.update_base_candles_df(symbol=symbol, force_update=False)
+            df = self.__online_market_data.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
+            self.__candles_df_dict[key] = df
 
-    def get_data_collection(self, symbols: List[str], time_frames: List[TimeFrame]) -> DataCollection:
-        dc = DataCollection()
-        for symbol in symbols:
-            symbol_info = self.get_symbol_info(symbol=symbol)
-            dc.set_symbol_info(symbol=symbol, symbol_info=symbol_info)
-            for time_frame in time_frames:
-                df = self.get_candles_dataframe(symbol=symbol, time_frame=time_frame)
-                dc.set_candles_df(symbol=symbol, time_frame=time_frame, df=df)
+        df = self.__candles_df_dict[key]
+        df = df[df.index < self.timestamp]
 
-        return dc
-
-    def get_funding_rates_dataframe(self, symbol: str) -> pd.DataFrame:
-        raise NotImplementedError()
-
-    def get_top_long_short_ratios_account_dataframe(self, symbol: str, time_frame: TimeFrame) -> pd.DataFrame:
-        raise NotImplementedError()
-
-    def next(self, timestamp: int) -> None:
-        super().next(timestamp=timestamp)
-        self.__current_candle_dict.clear()
-        self.__candles_dataframe_dict.clear()
+        return df
+    
+    def clear_state_dict(self) -> None:
+        super().clear_state_dict()
+        self.__candles_df_dict.clear()

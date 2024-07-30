@@ -1,6 +1,8 @@
 from typing import Dict
+
 import numpy as np
 
+from ._error import NanInSideColumnException
 from ._strategy import Strategy
 from ..deep.module import Module
 from ..dtype import Order, Position
@@ -10,7 +12,7 @@ class ActiveMarketToggleStrategy(Strategy):
     def __init__(self, module: Module) -> None:
         super().__init__(
             name="Active Market Toggle Strategy",
-            short_name="AM-TOG",
+            short_name="TOG",
             module=module,
             indicators=[],
             height_ratios=[1]
@@ -38,14 +40,14 @@ class ActiveMarketToggleStrategy(Strategy):
         })
         
         return state_dict
-        
+
     def load_state_dict(self, state_dict: Dict) -> None:
         super().load_state_dict(state_dict=state_dict)
         self.take_profit_order = state_dict.get("take_profit_order", None)
         self.stop_loss_order = state_dict.get("stop_loss_order", None)
         self.is_risk_free_done = state_dict.get("is_risk_free_done", False)
         self.is_head_to_head_done = state_dict.get("is_head_to_head_done", False)
-        
+
     def clear_state(self) -> None:
         super().clear_state()
         self.take_profit_order: Order = None
@@ -55,26 +57,27 @@ class ActiveMarketToggleStrategy(Strategy):
 
     def on_new_candle(self) -> None:
         if 0 < len(self.df):
-            # market data
             side = self.df.side.iloc[-1]
-            if np.isnan(side):
-                return
+            
+            if np.isnan(side).any():
+                raise NanInSideColumnException("NaN or Inf values found in side column of dataframe.")
 
             # trade data
             position = self.future.trade.get_position(symbol=self.symbol)
             open_orders = self.future.trade.get_open_orders(symbol=self.symbol)
-            if self.take_profit_order not in open_orders:
+            open_orders_id = set([order.id for order in open_orders])
+            if self.take_profit_order is not None and self.take_profit_order.id not in open_orders_id:
                 self.take_profit_order = None
-            if self.stop_loss_order not in open_orders:
+            if self.stop_loss_order is not None and self.stop_loss_order.id not in open_orders_id:
                 self.stop_loss_order = None
-                
+
             # update take profit order (Head to Head order)
             if position.is_open and position.profit_rate <= -self.head_to_head_threshold_rate:
                 head_to_head_price = position.entry_price
                 if not self.is_head_to_head_done and self.take_profit_order.price != head_to_head_price:
                     self.is_head_to_head_done = True
                     self.future.trade.cancel_order(symbol=self.symbol, order_id=self.take_profit_order.id)
-                    self.future.trade.set_exit_order(
+                    self.take_profit_order = self.future.trade.set_exit_order(
                         position=position,
                         percentage=100,
                         price=head_to_head_price,
@@ -83,8 +86,8 @@ class ActiveMarketToggleStrategy(Strategy):
 
             # update stop loss order (Risk Free order)
             if position.is_open and self.risk_free_threshold_rate <= position.profit_rate:
-                risk_free_price = position.entry_price 
-                if not self.is_risk_free_done and self.stop_loss_order.price != risk_free_price:
+                risk_free_price = position.entry_price
+                if not self.is_risk_free_done and self.stop_loss_order.stop_price != risk_free_price:
                     self.is_risk_free_done = True
                     self.future.trade.cancel_order(symbol=self.symbol, order_id=self.stop_loss_order.id)
                     self.stop_loss_order = self.future.trade.set_exit_order(
@@ -102,7 +105,7 @@ class ActiveMarketToggleStrategy(Strategy):
                         self.future.trade.set_exit_order(
                             position=position,
                             percentage=100,
-                            comment="Market Exit"
+                            comment="Exit"
                         )
 
                 # there is no open position
@@ -111,13 +114,13 @@ class ActiveMarketToggleStrategy(Strategy):
                         symbol=self.symbol,
                         side=side,
                         percentage=100,
-                        comment="Market Entry"
+                        comment="Entry"
                     )
 
     def on_opened_position(self, position: Position) -> None:
         self.is_risk_free_done = False
-        self.is_head_to_head_done = False 
-        
+        self.is_head_to_head_done = False
+
         take_profit_price = position.entry_price * (1 + int(position.side) * self.take_profit_rate)
         stop_loss_price = position.entry_price * (1 - int(position.side) * self.stop_loss_rate)
 
@@ -127,7 +130,7 @@ class ActiveMarketToggleStrategy(Strategy):
             price=take_profit_price,
             comment="Take Profit"
         )
-        
+
         self.stop_loss_order = self.future.trade.set_exit_order(
             position=position,
             percentage=100,

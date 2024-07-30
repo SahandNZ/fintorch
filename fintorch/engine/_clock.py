@@ -10,8 +10,9 @@ from ..utils.timestamp import floor_timestamp, ceil_timestamp, to_timestamp
 
 
 class Clock:
-    def __init__(self, start_date: Union[str, datetime], interval: TimeFrame):
+    def __init__(self, start_date: Union[str, datetime], stop_date: Union[str, datetime], interval: TimeFrame):
         self.__start_timestamp: int = to_timestamp(date=start_date)
+        self.__stop_timestamp: int = to_timestamp(date=stop_date) if stop_date is not None else None
         self.__interval: TimeFrame = interval
 
         # state
@@ -22,6 +23,10 @@ class Clock:
         return self.__start_timestamp
 
     @property
+    def stop_timestamp(self) -> int:
+        return self.__stop_timestamp
+
+    @property
     def interval(self) -> TimeFrame:
         return self.__interval
 
@@ -30,13 +35,21 @@ class Clock:
         return datetime.fromtimestamp(self.start_timestamp)
 
     @property
+    def stop_datetime(self) -> datetime:
+        return datetime.fromtimestamp(self.stop_timestamp)
+
+    @property
     def timestamp(self) -> int:
         return self.__timestamp
 
     def next(self) -> Union[int, None]:
         current_timestamp = int(datetime.now().timestamp())
         current_open_timestamp = floor_timestamp(timestamp=current_timestamp, time_frame=self.interval)
-        if self.timestamp < current_open_timestamp:
+        last_closed_timestamp = current_open_timestamp - self.interval
+        stop_timestamp = self.stop_timestamp or math.inf
+        stop_timestamp = min(stop_timestamp, last_closed_timestamp)
+        
+        if self.timestamp < stop_timestamp:
             self.__timestamp = self.timestamp + self.interval
             return self.timestamp
 
